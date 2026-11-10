@@ -200,3 +200,18 @@ tr.cut td{padding:0;border-bottom:0}
 .ok{color:var(--good);font-weight:600}
 .steps{margin:6px 0 0;padding-left:1.2em;display:grid;gap:4px;font-size:.88rem}
 code{font-family:var(--f-data);font-size:.85em;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+
+/* accounts */
+.acct{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.88rem;color:var(--ink);text-decoration:none;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.acct:hover,.acct.on{border-color:var(--accent)}
+.nav .btn{margin-left:4px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;box-shadow:inset 0 0 0 2px var(--panel)}
+.swatch.on{border-color:var(--ink)}
+.google{justify-content:center;width:100%;padding:11px 14px}
+.or{display:flex;align-items:center;gap:10px;font-size:.78rem;color:var(--muted)}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+.st-pending{background:var(--accent-soft);color:var(--accent)}
+.st-approved{background:var(--panel-2);color:var(--good)}
+.st-rejected{background:var(--bad-soft);color:var(--bad)}
+.keyrow select{width:auto}

@@ -1,6 +1,6 @@
 # Kart Night League
 
-Regular-season standings for our Mario Kart Wii league. It's a static site on GitHub Pages: the page reads `data/league.json`, and every cup is a commit.
+Regular-season standings for our Mario Kart Wii league. It's a static site on GitHub Pages with Firebase for accounts and league data.
 
 ## How the standings work
 
@@ -10,27 +10,30 @@ Regular-season standings for our Mario Kart Wii league. It's a static site on Gi
 - Tiebreakers: cup wins, head-to-head points, total points, then a one-race runoff.
 - 20-cup regular season; top 4 make the playoffs (playoff page is "coming soon").
 
-All of these numbers are editable on the Rules page by the commissioner. Full rules are on the site.
+All of these numbers are editable by admins on the Admin page. Full rules are on the site.
 
-## Adding a cup
+## Accounts and roles
 
-**On the site (phone or laptop).** Open the site, scroll to the bottom, tap **Commissioner**, and paste:
+Sign-in is handled by Firebase (email and password, or Google). League data lives in Cloud Firestore, and `firestore.rules` enforces who can do what:
 
-1. A **GitHub fine-grained token**: github.com › Settings › Developer settings › Fine-grained tokens › Generate. Repository access: only `kart-league`. Permissions: **Contents: Read and write**. Nothing else.
-2. Optionally, an **Anthropic API key** (console.anthropic.com › API keys) so Claude reads the photo for you. Each photo costs a few cents; set a spend limit on the key.
-
-Both are stored only in that browser's local storage. Then **+ Add cup**, upload the results-screen photo, check the scores, save. The site updates about a minute later.
-
-**From Claude Code.** Open this folder in Claude Code, drop in the photo, and say "add this cup". See `CLAUDE.md`.
-
-## Files
-
-| Path | What it is |
+| Role | Can |
 |---|---|
-| `index.html`, `styles.css`, `app.js` | The site |
-| `data/league.json` | League settings, players and every cup's results |
-| `photos/` | Results-screen photos, one per cup |
-| `CNAME` | Custom domain (added once a domain is set up) |
+| Visitor (signed out) | View standings, cups, rules |
+| Member (anyone who signs up) | Edit their profile; submit a cup with a photo for review; withdraw their pending submissions |
+| Admin | Add, edit and delete cups; approve or reject submissions; change league settings and players; promote or demote members |
+| Owner | Everything an admin can do; can't be demoted. Claimed once from the account page |
+
+With an Anthropic API key saved on their account page (stored only in that browser), anyone adding or submitting a cup gets Claude to read the names and points from the photo.
+
+## Firebase setup (one time)
+
+1. [Firebase console](https://console.firebase.google.com) › **Add project** (Analytics off is fine).
+2. **Build › Authentication › Get started › Sign-in method**: enable **Email/Password** and **Google**.
+3. **Authentication › Settings › Authorized domains**: add `megmax.github.io` (and the custom domain once you have one).
+4. **Build › Firestore Database › Create database**, production mode, any nearby location.
+5. **Firestore › Rules**: replace everything with the contents of `firestore.rules`, then **Publish**. Do this again whenever that file changes.
+6. **Project settings › General › Your apps › Web (`</>`)**: register an app and copy the `firebaseConfig` object into `firebase-config.js`.
+7. Open the site, create an account, and press **Claim league ownership** on the account page.
 
 ## Custom domain
 
