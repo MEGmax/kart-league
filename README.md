@@ -1,6 +1,6 @@
 # Kart Night League
 
-Regular-season standings for our Mario Kart Wii league. It's a static site on GitHub Pages with Firebase for accounts and league data.
+Regular-season standings for our Mario Kart Wii league. It's a static site on GitHub Pages with Supabase for accounts and league data.
 
 ## How the standings work
 
@@ -14,7 +14,7 @@ All of these numbers are editable by admins on the Admin page. Full rules are on
 
 ## Accounts and roles
 
-Sign-in is handled by Firebase (email and password, or Google). League data lives in Cloud Firestore, and `firestore.rules` enforces who can do what:
+Sign-in and data use [Supabase](https://supabase.com) (free plan): email and password or Google sign-in, and a Postgres database. Row level security in `supabase/schema.sql` enforces who can do what:
 
 | Role | Can |
 |---|---|
@@ -25,15 +25,32 @@ Sign-in is handled by Firebase (email and password, or Google). League data live
 
 With an Anthropic API key saved on their account page (stored only in that browser), anyone adding or submitting a cup gets Claude to read the names and points from the photo.
 
-## Firebase setup (one time)
+Free Supabase projects pause after 7 days without activity. The `Keep database awake` GitHub Action reads one row every 3 days to prevent that. If the project is ever paused anyway, restore it from the Supabase dashboard.
 
-1. [Firebase console](https://console.firebase.google.com) › **Add project** (Analytics off is fine).
-2. **Build › Authentication › Get started › Sign-in method**: enable **Email/Password** and **Google**.
-3. **Authentication › Settings › Authorized domains**: add `megmax.github.io` (and the custom domain once you have one).
-4. **Build › Firestore Database › Create database**, production mode, any nearby location.
-5. **Firestore › Rules**: replace everything with the contents of `firestore.rules`, then **Publish**. Do this again whenever that file changes.
-6. **Project settings › General › Your apps › Web (`</>`)**: register an app and copy the `firebaseConfig` object into `firebase-config.js`.
-7. Open the site, create an account, and press **Claim league ownership** on the account page.
+## Supabase setup (one time)
+
+1. Create a free project at [supabase.com/dashboard](https://supabase.com/dashboard) (pick a nearby region; save the database password somewhere safe).
+2. **SQL Editor › New query**: paste all of `supabase/schema.sql`, press **Run**. Re-run it whenever that file changes.
+3. **Authentication › URL Configuration**: Site URL `https://megmax.github.io/kart-league/`; add the same under Redirect URLs (and the custom domain later).
+4. **Project Settings › API** (or **Connect**): copy the Project URL and the publishable/anon key into `supabase-config.js`.
+5. Open the site, create an account, and press **Claim league ownership** on the account page.
+
+### Google sign-in (optional)
+
+1. [Google Cloud Console](https://console.cloud.google.com) › create a project › **APIs & Services › OAuth consent screen**: External, app name "Kart Night League", your email; publish it.
+2. **Credentials › Create credentials › OAuth client ID** › Web application. Authorized redirect URI: `https://YOUR-PROJECT.supabase.co/auth/v1/callback`.
+3. Supabase › **Authentication › Sign In / Providers › Google**: enable, paste the client ID and secret, save.
+
+## Files
+
+| Path | What it is |
+|---|---|
+| `index.html`, `styles.css`, `app.js` | The site |
+| `supabase-config.js` | Supabase project URL and publishable key (not secret) |
+| `supabase/schema.sql` | Tables, permissions and save functions; paste into the Supabase SQL editor |
+| `.github/workflows/keepalive.yml` | Pings the database every 3 days so the free project doesn't pause |
+| `data/league.json` | Fallback data shown only while Supabase isn't configured |
+| `CNAME` | Custom domain (added once a domain is set up) |
 
 ## Custom domain
 

@@ -3,12 +3,12 @@
 
 // ---------- configuration ----------
 var CONFIG = {
-  firebaseVersion: "12.19.0",
+  supabaseUrl: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm",
   legacyDataPath: "data/league.json",
   model: "claude-opus-5-5",
   sdkUrl: "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.1.0/+esm"
 };
-var FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
+var SUPABASE_CONFIG = window.SUPABASE_CONFIG || null;
 var KEY_AI = "kl.anthropicKey";
 
 var RACE_POINTS = [15, 12, 10, 8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -19,14 +19,12 @@ var VIEWS = ["standings", "cups", "playoffs", "rules", "add", "account", "admin"
 var DEFAULT_LEAGUE = { name: "Kart Night League", season: "Season 1", seasonLength: 20, playoffSpots: 4, minParticipation: 50, defaultMax: 60 };
 
 // ---------- state ----------
-var FB = null;                       // Firebase modules + instances once loaded
-var live = { league: undefined, players: undefined, cups: undefined };
-var state = null;                    // {league, players, cups} assembled from `live`
-var me = { ready: !FIREBASE_CONFIG, user: null, profile: null, ownerUid: null, ownerKnown: false };
+var sb = null;                        // Supabase client once loaded
+var state = null;                    // {league, players, cups}
+var me = { ready: !SUPABASE_CONFIG, user: null, profile: null, hasOwner: true, ownerKnown: false, recovery: false };
 var adminData = { pending: [], users: [] };
 var mySubs = [];
 var photoCache = {};                 // cupId -> data URL | "loading" | "none"
-var userUnsubs = [];
 var ui = { view: "standings", sel: null, confirmDel: null, flash: "", busy: false, error: "", loadError: "", msg: "",
   authMode: "signin", form: { email: "", password: "", name: "" }, confirmDeleteAccount: false, rejectId: null, rejectNote: "" };
 var draft = null, readCtl = null, settingsDraft = null, profileDraft = null;
@@ -46,11 +44,11 @@ function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function nextColor(players) { var used = players.map(function (p) { return p.color; }); for (var i = 0; i < COLORS.length; i++) if (used.indexOf(COLORS[i]) < 0) return COLORS[i]; return COLORS[players.length % COLORS.length]; }
 function playerName(id) { var p = state.players.find(function (x) { return x.id === id; }); return p ? p.name : "Unknown"; }
 function signedIn() { return !!me.user; }
-function isOwner() { return !!(me.user && me.ownerUid && me.ownerUid === me.user.uid); }
+function isOwner() { return !!(me.profile && me.profile.role === "owner"); }
 function isAdmin() { return isOwner() || !!(me.profile && me.profile.role === "admin"); }
-function roleOf(u) { return u.id === me.ownerUid ? "owner" : (u.role || "member"); }
+function roleOf(u) { return u.role || "member"; }
 function roleLabel(r) { return r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Member"; }
-function myName() { return (me.profile && me.profile.displayName) || (me.user && (me.user.displayName || (me.user.email || "").split("@")[0])) || "Racer"; }
+function myName() { return (me.profile && me.profile.displayName) || (me.user && (me.user.email || "").split("@")[0]) || "Racer"; }
 
 function normalize(raw) {
   raw = raw || {};
@@ -132,7 +130,7 @@ function render() {
   var body = v === "standings" ? viewStandings(st, m, demo) : v === "cups" ? viewCups(st, m, demo) : v === "playoffs" ? viewPlayoffs(st, m, demo)
     : v === "rules" ? viewRules(L) : v === "account" ? viewAccount() : v === "admin" ? viewAdmin() : viewAdd();
   app.innerHTML = mast(L, compute(state)) + navHTML(v) + '<main class="wrap">' + body + "</main>" +
-    '<footer class="wrap foot"><span>' + esc(L.name) + " · " + esc(L.season) + "</span>" + (FIREBASE_CONFIG ? '<a href="#account">' + (signedIn() ? "Your account" : "Sign in or create an account") + "</a>" : "") + "</footer>" +
+    '<footer class="wrap foot"><span>' + esc(L.name) + " · " + esc(L.season) + "</span>" + (SUPABASE_CONFIG ? '<a href="#account">' + (signedIn() ? "Your account" : "Sign in or create an account") + "</a>" : "") + "</footer>" +
     (ui.flash ? '<div class="flash" role="status">' + esc(ui.flash) + "</div>" : "");
 }
 function mast(L, m) {
@@ -144,7 +142,7 @@ function mast(L, m) {
 function navHTML(v) {
   function t(id, label, extra) { return '<a class="tab" href="#' + id + '"' + (v === id ? ' aria-current="page"' : "") + ">" + label + (extra || "") + "</a>"; }
   var right = "";
-  if (FIREBASE_CONFIG) {
+  if (SUPABASE_CONFIG) {
     if (isAdmin()) right += t("admin", "Admin", adminData.pending.length ? '<span class="soon">' + adminData.pending.length + "</span>" : "");
     if (isAdmin()) right += '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">+ Add cup</a>';
     else if (signedIn()) right += '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">+ Submit cup</a>';
@@ -306,14 +304,15 @@ function viewRules(L) {
 
 // ---------- account page ----------
 function viewAccount() {
-  if (!FIREBASE_CONFIG) return '<div class="panel empty"><b>Accounts aren\'t switched on yet.</b></div>';
+  if (!SUPABASE_CONFIG) return '<div class="panel empty"><b>Accounts aren\'t switched on yet.</b></div>';
   if (!me.ready) return '<div class="loading"><span class="spin"></span>Checking your sign-in…</div>';
   if (!signedIn()) return authFormHTML();
   var p = profileDraft || (profileDraft = me.profile ? { displayName: me.profile.displayName || "", color: me.profile.color || COLORS[0], favoriteCharacter: me.profile.favoriteCharacter || "", favoriteVehicle: me.profile.favoriteVehicle || "" } : null);
-  var role = isOwner() ? "owner" : (me.profile && me.profile.role) || "member";
+  var role = (me.profile && me.profile.role) || "member";
   var out = '<section class="section-h"><h2>Your account</h2><span class="chip">' + roleLabel(role) + "</span></section>";
+  if (me.recovery) out += '<div class="panel panel-pad keys"><b>Set a new password</b>' + pwFormHTML() + "</div>";
   if (ui.msg) out += '<div class="note">' + esc(ui.msg) + "</div>";
-  if (me.ownerKnown && !me.ownerUid) {
+  if (me.ownerKnown && !me.hasOwner) {
     out += '<div class="panel panel-pad keys"><b>This league has no owner yet.</b><p style="margin:0">The owner is the permanent admin: they can promote other admins and can\'t be demoted. Only claim this if you run the league. It can be claimed once.</p><div><button class="btn btn-primary" data-act="claim"' + (ui.busy ? " disabled" : "") + ">Claim league ownership</button></div></div>";
   }
   if (!p) return out + '<div class="loading"><span class="spin"></span>Setting up your profile…</div>';
@@ -336,11 +335,12 @@ function viewAccount() {
     }).join("") + "</tbody></table></div>";
 
   // sign-in & security
-  var isPw = me.user.providerData.some(function (d) { return d.providerId === "password"; });
+  var isPw = (me.user.identities || []).some(function (d) { return d.provider === "email"; }) || (me.user.app_metadata && me.user.app_metadata.provider === "email");
   var ak = lsGet(KEY_AI);
   out += '<section class="section-h"><h2>Sign-in and security</h2></section><div class="panel panel-pad keys">' +
     '<div class="small">Signed in as <b>' + esc(me.user.email || "") + "</b>" + (isPw ? " with a password" : " with Google") + ".</div>" +
-    '<div class="keyrow">' + (isPw ? '<button class="btn btn-sm" data-act="reset-pw">Email me a password reset link</button>' : "") + '<button class="btn btn-sm" data-act="signout">Sign out</button></div>' +
+    '<div class="keyrow">' + (isPw ? '<button class="btn btn-sm" data-act="change-pw">Change password</button>' : "") + '<button class="btn btn-sm" data-act="signout">Sign out</button></div>' +
+    (isPw && ui.changingPw ? pwFormHTML() : "") +
     '<div><label class="f" for="k-ai">Anthropic API key (optional, this device only)</label><div class="keyrow"><input id="k-ai" type="password" autocomplete="off" placeholder="sk-ant-…" value="' + esc(ak) + '"><button class="btn btn-sm" data-act="save-ai">Save</button>' + (ak ? '<span class="ok small">Saved</span>' : "") + "</div>" +
     '<p class="small muted" style="margin:6px 0 0">With a key, Claude reads the names and points from a results photo for you. It\'s stored in this browser only and costs a few cents per photo. Create one in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic Console</a> and set a spend limit.</p></div>' +
     (isOwner() ? "" : ui.confirmDeleteAccount
@@ -348,6 +348,9 @@ function viewAccount() {
       : '<div><button class="btn-link small" data-act="delete-account">Delete my account</button></div>') +
     "</div>";
   return out;
+}
+function pwFormHTML() {
+  return '<div class="keyrow"><input id="new-pw" type="password" autocomplete="new-password" minlength="6" placeholder="New password (6+ characters)" data-a="newPassword" value="' + esc(ui.form.newPassword || "") + '"><button class="btn btn-primary btn-sm" data-act="set-pw"' + (ui.busy ? " disabled" : "") + '>Save password</button></div>';
 }
 function authFormHTML() {
   var up = ui.authMode === "signup", f = ui.form;
@@ -388,7 +391,7 @@ function viewAdmin() {
       var r = roleOf(u);
       var ctl = r === "owner" ? '<span class="chip">Owner</span>'
         : '<select data-role="' + esc(u.id) + '" aria-label="Role for ' + esc(u.displayName) + '"><option value="member"' + (r === "member" ? " selected" : "") + '>Member</option><option value="admin"' + (r === "admin" ? " selected" : "") + ">Admin</option></select>";
-      return '<tr><td class="l"><span class="who"><span class="dot" style="background:' + esc(u.color || "var(--muted)") + '"></span>' + esc(u.displayName || "—") + (me.user && u.id === me.user.uid ? ' <span class="muted small">(you)</span>' : "") + '</span></td><td class="l small muted">' + esc(u.email || "") + '</td><td class="l">' + ctl + "</td></tr>";
+      return '<tr><td class="l"><span class="who"><span class="dot" style="background:' + esc(u.color || "var(--muted)") + '"></span>' + esc(u.displayName || "—") + (me.user && u.id === me.user.id ? ' <span class="muted small">(you)</span>' : "") + '</span></td><td class="l small muted">' + esc(u.email || "") + '</td><td class="l">' + ctl + "</td></tr>";
     }).join("") + "</tbody></table></div>";
   return out;
 }
@@ -429,8 +432,8 @@ function reviewDraft(s) {
   });
   if (s.hasPhoto) {
     d.photoLoading = true;
-    FB.fs.getDoc(FB.fs.doc(FB.db, "submissionPhotos", s.id)).then(function (snap) {
-      if (snap.exists()) { d.photoB64 = snap.data().data; d.photoUrl = "data:image/jpeg;base64," + d.photoB64; d.photoChanged = true; }
+    q(sb.from("submission_photos").select("data").eq("id", s.id).maybeSingle()).then(function (r) {
+      if (r && r.data) { d.photoB64 = r.data; d.photoUrl = "data:image/jpeg;base64," + r.data; d.photoChanged = true; }
     }).catch(function () {}).then(function () { d.photoLoading = false; if (draft === d) render(); });
   }
   return d;
@@ -490,7 +493,7 @@ function mapRow(r) {
   var m = matchPlayer(state.players, name);
   return { raw: name, pts: pts, assign: m ? m.id : (r && r.cpu ? "ignore" : "new"), newName: m ? "" : name };
 }
-// Downscales to JPEG and keeps the base64 under Firestore's 1 MiB document limit.
+// Downscales to JPEG and keeps each photo well under the database's size limit.
 function prepImage(file) {
   return new Promise(function (resolve, reject) {
     var url = URL.createObjectURL(file), img = new Image();
@@ -601,108 +604,99 @@ function readErr(e, A) {
   return "Reading the photo failed. Press Read photo again, or type the scores below.";
 }
 
-// ---------- Firebase ----------
-function fsErr(e) {
-  var c = e && e.code;
-  if (c === "permission-denied") return "You don't have permission to do that. If your role just changed, refresh the page.";
-  if (c === "unavailable") return "Couldn't reach the server. Check your connection and try again.";
-  if (c === "invalid-argument" || c === "out-of-range") return "That was rejected as invalid. A photo may be too large; try a smaller one.";
-  if (c === "resource-exhausted") return "The league's free database quota is used up for today. Try again tomorrow.";
-  return "Saving failed" + (c ? " (" + c + ")" : "") + ". Try again.";
+// ---------- Supabase ----------
+function dbErr(e) {
+  var c = e && e.code, m = (e && e.message) || "";
+  if (c === "P0001") return m;                                    // our own friendly messages from the database functions
+  if (c === "42501" || /row-level security|permission denied/i.test(m)) return "You don't have permission to do that. If your role just changed, refresh the page.";
+  if (c === "23514") return "Something was too long or invalid. A photo may be too large; try a smaller one.";
+  if (c === "23505") return "That already exists.";
+  if (c === "PGRST301" || /JWT/i.test(m)) return "Your session expired. Sign in again.";
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Couldn't reach the server. Check your connection and try again.";
+  return "Saving failed" + (m ? ": " + m : "") + ".";
 }
 function authErr(e) {
-  var c = e && e.code;
+  var c = (e && e.code) || "", m = (e && e.message) || "";
   var map = {
-    "auth/invalid-credential": "That email and password don't match an account.",
-    "auth/wrong-password": "That email and password don't match an account.",
-    "auth/user-not-found": "That email and password don't match an account.",
-    "auth/invalid-email": "Enter a valid email address.",
-    "auth/email-already-in-use": "There's already an account with that email. Sign in instead, or use Google if you signed up with it.",
-    "auth/weak-password": "Use a password with at least 6 characters.",
-    "auth/missing-password": "Enter your password.",
-    "auth/too-many-requests": "Too many attempts. Wait a few minutes and try again.",
-    "auth/popup-closed-by-user": "",
-    "auth/cancelled-popup-request": "",
-    "auth/popup-blocked": "Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.",
-    "auth/account-exists-with-different-credential": "This email already has an account with a password. Sign in with your password.",
-    "auth/unauthorized-domain": "Sign-in isn't enabled for this web address yet. Add it under Firebase › Authentication › Settings › Authorized domains.",
-    "auth/operation-not-allowed": "This sign-in method isn't switched on in Firebase yet.",
-    "auth/network-request-failed": "Couldn't reach the sign-in server. Check your connection.",
-    "auth/requires-recent-login": "For security, sign out and sign back in, then try again."
+    invalid_credentials: "That email and password don't match an account.",
+    email_not_confirmed: "Confirm your email first: open the link we sent you, then sign in.",
+    user_already_exists: "There's already an account with that email. Sign in instead, or use Google if you signed up with it.",
+    email_exists: "There's already an account with that email. Sign in instead, or use Google if you signed up with it.",
+    weak_password: "Use a longer password: at least 6 characters.",
+    email_address_invalid: "Enter a valid email address.",
+    validation_failed: "Check the email and password and try again.",
+    over_email_send_rate_limit: "Too many emails sent. Wait a few minutes and try again.",
+    over_request_rate_limit: "Too many attempts. Wait a few minutes and try again.",
+    signup_disabled: "New sign-ups are switched off for this league.",
+    provider_disabled: "Google sign-in isn't switched on in Supabase yet.",
+    same_password: "That's already your password. Pick a different one.",
+    reauthentication_needed: "For security, sign out and back in, then try again."
   };
-  return c in map ? map[c] : "Sign-in failed" + (c ? " (" + c + ")" : "") + ".";
+  if (map[c]) return map[c];
+  if (/Invalid login credentials/i.test(m)) return map.invalid_credentials;
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Couldn't reach the sign-in server. Check your connection.";
+  return m || "Sign-in failed.";
 }
-function loadFirebase() {
-  var base = "https://www.gstatic.com/firebasejs/" + CONFIG.firebaseVersion + "/";
-  return Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-firestore.js")]).then(function (mods) {
-    var fbApp = mods[0].initializeApp(FIREBASE_CONFIG);
-    FB = { a: mods[1], fs: mods[2], auth: mods[1].getAuth(fbApp), db: mods[2].getFirestore(fbApp) };
+function q(p) { return p.then(function (r) { if (r.error) throw r.error; return r.data; }); }
+function siteUrl() { return location.origin + location.pathname; }
+function loadSupabase() {
+  return import(CONFIG.supabaseUrl).then(function (m) {
+    sb = m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key, { auth: { flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   });
 }
-function assemble() {
-  if (live.league === undefined || live.players === undefined || live.cups === undefined) return;
-  state = normalize({ league: live.league, players: live.players, cups: live.cups });
-  render();
-}
-function startPublicListeners() {
-  var fs = FB.fs, db = FB.db;
-  function fail(e) { if (!state) { ui.loadError = "Couldn't load the standings (" + (e.code || "error") + "). Refresh to try again."; render(); } }
-  fs.onSnapshot(fs.doc(db, "league", "main"), function (s) { live.league = s.exists() ? s.data() : {}; assemble(); }, fail);
-  fs.onSnapshot(fs.collection(db, "players"), function (q) { live.players = q.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }); assemble(); }, fail);
-  fs.onSnapshot(fs.collection(db, "cups"), function (q) { live.cups = q.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }); assemble(); }, fail);
-  fs.onSnapshot(fs.doc(db, "config", "owner"), function (s) { me.ownerUid = s.exists() ? s.data().uid : null; me.ownerKnown = true; onRoleMaybeChanged(); }, function () { me.ownerKnown = true; });
-}
-function loadPhoto(id) {
-  if (photoCache[id] || !FB) return;
-  photoCache[id] = "loading";
-  FB.fs.getDoc(FB.fs.doc(FB.db, "photos", id)).then(function (s) {
-    photoCache[id] = s.exists() && s.data().data ? "data:image/jpeg;base64," + s.data().data : "none";
-  }).catch(function () { photoCache[id] = "none"; }).then(render);
-}
-var pendingSignupName = "";
-function startAuth() {
-  FB.a.onAuthStateChanged(FB.auth, function (user) {
-    userUnsubs.forEach(function (u) { u(); }); userUnsubs = [];
-    me.user = user; me.profile = null; profileDraft = null; mySubs = []; adminData = { pending: [], users: [] };
-    me.ready = true;
-    if (!user) { onRoleMaybeChanged(); return; }
-    var fs = FB.fs, db = FB.db;
-    var ref = fs.doc(db, "users", user.uid);
-    userUnsubs.push(fs.onSnapshot(ref, function (s) {
-      if (!s.exists()) {
-        var name = (pendingSignupName || user.displayName || (user.email || "").split("@")[0] || "Racer").slice(0, 40);
-        fs.setDoc(ref, { displayName: name, email: user.email || "", role: "member", color: COLORS[Math.floor(Math.random() * COLORS.length)], favoriteCharacter: "", favoriteVehicle: "", createdAt: Date.now(), updatedAt: Date.now() })
-          .catch(function (e) { ui.error = fsErr(e); render(); });
-        return;
-      }
-      pendingSignupName = "";
-      me.profile = s.data();
-      if (!profileDraft) profileDraft = null;
-      onRoleMaybeChanged();
-    }, function () {}));
-    userUnsubs.push(fs.onSnapshot(fs.query(fs.collection(db, "submissions"), fs.where("submittedBy", "==", user.uid)), function (q) {
-      mySubs = q.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }).sort(function (a, b) { return b.submittedAt - a.submittedAt; });
-      render();
-    }, function () {}));
+function mapCup(c) { return { id: c.id, cup: c.cup, date: c.date, max: c.max, results: c.results || [], notes: c.notes || "", hasPhoto: !!c.has_photo, addedAt: Number(c.added_at) || 0 }; }
+function mapProfile(u) { return { id: u.id, displayName: u.display_name, email: u.email, role: u.role, color: u.color, favoriteCharacter: u.favorite_character, favoriteVehicle: u.favorite_vehicle }; }
+function mapSub(s) { return { id: s.id, cup: s.cup, date: s.date, max: s.max, rows: s.rows || [], notes: s.notes || "", hasPhoto: !!s.has_photo, status: s.status, submittedBy: s.submitted_by, submitterName: s.submitter_name, submittedAt: Number(s.submitted_at) || 0, reviewNote: s.review_note || "" }; }
+function loadPublic() {
+  return Promise.all([
+    q(sb.from("league").select("settings").eq("id", 1).maybeSingle()),
+    q(sb.from("players").select("id,name,color,aliases")),
+    q(sb.from("cups").select("id,cup,date,max,results,notes,has_photo,added_at")),
+    q(sb.rpc("league_has_owner"))
+  ]).then(function (r) {
+    state = normalize({ league: r[0] ? r[0].settings : {}, players: r[1], cups: r[2].map(mapCup) });
+    me.hasOwner = !!r[3]; me.ownerKnown = true;
     render();
   });
 }
-var adminUnsubs = [], adminOn = false;
-function onRoleMaybeChanged() {
-  var want = isAdmin();
-  if (want && !adminOn) {
-    adminOn = true;
-    var fs = FB.fs, db = FB.db;
-    adminUnsubs.push(fs.onSnapshot(fs.query(fs.collection(db, "submissions"), fs.where("status", "==", "pending")), function (q) {
-      adminData.pending = q.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }); render();
-    }, function () {}));
-    adminUnsubs.push(fs.onSnapshot(fs.collection(db, "users"), function (q) {
-      adminData.users = q.docs.map(function (d) { return Object.assign({}, d.data(), { id: d.id }); }); render();
-    }, function () {}));
-  } else if (!want && adminOn) {
-    adminOn = false; adminUnsubs.forEach(function (u) { u(); }); adminUnsubs = []; adminData = { pending: [], users: [] };
-  }
-  render();
+function loadMine() {
+  if (!me.user) return Promise.resolve();
+  var uidNow = me.user.id;
+  return q(sb.from("profiles").select("*").eq("id", uidNow).maybeSingle()).then(function (p) {
+    if (!me.user || me.user.id !== uidNow) return;
+    me.profile = p ? mapProfile(p) : null;
+    var jobs = [q(sb.from("submissions").select("*").eq("submitted_by", uidNow)).then(function (rows) { mySubs = rows.map(mapSub).sort(function (a, b) { return b.submittedAt - a.submittedAt; }); })];
+    if (isAdmin()) {
+      jobs.push(q(sb.from("submissions").select("*").eq("status", "pending")).then(function (rows) { adminData.pending = rows.map(mapSub); }));
+      jobs.push(q(sb.from("profiles").select("*")).then(function (rows) { adminData.users = rows.map(mapProfile); }));
+    } else adminData = { pending: [], users: [] };
+    return Promise.all(jobs);
+  }).catch(function () {}).then(render);
+}
+var reloadT = null;
+function reloadSoon() { clearTimeout(reloadT); reloadT = setTimeout(function () { loadPublic().catch(function () {}); loadMine(); }, 250); }
+function startRealtime() {
+  try {
+    sb.channel("league-live").on("postgres_changes", { event: "*", schema: "public" }, reloadSoon).subscribe();
+  } catch (e) { /* live updates are a convenience; the page still works without them */ }
+}
+function loadPhoto(id) {
+  if (photoCache[id] || !sb) return;
+  photoCache[id] = "loading";
+  q(sb.from("photos").select("data").eq("cup_id", id).maybeSingle()).then(function (r) {
+    photoCache[id] = r && r.data ? "data:image/jpeg;base64," + r.data : "none";
+  }).catch(function () { photoCache[id] = "none"; }).then(render);
+}
+function startAuth() {
+  sb.auth.onAuthStateChange(function (event, session) {
+    var user = session ? session.user : null;
+    var changed = (me.user && me.user.id) !== (user && user.id);
+    me.user = user; me.ready = true;
+    if (event === "PASSWORD_RECOVERY") { me.recovery = true; location.hash = "account"; }
+    if (changed) { me.profile = null; profileDraft = null; mySubs = []; adminData = { pending: [], users: [] }; ui.msg = ""; ui.error = ""; ui.changingPw = false; }
+    // Supabase advises not awaiting its own calls inside this callback.
+    setTimeout(function () { if (changed || event === "USER_UPDATED") loadMine(); else render(); }, 0);
+  });
 }
 
 // ---------- saving ----------
@@ -731,21 +725,18 @@ function saveDraft() {
   var err = validateDraft(d);
   if (err) { d.error = err; render(); return; }
   d.saving = true; d.error = ""; render();
-  var fs = FB.fs, db = FB.db, batch = fs.writeBatch(db), done;
+  var call, done;
   if (d.mode === "submit") {
-    var sid = uid();
-    batch.set(fs.doc(db, "submissions", sid), {
-      cup: d.cup, date: d.date, max: Number(d.max), notes: String(d.notes || "").trim(), hasPhoto: !!d.photoB64,
-      rows: d.rows.map(function (r) { return { raw: String(r.raw || "").trim(), pts: r.assign === "ignore" ? (r.pts === "" ? null : Number(r.pts)) : Number(r.pts), assign: r.assign, newName: r.assign === "new" ? String(r.newName || "").trim() : "" }; }),
-      status: "pending", submittedBy: me.user.uid, submitterName: myName(), submittedAt: Date.now()
-    });
-    if (d.photoB64) batch.set(fs.doc(db, "submissionPhotos", sid), { data: d.photoB64, submittedBy: me.user.uid });
+    call = q(sb.rpc("submit_cup", {
+      p_sub: { id: uid(), cup: d.cup, date: d.date, max: Number(d.max), notes: String(d.notes || "").trim(),
+        rows: d.rows.map(function (r) { return { raw: String(r.raw || "").trim(), pts: r.pts === "" ? null : Number(r.pts), assign: r.assign, newName: r.assign === "new" ? String(r.newName || "").trim() : "" }; }) },
+      p_photo: d.photoB64 || null
+    }));
     done = { view: "account", flash: "Submitted. An admin will review it." };
   } else {
     var cupId = d.id || uid();
     var players = state.players.map(function (p) { return Object.assign({}, p, { aliases: (p.aliases || []).slice() }); });
-    var touched = {};
-    var results = [];
+    var touched = {}, results = [];
     d.rows.filter(function (r) { return r.assign !== "ignore"; }).forEach(function (r) {
       var pid = r.assign;
       if (pid === "new" || !players.some(function (p) { return p.id === pid; })) {
@@ -758,23 +749,20 @@ function saveDraft() {
       if (p && raw && raw.toLowerCase() !== p.name.toLowerCase() && !p.aliases.some(function (a) { return a.toLowerCase() === raw.toLowerCase(); })) { p.aliases.push(raw); touched[pid] = 1; }
       results.push({ p: pid, pts: Number(r.pts), raw: raw });
     });
-    players.forEach(function (p) { if (touched[p.id]) batch.set(fs.doc(db, "players", p.id), { name: p.name, color: p.color, aliases: p.aliases }); });
     var old = state.cups.find(function (c) { return c.id === cupId; });
-    batch.set(fs.doc(db, "cups", cupId), {
-      cup: d.cup, date: d.date, max: Number(d.max), results: results, notes: String(d.notes || "").trim(),
-      hasPhoto: !!d.photoB64 || !!(old && old.hasPhoto), addedAt: old ? old.addedAt : Date.now(), addedBy: me.user.uid
-    });
-    if (d.photoB64 && d.photoChanged) { batch.set(fs.doc(db, "photos", cupId), { data: d.photoB64 }); photoCache[cupId] = d.photoUrl; }
-    if (d.mode === "review") {
-      batch.update(fs.doc(db, "submissions", d.id), { status: "approved", reviewedBy: me.user.uid, reviewedAt: Date.now(), cupId: cupId });
-      batch.delete(fs.doc(db, "submissionPhotos", d.id));
-    }
+    call = q(sb.rpc("save_cup", {
+      p_cup: { id: cupId, cup: d.cup, date: d.date, max: Number(d.max), results: results, notes: String(d.notes || "").trim(),
+        has_photo: !!d.photoB64 || !!(old && old.hasPhoto), added_at: old ? old.addedAt : Date.now() },
+      p_players: players.filter(function (p) { return touched[p.id]; }),
+      p_photo: d.photoB64 && d.photoChanged ? d.photoB64 : null,
+      p_submission: d.mode === "review" ? d.id : null
+    })).then(function () { if (d.photoB64 && d.photoChanged) photoCache[cupId] = d.photoUrl; });
     done = d.mode === "review" ? { view: "admin", flash: "Approved. Standings updated." } : { view: "cups", flash: d.mode === "edit" ? "Cup updated" : "Cup saved. Standings updated." };
   }
-  batch.commit().then(function () {
-    draft = null; flash(done.flash);
+  call.then(function () {
+    draft = null; flash(done.flash); reloadSoon();
     if (location.hash !== "#" + done.view) location.hash = done.view; else render();
-  }).catch(function (e) { d.error = fsErr(e); }).then(function () { d.saving = false; if (draft === d) render(); });
+  }).catch(function (e) { d.error = dbErr(e); }).then(function () { d.saving = false; if (draft === d) render(); });
 }
 function saveSettings() {
   var s = settingsDraft; if (!s || ui.busy) return;
@@ -786,25 +774,22 @@ function saveSettings() {
   else if (!(n.playoffSpots >= 2 && n.playoffSpots <= 32 && Math.round(n.playoffSpots) === n.playoffSpots)) err = "Playoff spots must be a whole number from 2 to 32.";
   else if (!(n.minParticipation >= 0 && n.minParticipation <= 100)) err = "Qualifying % must be between 0 and 100.";
   else if (!(n.defaultMax >= 1 && Math.round(n.defaultMax) === n.defaultMax)) err = "Default max points must be a whole number above 0.";
-  else if (s.players.some(function (p) { return !String(p.name).trim(); })) err = "Every player needs a name.";
+  else if (s.players.some(function (p) { return !String(p.name).trim() || String(p.name).trim().length > 40; })) err = "Every player needs a name of up to 40 characters.";
   if (err) { ui.error = err; render(); return; }
-  var fs = FB.fs, db = FB.db, batch = fs.writeBatch(db);
-  batch.set(fs.doc(db, "league", "main"), n);
   var keep = {}; s.players.forEach(function (p) { keep[p.id] = String(p.name).trim(); });
-  state.players.forEach(function (p) {
-    if (!(p.id in keep)) batch.delete(fs.doc(db, "players", p.id));
-    else if (keep[p.id] !== p.name) batch.update(fs.doc(db, "players", p.id), { name: keep[p.id] });
-  });
+  var names = state.players.filter(function (p) { return p.id in keep && keep[p.id] !== p.name; }).map(function (p) { return { id: p.id, name: keep[p.id] }; });
+  var removed = state.players.filter(function (p) { return !(p.id in keep); }).map(function (p) { return p.id; });
   ui.busy = true; ui.error = ""; render();
-  batch.commit().then(function () { settingsDraft = null; flash("Settings saved"); }).catch(function (e) { ui.error = fsErr(e); }).then(function () { ui.busy = false; render(); });
+  q(sb.rpc("save_settings", { p_settings: n, p_names: names, p_removed: removed }))
+    .then(function () { settingsDraft = null; flash("Settings saved"); reloadSoon(); }).catch(function (e) { ui.error = dbErr(e); }).then(function () { ui.busy = false; render(); });
 }
 function saveProfile() {
   var p = profileDraft; if (!p || ui.busy) return;
   var name = String(p.displayName || "").trim();
   if (!name) { ui.error = "Enter a display name."; render(); return; }
   ui.busy = true; ui.error = ""; render();
-  FB.fs.updateDoc(FB.fs.doc(FB.db, "users", me.user.uid), { displayName: name, color: p.color, favoriteCharacter: p.favoriteCharacter || "", favoriteVehicle: String(p.favoriteVehicle || "").trim(), updatedAt: Date.now() })
-    .then(function () { profileDraft = null; flash("Profile saved"); }).catch(function (e) { ui.error = fsErr(e); }).then(function () { ui.busy = false; render(); });
+  q(sb.from("profiles").update({ display_name: name, color: p.color, favorite_character: p.favoriteCharacter || "", favorite_vehicle: String(p.favoriteVehicle || "").trim(), updated_at: new Date().toISOString() }).eq("id", me.user.id))
+    .then(function () { profileDraft = null; flash("Profile saved"); return loadMine(); }).catch(function (e) { ui.error = dbErr(e); }).then(function () { ui.busy = false; render(); });
 }
 var flashT = null;
 function flash(msg) { ui.flash = msg; clearTimeout(flashT); flashT = setTimeout(function () { ui.flash = ""; render(); }, 4500); render(); }
@@ -816,15 +801,24 @@ function doAuth() {
   if (up && !f.name.trim()) { ui.error = "Enter a display name."; render(); return; }
   ui.busy = true; render();
   var p = up
-    ? (pendingSignupName = f.name.trim(), FB.a.createUserWithEmailAndPassword(FB.auth, f.email.trim(), f.password).then(function (cred) { return FB.a.updateProfile(cred.user, { displayName: f.name.trim() }); }))
-    : FB.a.signInWithEmailAndPassword(FB.auth, f.email.trim(), f.password);
-  p.then(function () { ui.form = { email: "", password: "", name: "" }; flash(up ? "Account created. Welcome!" : "Signed in"); })
-    .catch(function (e) { pendingSignupName = ""; ui.error = authErr(e); })
-    .then(function () { ui.busy = false; render(); });
+    ? q(sb.auth.signUp({ email: f.email.trim(), password: f.password, options: { data: { display_name: f.name.trim() }, emailRedirectTo: siteUrl() } }))
+    : q(sb.auth.signInWithPassword({ email: f.email.trim(), password: f.password }));
+  p.then(function (data) {
+    ui.form = { email: "", password: "", name: "" };
+    if (up && !data.session) { ui.authMode = "signin"; ui.msg = "Check your inbox: open the confirmation link we sent, then sign in."; }
+    else flash(up ? "Account created. Welcome!" : "Signed in");
+  }).catch(function (e) { ui.error = authErr(e); }).then(function () { ui.busy = false; render(); });
 }
 function doGoogle() {
   ui.error = ""; ui.msg = ""; ui.busy = true; render();
-  FB.a.signInWithPopup(FB.auth, new FB.a.GoogleAuthProvider()).then(function () { flash("Signed in"); })
+  q(sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: siteUrl() } }))
+    .catch(function (e) { ui.error = authErr(e); ui.busy = false; render(); }); // on success the browser leaves for Google
+}
+function setPassword() {
+  var pw = ui.form.newPassword || "";
+  if (pw.length < 6) { ui.error = "Use at least 6 characters."; render(); return; }
+  ui.busy = true; ui.error = ""; render();
+  q(sb.auth.updateUser({ password: pw })).then(function () { ui.form.newPassword = ""; me.recovery = false; ui.changingPw = false; flash("Password updated"); })
     .catch(function (e) { ui.error = authErr(e); }).then(function () { ui.busy = false; render(); });
 }
 
@@ -841,7 +835,6 @@ document.addEventListener("submit", function (e) { if (e.target.id === "auth-for
 document.addEventListener("click", function (e) {
   var t = e.target.closest("[data-act]"); if (!t) return;
   var act = t.getAttribute("data-act"), id = t.getAttribute("data-key"), i = Number(t.getAttribute("data-i"));
-  var fs = FB && FB.fs, db = FB && FB.db;
   if (act === "sel") { ui.sel = ui.sel === id ? null : id; render(); }
   else if (act === "unsel") { ui.sel = null; render(); }
   else if (act === "new-cup") { if (!draft || draft.mode === "edit" || draft.mode === "review") { draft = newDraft(); if (ui.view === "add") render(); } }
@@ -851,21 +844,17 @@ document.addEventListener("click", function (e) {
   else if (act === "reject") { ui.rejectId = id; ui.rejectNote = ""; render(); }
   else if (act === "reject-no") { ui.rejectId = null; render(); }
   else if (act === "reject-yes") {
-    var b = fs.writeBatch(db);
-    b.update(fs.doc(db, "submissions", id), { status: "rejected", reviewedBy: me.user.uid, reviewedAt: Date.now(), reviewNote: String(ui.rejectNote || "").trim().slice(0, 200) });
-    b.delete(fs.doc(db, "submissionPhotos", id));
-    b.commit().then(function () { ui.rejectId = null; flash("Submission rejected"); }).catch(function (er) { ui.error = fsErr(er); render(); });
+    q(sb.rpc("reject_submission", { p_id: id, p_note: String(ui.rejectNote || "").trim().slice(0, 200) }))
+      .then(function () { ui.rejectId = null; flash("Submission rejected"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); render(); });
   }
   else if (act === "withdraw") {
-    var w = fs.writeBatch(db); w.delete(fs.doc(db, "submissions", id)); w.delete(fs.doc(db, "submissionPhotos", id));
-    w.commit().then(function () { flash("Submission withdrawn"); }).catch(function (er) { ui.error = fsErr(er); render(); });
+    q(sb.from("submissions").delete().eq("id", id)).then(function () { flash("Submission withdrawn"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); render(); });
   }
   else if (act === "del-ask") { ui.confirmDel = id; render(); }
   else if (act === "del-no") { ui.confirmDel = null; render(); }
   else if (act === "del-yes") {
     ui.busy = true; ui.error = ""; render();
-    var dl = fs.writeBatch(db); dl.delete(fs.doc(db, "cups", id)); dl.delete(fs.doc(db, "photos", id));
-    dl.commit().then(function () { flash("Cup deleted"); }).catch(function (er) { ui.error = fsErr(er); }).then(function () { ui.busy = false; ui.confirmDel = null; render(); });
+    q(sb.from("cups").delete().eq("id", id)).then(function () { flash("Cup deleted"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); }).then(function () { ui.busy = false; ui.confirmDel = null; render(); });
   }
   else if (act === "read") { readPhoto(); }
   else if (act === "stop-read") { if (readCtl) readCtl.abort(); readCtl = null; if (draft) draft.reading = false; render(); }
@@ -881,26 +870,24 @@ document.addEventListener("click", function (e) {
   else if (act === "forgot") {
     var em = ui.form.email.trim();
     if (!em) { ui.error = "Enter your email above, then press Forgot password."; render(); return; }
-    FB.a.sendPasswordResetEmail(FB.auth, em).then(function () { ui.error = ""; ui.msg = "If there's an account for " + em + ", a reset link is on its way."; render(); })
+    q(sb.auth.resetPasswordForEmail(em, { redirectTo: siteUrl() })).then(function () { ui.error = ""; ui.msg = "If there's an account for " + em + ", a reset link is on its way."; render(); })
       .catch(function (er) { ui.error = authErr(er); render(); });
   }
-  else if (act === "reset-pw") {
-    FB.a.sendPasswordResetEmail(FB.auth, me.user.email).then(function () { ui.msg = "Password reset link sent to " + me.user.email + "."; render(); }).catch(function (er) { ui.error = authErr(er); render(); });
-  }
-  else if (act === "signout") { FB.a.signOut(FB.auth).then(function () { flash("Signed out"); location.hash = "standings"; }); }
+  else if (act === "change-pw") { ui.changingPw = !ui.changingPw; ui.form.newPassword = ""; ui.error = ""; render(); }
+  else if (act === "set-pw") { setPassword(); }
+  else if (act === "signout") { sb.auth.signOut().then(function () { flash("Signed out"); location.hash = "standings"; }); }
   else if (act === "claim") {
     ui.busy = true; render();
-    fs.setDoc(fs.doc(db, "config", "owner"), { uid: me.user.uid, claimedAt: Date.now() }).then(function () { flash("You're the league owner"); })
-      .catch(function (er) { ui.error = er && er.code === "permission-denied" ? "Someone has already claimed ownership." : fsErr(er); }).then(function () { ui.busy = false; render(); });
+    q(sb.rpc("claim_ownership")).then(function () { flash("You're the league owner"); me.hasOwner = true; return loadMine(); })
+      .catch(function (er) { ui.error = dbErr(er); }).then(function () { ui.busy = false; render(); });
   }
   else if (act === "save-ai") { lsSet(KEY_AI, document.getElementById("k-ai").value.trim()); ui.msg = lsGet(KEY_AI) ? "Anthropic key saved on this device." : "Anthropic key removed from this device."; render(); }
   else if (act === "delete-account") { ui.confirmDeleteAccount = true; render(); }
   else if (act === "delete-account-no") { ui.confirmDeleteAccount = false; render(); }
   else if (act === "delete-account-yes") {
-    var u = me.user;
-    fs.deleteDoc(fs.doc(db, "users", u.uid)).then(function () { return FB.a.deleteUser(u); })
+    q(sb.rpc("delete_my_account")).then(function () { return sb.auth.signOut({ scope: "local" }); })
       .then(function () { flash("Your account was deleted"); location.hash = "standings"; })
-      .catch(function (er) { ui.confirmDeleteAccount = false; ui.error = er && er.code && er.code.indexOf("auth/") === 0 ? authErr(er) : fsErr(er); render(); });
+      .catch(function (er) { ui.confirmDeleteAccount = false; ui.error = dbErr(er); render(); });
   }
 });
 document.addEventListener("keydown", function (e) {
@@ -922,8 +909,8 @@ document.addEventListener("change", function (e) {
   else if (t.dataset.r === "assign" && draft) { var row = draft.rows[Number(t.dataset.i)]; row.assign = t.value; if (t.value === "new" && !row.newName) row.newName = row.raw; render(); var n = document.getElementById("r-new-" + t.dataset.i); if (n) n.focus(); }
   else if (t.dataset.role) {
     var target = t.dataset.role, role = t.value;
-    FB.fs.updateDoc(FB.fs.doc(FB.db, "users", target), { role: role, updatedAt: Date.now() }).then(function () { flash("Role updated"); })
-      .catch(function (er) { ui.error = fsErr(er); render(); });
+    q(sb.rpc("set_role", { p_user: target, p_role: role })).then(function () { flash("Role updated"); return loadMine(); })
+      .catch(function (er) { ui.error = dbErr(er); render(); });
   }
 });
 document.addEventListener("dragover", function (e) { var d = e.target.closest && e.target.closest("#drop"); if (d) { e.preventDefault(); d.classList.add("over"); } });
@@ -933,8 +920,8 @@ document.addEventListener("drop", function (e) { var d = e.target.closest && e.t
 // ---------- boot ----------
 var h0 = (location.hash || "").replace("#", ""); ui.view = VIEWS.indexOf(h0) >= 0 ? h0 : "standings";
 render();
-if (FIREBASE_CONFIG) {
-  loadFirebase().then(function () { startPublicListeners(); startAuth(); })
+if (SUPABASE_CONFIG) {
+  loadSupabase().then(function () { startAuth(); startRealtime(); return loadPublic(); })
     .catch(function () { ui.loadError = "Couldn't load the league. Check your connection and refresh."; render(); });
 } else {
   // Accounts not configured yet: show the static data file read-only.

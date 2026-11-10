@@ -1,23 +1,19 @@
 # Kart Night League
 
 Static GitHub Pages site (repo MEGmax/kart-league, branch `main`, no build step): `index.html` + `styles.css` + `app.js`.
-Accounts and data are in Firebase: Auth (email/password + Google) and Cloud Firestore. `firebase-config.js` holds the project config.
+Accounts and data are in Supabase (Auth: email/password + Google; Postgres with row level security). `supabase-config.js` holds the project URL and publishable key. The client is `@supabase/supabase-js@2.118.0` from jsDelivr.
 
-## Firestore layout
+## Database
 
-- `league/main`: settings `{name, season, seasonLength, playoffSpots, minParticipation, defaultMax}`
-- `players/{id}`: `{name, color, aliases[]}`
-- `cups/{id}`: `{cup, date, max, results: [{p, pts, raw}], notes, hasPhoto, addedAt, addedBy}`
-- `photos/{cupId}`: `{data: base64 JPEG}` (kept under 1 MiB)
-- `users/{uid}`: `{displayName, email, role: member|admin, color, favoriteCharacter, favoriteVehicle, createdAt, updatedAt}`
-- `config/owner`: `{uid}`, the permanent owner, claimed once from the account page
-- `submissions/{id}` + `submissionPhotos/{id}`: member-submitted cups awaiting admin review
+`supabase/schema.sql` is the single source of truth: tables (`league`, `players`, `cups`, `photos`, `profiles`, `submissions`, `submission_photos`), RLS policies, and `security definer` functions that re-check roles (`save_cup`, `submit_cup`, `reject_submission`, `save_settings`, `set_role`, `claim_ownership`, `delete_my_account`). It is written to be re-runnable. After editing it, the user must paste it into Supabase › SQL Editor and run it; there is no CLI deploy.
 
-`firestore.rules` is the source of truth for permissions. After editing it, the user must paste it into Firebase console › Firestore › Rules and publish (no CLI deploy is set up).
+Roles are in `profiles.role`: member, admin, owner (exactly one, claimed once). Photos are base64 JPEG text in `photos.data`.
+
+To test schema changes locally, run it in PGlite (`@electric-sql/pglite`, Node 20+) with stubs for `auth.users`, `auth.uid()` (reading `request.jwt.claim.sub`), the `anon`/`authenticated` roles and the `supabase_realtime` publication, then exercise each role with `set role`.
 
 ## When the user shares a results-screen photo
 
-Claude Code has no Firebase credentials, so it cannot write cups directly. Read the photo (rows: position, on-screen name, points; skip CPU character names), then give the user a table of league players and points to enter on the site's **+ Add cup** page.
+Claude Code has no database credentials, so it cannot write cups directly. Read the photo (rows: position, on-screen name, points; skip CPU character names), then give the user a table of league players and points to enter on the site's **+ Add cup** page.
 
 ## Rules of the data
 

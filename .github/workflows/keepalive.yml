@@ -1,0 +1,23 @@
+# Supabase pauses free projects after 7 days without activity.
+# This makes one small read every 3 days so the league stays online between seasons.
+name: Keep database awake
+on:
+  schedule:
+    - cron: "17 9 */3 * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read league settings
+        run: |
+          url=$(grep -o 'url: *"[^"]*"' supabase-config.js | head -1 | sed 's/.*"\(.*\)"/\1/')
+          key=$(grep -o 'key: *"[^"]*"' supabase-config.js | head -1 | sed 's/.*"\(.*\)"/\1/')
+          if [ -z "$url" ] || grep -q 'SUPABASE_CONFIG = null' supabase-config.js; then
+            echo "Supabase isn't configured yet; nothing to ping."; exit 0
+          fi
+          curl -fsS "$url/rest/v1/league?select=id" -H "apikey: $key" -H "Authorization: Bearer $key" > /dev/null
+          echo "Pinged $url"
