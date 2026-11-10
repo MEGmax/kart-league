@@ -1,0 +1,13 @@
+{
+  "v": 1,
+  "league": {
+    "name": "Kart Night League",
+    "season": "Season 1",
+    "seasonLength": 20,
+    "playoffSpots": 4,
+    "minParticipation": 50,
+    "defaultMax": 60
+  },
+  "players": [],
+  "cups": []
+}
