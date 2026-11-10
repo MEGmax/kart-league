@@ -215,3 +215,29 @@ code{font-family:var(--f-data);font-size:.85em;background:var(--panel-2);border:
 .st-approved{background:var(--panel-2);color:var(--good)}
 .st-rejected{background:var(--bad-soft);color:var(--bad)}
 .keyrow select{width:auto}
+
+/* weeks, badges, characters, unclaimed */
+.weeks{display:grid;gap:8px}
+.wk{display:grid;gap:4px;min-width:0}
+.wk span{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.wk.cur span{color:var(--accent)}
+.wk .track{height:14px;gap:2px}
+.wk-h{font-family:var(--f-display);font-weight:800;font-size:1.25rem;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:baseline;gap:10px;margin-top:6px}
+.who-txt{display:grid;gap:1px;min-width:0}
+.who-txt .main{font-size:.74rem;color:var(--muted);font-weight:500}
+.badge{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap;vertical-align:1px}
+.badge.off{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+.detail-head{justify-content:flex-start}
+.detail-head .badge{font-size:.72rem}
+.chars{display:grid;gap:6px}
+.char-row{display:grid;grid-template-columns:minmax(90px,130px) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.9rem}
+.char-row .cn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.char-row .cs{font-size:.8rem;text-align:right;white-space:nowrap}
+@media (max-width:520px){.char-row{grid-template-columns:minmax(80px,110px) minmax(0,1fr)}.char-row .cs{grid-column:1/-1;text-align:left}}
+.res-row .n{display:flex;align-items:baseline;gap:6px;min-width:0}
+.res-row .ch{font-size:.74rem;font-weight:500;color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.res-row{grid-template-columns:28px minmax(110px,190px) minmax(0,1fr) 64px}
+a.unc{color:var(--muted);font-style:italic;font-weight:600}
+.unc-tbl td{vertical-align:middle}
+.claim-form td{background:var(--panel-2)}
+.claim-form .f{min-width:150px}

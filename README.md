@@ -4,13 +4,21 @@ Regular-season standings for our Mario Kart Wii league. It's a static site on Gi
 
 ## How the standings work
 
-- Each race is scored 15-12-10-8-7-6-5-4-3-2-1-0, so a 4-race cup is out of 60.
+- Regular season: 5 weeks, about 4 cups a week (20 cups). Each cup is 4 races.
+- Each race is scored 15-12-10-8-7-6-5-4-3-2-1-0, so a cup is out of 60.
 - Rank = points earned ÷ points possible in the cups you played.
 - You must play at least 50% of cups held so far to be ranked.
 - Tiebreakers: cup wins, head-to-head points, total points, then a one-race runoff.
-- 20-cup regular season; top 4 make the playoffs (playoff page is "coming soon").
+- Top 4 make the playoffs (playoff page is "coming soon").
+- Every result records the character used; the site shows each player's most-picked character and a league-wide character chart.
 
-All of these numbers are editable by admins on the Admin page. Full rules are on the site.
+All of these numbers are editable by admins on the Admin page.
+
+## Results photos and unclaimed points
+
+Upload the photo of the standings screen after a cup's 4 races. Human players' rows are highlighted on that screen. With an Anthropic API key saved on your account page, Claude reads every row and records each highlighted player's character and points; CPU rows are dropped.
+
+Highlighted rows that can't be matched to a player are saved as **unclaimed**. They appear on the Unclaimed page, where a signed-in person presses **That was me** (and can correct the character). An admin approves the request on the Admin page and the points move to that person's player, creating one if needed.
 
 ## Accounts and roles
 
@@ -19,11 +27,11 @@ Sign-in and data use [Supabase](https://supabase.com) (free plan): email and pas
 | Role | Can |
 |---|---|
 | Visitor (signed out) | View standings, cups, rules |
-| Member (anyone who signs up) | Edit their profile; submit a cup with a photo for review; withdraw their pending submissions |
-| Admin | Add, edit and delete cups; approve or reject submissions; change league settings and players; promote or demote members |
+| Member (anyone who signs up) | Edit their profile; request unclaimed points; submit a cup with a photo for review; withdraw their pending requests and submissions |
+| Admin | Add, edit and delete cups; approve or decline point requests and submissions; add players ahead of sign-up and link them to accounts; change league settings; promote or demote members |
 | Owner | Everything an admin can do; can't be demoted. Claimed once from the account page |
 
-With an Anthropic API key saved on their account page (stored only in that browser), anyone adding or submitting a cup gets Claude to read the names and points from the photo.
+Admins can add players before those people sign up. Put the person's email on the player: when they create an account with that email and confirm it, it's linked automatically and their registration date shows as a "Joined" badge.
 
 Free Supabase projects pause after 7 days without activity. The `Keep database awake` GitHub Action reads one row every 3 days to prevent that. If the project is ever paused anyway, restore it from the Supabase dashboard.
 

@@ -15,19 +15,20 @@ var RACE_POINTS = [15, 12, 10, 8, 7, 6, 5, 4, 3, 2, 1, 0];
 var CUP_NAMES = ["Mushroom Cup", "Flower Cup", "Star Cup", "Special Cup", "Shell Cup", "Banana Cup", "Leaf Cup", "Lightning Cup", "Other"];
 var COLORS = ["#E5484D", "#0090FF", "#30A46C", "#F76B15", "#8E4EC6", "#E93D82", "#12A594", "#D9A400", "#6E56CF", "#A18072", "#3E63DD", "#7C8A2E"];
 var CHARACTERS = ["Mario", "Luigi", "Peach", "Daisy", "Yoshi", "Birdo", "Toad", "Toadette", "Koopa Troopa", "Diddy Kong", "Donkey Kong", "Bowser", "Bowser Jr.", "Wario", "Waluigi", "King Boo", "Rosalina", "Funky Kong", "Dry Bones", "Dry Bowser", "Baby Mario", "Baby Luigi", "Baby Peach", "Baby Daisy", "Mii"];
-var VIEWS = ["standings", "cups", "playoffs", "rules", "add", "account", "admin"];
-var DEFAULT_LEAGUE = { name: "Kart Night League", season: "Season 1", seasonLength: 20, playoffSpots: 4, minParticipation: 50, defaultMax: 60 };
+var VIEWS = ["standings", "cups", "unclaimed", "playoffs", "rules", "add", "account", "admin"];
+var DEFAULT_LEAGUE = { name: "Kart Night League", season: "Season 1", seasonWeeks: 5, cupsPerWeek: 4, playoffSpots: 4, minParticipation: 50, defaultMax: 60 };
 
 // ---------- state ----------
 var sb = null;                        // Supabase client once loaded
 var state = null;                    // {league, players, cups}
 var me = { ready: !SUPABASE_CONFIG, user: null, profile: null, hasOwner: true, ownerKnown: false, recovery: false };
-var adminData = { pending: [], users: [] };
-var mySubs = [];
+var adminData = { pending: [], users: [], claims: [], invites: [] };
+var mySubs = [], myClaims = [];
 var photoCache = {};                 // cupId -> data URL | "loading" | "none"
 var ui = { view: "standings", sel: null, confirmDel: null, flash: "", busy: false, error: "", loadError: "", msg: "",
-  authMode: "signin", form: { email: "", password: "", name: "" }, confirmDeleteAccount: false, rejectId: null, rejectNote: "" };
-var draft = null, readCtl = null, settingsDraft = null, profileDraft = null;
+  authMode: "signin", form: { email: "", password: "", name: "" }, confirmDeleteAccount: false,
+  rejectId: null, rejectNote: "", claimFor: null, claimForm: { character: "", note: "" } };
+var draft = null, readCtl = null, settingsDraft = null, profileDraft = null, playersDraft = null;
 
 // ---------- helpers ----------
 function lsGet(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
@@ -36,38 +37,55 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function today() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 function fmtDate(iso) { if (!iso) return ""; var d = new Date(iso + "T12:00:00"); if (isNaN(d)) return esc(iso); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: (d.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined) }); }
+function fmtDay(ts) { if (!ts) return ""; var d = new Date(ts); if (isNaN(d)) return ""; return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
 function fmtWhen(ms) { if (!ms) return ""; var d = new Date(ms); return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }); }
 function ord(n) { var s = ["th", "st", "nd", "rd"], v = n % 100; return s[(v - 20) % 10] || s[v] || s[0]; }
 function posHTML(n) { return '<span class="pos' + (n <= 3 ? " p" + n : "") + '">' + n + "<sup>" + ord(n) + "</sup></span>"; }
 function pctTxt(x) { return (x * 100).toFixed(1) + "%"; }
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function nextColor(players) { var used = players.map(function (p) { return p.color; }); for (var i = 0; i < COLORS.length; i++) if (used.indexOf(COLORS[i]) < 0) return COLORS[i]; return COLORS[players.length % COLORS.length]; }
-function playerName(id) { var p = state.players.find(function (x) { return x.id === id; }); return p ? p.name : "Unknown"; }
+function playerById(id) { return state.players.find(function (x) { return x.id === id; }); }
+function playerName(id) { var p = playerById(id); return p ? p.name : "Unknown"; }
 function signedIn() { return !!me.user; }
 function isOwner() { return !!(me.profile && me.profile.role === "owner"); }
 function isAdmin() { return isOwner() || !!(me.profile && me.profile.role === "admin"); }
 function roleOf(u) { return u.role || "member"; }
 function roleLabel(r) { return r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Member"; }
 function myName() { return (me.profile && me.profile.displayName) || (me.user && (me.user.email || "").split("@")[0]) || "Racer"; }
+function myPlayer() { return me.user && state ? state.players.find(function (p) { return p.userId === me.user.id; }) : null; }
+function seasonCups(L) { return (Number(L.seasonWeeks) || 5) * (Number(L.cupsPerWeek) || 4); }
+function joinedBadge(p, long) { return p.registeredAt ? '<span class="badge" title="Registered ' + esc(fmtDay(p.registeredAt)) + '">' + (long ? "Registered " + esc(fmtDay(p.registeredAt)) : "Joined " + esc(fmtDay(p.registeredAt).replace(/, \d{4}$/, ""))) + "</span>" : (long ? '<span class="badge off">Not registered</span>' : ""); }
+function charOptions(sel) { return '<option value="">—</option>' + CHARACTERS.map(function (c) { return "<option" + (c === sel ? " selected" : "") + ">" + c + "</option>"; }).join(""); }
 
 function normalize(raw) {
   raw = raw || {};
+  var L = Object.assign({}, DEFAULT_LEAGUE, raw.league || {});
+  delete L.seasonLength;
   return {
-    league: Object.assign({}, DEFAULT_LEAGUE, raw.league || {}),
-    players: (raw.players || []).map(function (p) { return { id: p.id, name: p.name, color: p.color || COLORS[0], aliases: p.aliases || [] }; }),
-    cups: (raw.cups || []).map(function (c) { return Object.assign({ notes: "", hasPhoto: false }, c, { results: (c.results || []).slice() }); })
+    league: L,
+    players: (raw.players || []).map(function (p) {
+      return { id: p.id, name: p.name, color: p.color || COLORS[0], aliases: p.aliases || [], userId: p.userId || p.user_id || null, registeredAt: p.registeredAt || p.registered_at || null };
+    }),
+    cups: (raw.cups || []).map(function (c) {
+      return Object.assign({ notes: "", hasPhoto: false }, c, {
+        week: Number(c.week) || 1,
+        results: (c.results || []).map(function (r, i) { return { rid: r.rid || "r" + i, p: r.p || null, pts: Number(r.pts) || 0, character: r.character || "", raw: r.raw || "" }; })
+      });
+    })
   };
 }
 
 // Example data, shown only while the league has no cups yet.
 var DEMO = (function () {
   var names = ["Alex", "Sam", "Jordan", "Riley", "Casey", "Morgan"];
-  var players = names.map(function (n, i) { return { id: "d" + i, name: n, color: COLORS[i], aliases: [] }; });
+  var mains = [["Funky Kong", "Funky Kong", "Daisy"], ["Daisy", "Peach"], ["Rosalina", "Rosalina", "King Boo"], ["Luigi"], ["Bowser", "Dry Bowser"], ["Toad", "Baby Daisy"]];
+  var players = names.map(function (n, i) { return { id: "d" + i, name: n, color: COLORS[i], aliases: [], userId: null, registeredAt: i < 4 ? "2026-09-0" + (i + 1) + "T18:00:00Z" : null }; });
   var pts = [[52, 47, 41, 38, 30, 25], [44, 55, 39, 33, 41, 0], [49, 38, 50, 29, 35, 41], [57, 42, 36, 44, 0, 31], [41, 49, 45, 37, 33, 28], [46, 51, 40, 0, 38, 35], [53, 39, 47, 41, 30, 0], [48, 44, 52, 36, 40, 29]];
   var cups = pts.map(function (row, ci) {
-    var d = new Date(2026, 8, 4 + ci * 7);
-    return { id: "dc" + ci, cup: CUP_NAMES[ci], date: d.toISOString().slice(0, 10), max: 60, notes: "", hasPhoto: false, addedAt: ci,
-      results: row.map(function (p, pi) { return { p: "d" + pi, pts: p, raw: names[pi] }; }).filter(function (r) { return r.pts > 0; }) };
+    var d = new Date(2026, 8, 4 + Math.floor(ci / 4) * 7);
+    var results = row.map(function (p, pi) { return { rid: "r" + pi, p: "d" + pi, pts: p, character: mains[pi][ci % mains[pi].length], raw: names[pi] }; }).filter(function (r) { return r.pts > 0; });
+    if (ci === 5 || ci === 7) results.push({ rid: "rx", p: null, pts: ci === 5 ? 36 : 33, character: "Yoshi", raw: "" });
+    return { id: "dc" + ci, cup: CUP_NAMES[ci], date: d.toISOString().slice(0, 10), week: Math.floor(ci / 4) + 1, max: 60, notes: "", hasPhoto: false, addedAt: ci, results: results };
   });
   return { league: Object.assign({}, DEFAULT_LEAGUE), players: players, cups: cups };
 })();
@@ -75,30 +93,43 @@ var DEMO = (function () {
 // ---------- standings math ----------
 function compute(st) {
   var L = st.league;
-  var cups = st.cups.slice().sort(function (a, b) { return (a.date || "").localeCompare(b.date || "") || ((a.addedAt || 0) - (b.addedAt || 0)); });
-  var byId = new Map();
-  st.players.forEach(function (p) { byId.set(p.id, { player: p, cp: 0, pts: 0, max: 0, wins: 0, pods: 0, finSum: 0, best: null, log: [], trend: [] }); });
+  var cups = st.cups.slice().sort(function (a, b) { return (a.week - b.week) || (a.date || "").localeCompare(b.date || "") || ((a.addedAt || 0) - (b.addedAt || 0)); });
+  var byId = new Map(), chars = {}, unclaimed = [], byWeek = {};
+  st.players.forEach(function (p) { byId.set(p.id, { player: p, cp: 0, pts: 0, max: 0, wins: 0, pods: 0, finSum: 0, best: null, log: [], trend: [], chars: {} }); });
   var cupInfo = new Map();
   cups.forEach(function (c, i) {
+    byWeek[c.week] = (byWeek[c.week] || 0) + 1;
     var max = Number(c.max) || L.defaultMax;
-    var res = c.results.filter(function (r) { return byId.has(r.p); }).map(function (r) { return { p: r.p, pts: Number(r.pts) || 0, raw: r.raw }; });
+    // Unclaimed rows are league humans too, so they keep their place in the finishing order.
+    var res = c.results.filter(function (r) { return !r.p || byId.has(r.p); }).map(function (r) { return { rid: r.rid, p: r.p || null, pts: Number(r.pts) || 0, character: r.character || "", raw: r.raw }; });
     res.sort(function (a, b) { return b.pts - a.pts; });
     res.forEach(function (r, k) { r.rank = (k > 0 && r.pts === res[k - 1].pts) ? res[k - 1].rank : k + 1; });
-    cupInfo.set(c.id, { num: i + 1, res: res, max: max });
+    cupInfo.set(c.id, { num: i + 1, res: res, max: max, week: c.week });
     res.forEach(function (r) {
+      if (r.character) {
+        var cs = chars[r.character] || (chars[r.character] = { name: r.character, picks: 0, pts: 0, max: 0, wins: 0 });
+        cs.picks++; cs.pts += r.pts; cs.max += max; if (r.rank === 1) cs.wins++;
+      }
+      if (!r.p) { unclaimed.push({ cup: c, num: i + 1, r: r, max: max, field: res.length }); return; }
       var s = byId.get(r.p);
       s.cp++; s.pts += r.pts; s.max += max;
       if (r.rank === 1) s.wins++;
       if (r.rank <= 3) s.pods++;
       s.finSum += r.rank;
+      if (r.character) s.chars[r.character] = (s.chars[r.character] || 0) + 1;
       if (!s.best || r.pts / max > s.best.pts / s.best.max) s.best = { pts: r.pts, max: max, cup: c, num: i + 1 };
-      s.log.push({ cup: c, num: i + 1, pts: r.pts, max: max, rank: r.rank, field: res.length });
+      s.log.push({ cup: c, num: i + 1, pts: r.pts, max: max, rank: r.rank, field: res.length, character: r.character });
       s.trend.push(s.pts / s.max);
     });
   });
   var total = cups.length;
   var need = total ? Math.max(1, Math.ceil(L.minParticipation / 100 * total)) : 0;
-  var rows = Array.from(byId.values()).map(function (s) { s.pct = s.max ? s.pts / s.max : 0; s.avg = s.cp ? s.finSum / s.cp : null; s.qualified = s.cp > 0 && s.cp >= need; return s; });
+  var rows = Array.from(byId.values()).map(function (s) {
+    s.pct = s.max ? s.pts / s.max : 0; s.avg = s.cp ? s.finSum / s.cp : null; s.qualified = s.cp > 0 && s.cp >= need;
+    s.charList = Object.keys(s.chars).map(function (k) { return { name: k, n: s.chars[k] }; }).sort(function (a, b) { return b.n - a.n || a.name.localeCompare(b.name); });
+    s.main = s.charList[0] || null;
+    return s;
+  });
   function h2h(a, b) { var d = 0; a.log.forEach(function (l) { var o = cupInfo.get(l.cup.id).res.find(function (r) { return r.p === b.player.id; }); if (o) d += l.pts - o.pts; }); return d; }
   function cmp(a, b) {
     var d = Math.round((b.pct - a.pct) * 1e6); if (d) return d;
@@ -110,7 +141,18 @@ function compute(st) {
   var ranked = rows.filter(function (r) { return r.qualified; }).sort(cmp);
   var unranked = rows.filter(function (r) { return !r.qualified && r.cp > 0; }).sort(function (a, b) { return b.cp - a.cp || b.pct - a.pct; });
   ranked.forEach(function (r, i) { r.rank = i + 1; r.back = (ranked[0].pct - r.pct) * 100; });
-  return { cups: cups, cupInfo: cupInfo, total: total, need: need, ranked: ranked, unranked: unranked, byId: byId };
+  var weeks = Object.keys(byWeek).map(Number);
+  return {
+    cups: cups, cupInfo: cupInfo, total: total, need: need, ranked: ranked, unranked: unranked, byId: byId, byWeek: byWeek,
+    curWeek: weeks.length ? Math.max.apply(null, weeks) : 1,
+    chars: Object.keys(chars).map(function (k) { return chars[k]; }).sort(function (a, b) { return b.picks - a.picks || b.wins - a.wins || a.name.localeCompare(b.name); }),
+    unclaimed: unclaimed.reverse()
+  };
+}
+function suggestWeek() {
+  if (!state || !state.cups.length) return 1;
+  var m = compute(state), L = state.league;
+  return (m.byWeek[m.curWeek] || 0) >= L.cupsPerWeek && m.curWeek < L.seasonWeeks ? m.curWeek + 1 : m.curWeek;
 }
 
 // ---------- rendering ----------
@@ -123,40 +165,50 @@ function render() {
   var demo = state.cups.length === 0;
   var st = demo ? DEMO : state;
   var m = compute(st);
+  var real = demo ? m : compute(state);
   var L = state.league;
   document.title = L.name;
   var v = ui.view;
   if ((v === "add" && !signedIn()) || (v === "admin" && !isAdmin())) v = "account";
-  var body = v === "standings" ? viewStandings(st, m, demo) : v === "cups" ? viewCups(st, m, demo) : v === "playoffs" ? viewPlayoffs(st, m, demo)
-    : v === "rules" ? viewRules(L) : v === "account" ? viewAccount() : v === "admin" ? viewAdmin() : viewAdd();
-  app.innerHTML = mast(L, compute(state)) + navHTML(v) + '<main class="wrap">' + body + "</main>" +
+  var body = v === "standings" ? viewStandings(st, m, demo) : v === "cups" ? viewCups(st, m, demo) : v === "unclaimed" ? viewUnclaimed(st, m, demo)
+    : v === "playoffs" ? viewPlayoffs(st, m, demo) : v === "rules" ? viewRules(L) : v === "account" ? viewAccount() : v === "admin" ? viewAdmin() : viewAdd();
+  app.innerHTML = mast(L, demo ? compute(state) : real) + navHTML(v, demo ? 0 : real.unclaimed.length) + '<main class="wrap">' + body + "</main>" +
     '<footer class="wrap foot"><span>' + esc(L.name) + " · " + esc(L.season) + "</span>" + (SUPABASE_CONFIG ? '<a href="#account">' + (signedIn() ? "Your account" : "Sign in or create an account") + "</a>" : "") + "</footer>" +
     (ui.flash ? '<div class="flash" role="status">' + esc(ui.flash) + "</div>" : "");
 }
 function mast(L, m) {
-  var n = Math.max(1, Number(L.seasonLength) || 20), done = Math.min(m.total, n), segs = "";
-  for (var i = 0; i < n; i++) segs += '<i class="seg' + (i < done ? " on" : "") + '"></i>';
-  var left = Math.max(0, n - m.total);
-  return '<header class="wrap mast"><div class="eyebrow">' + esc(L.season) + " · Regular season</div><h1>" + esc(L.name) + '</h1><div class="progress"><div class="progress-label"><span><b>' + m.total + " of " + n + "</b> cups played</span><span>" + (left ? left + " to go before playoffs" : "Regular season complete") + '</span></div><div class="track" style="grid-template-columns:repeat(' + n + ',minmax(0,1fr))" aria-hidden="true">' + segs + "</div></div></header>";
+  var W = Math.max(1, Number(L.seasonWeeks) || 5), per = Math.max(1, Number(L.cupsPerWeek) || 4), blocks = "";
+  for (var w = 1; w <= W; w++) {
+    var n = m.byWeek[w] || 0, segs = "";
+    for (var i = 0; i < Math.max(per, n); i++) segs += '<i class="seg' + (i < n ? " on" : "") + '"></i>';
+    blocks += '<div class="wk' + (w === m.curWeek && m.total ? " cur" : "") + '"><span>Week ' + w + '</span><div class="track" style="grid-template-columns:repeat(' + Math.max(per, n) + ',minmax(0,1fr))">' + segs + "</div></div>";
+  }
+  var left = Math.max(0, W * per - m.total);
+  var done = m.curWeek >= W && (m.byWeek[W] || 0) >= per;
+  return '<header class="wrap mast"><div class="eyebrow">' + esc(L.season) + " · Regular season</div><h1>" + esc(L.name) + "</h1>" +
+    '<div class="progress"><div class="progress-label"><span><b>Week ' + Math.min(m.curWeek, W) + " of " + W + "</b> · " + m.total + " cup" + (m.total === 1 ? "" : "s") + " played</span><span>" + (done ? "Regular season complete" : left + " cup" + (left === 1 ? "" : "s") + " to go before playoffs") + "</span></div>" +
+    '<div class="weeks" style="grid-template-columns:repeat(' + W + ',minmax(0,1fr))" aria-hidden="true">' + blocks + "</div></div></header>";
 }
-function navHTML(v) {
+function navHTML(v, unclaimedCount) {
   function t(id, label, extra) { return '<a class="tab" href="#' + id + '"' + (v === id ? ' aria-current="page"' : "") + ">" + label + (extra || "") + "</a>"; }
   var right = "";
   if (SUPABASE_CONFIG) {
-    if (isAdmin()) right += t("admin", "Admin", adminData.pending.length ? '<span class="soon">' + adminData.pending.length + "</span>" : "");
+    var waiting = adminData.pending.length + adminData.claims.length;
+    if (isAdmin()) right += t("admin", "Admin", waiting ? '<span class="soon">' + waiting + "</span>" : "");
     if (isAdmin()) right += '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">+ Add cup</a>';
     else if (signedIn()) right += '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">+ Submit cup</a>';
     right += signedIn()
       ? '<a class="acct' + (v === "account" ? " on" : "") + '" href="#account" title="Your account"><span class="dot" style="background:' + esc((me.profile && me.profile.color) || "var(--muted)") + '"></span>' + esc(myName()) + "</a>"
       : (me.ready ? '<a class="btn btn-sm" href="#account">Sign in</a>' : "");
   }
-  return '<nav class="nav"><div class="wrap">' + t("standings", "Standings") + t("cups", "Cups") + t("playoffs", "Playoffs", '<span class="soon">SOON</span>') + t("rules", "Rules") + '<span class="nav-spacer"></span>' + right + "</div></nav>";
+  return '<nav class="nav"><div class="wrap">' + t("standings", "Standings") + t("cups", "Cups") + t("unclaimed", "Unclaimed", unclaimedCount ? '<span class="soon">' + unclaimedCount + "</span>" : "") +
+    t("playoffs", "Playoffs", '<span class="soon">SOON</span>') + t("rules", "Rules") + '<span class="nav-spacer"></span>' + right + "</div></nav>";
 }
 function demoNote() {
-  return '<div class="note"><span><b>Example standings.</b> These made-up results show how the table works. They disappear when the first real cup is added.</span>' + (isAdmin() ? '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">Add the first cup</a>' : "") + "</div>";
+  return '<div class="note"><span><b>Example standings.</b> These made-up results show how the site works. They disappear when the first real cup is added.</span>' + (isAdmin() ? '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">Add the first cup</a>' : "") + "</div>";
 }
 function formPips(s) {
-  return '<span class="form">' + s.log.slice(-5).map(function (l) { return '<span class="pip' + (l.rank <= 3 ? " r" + l.rank : "") + '" title="' + esc(l.cup.cup) + ": " + l.rank + ord(l.rank) + " of " + l.field + '">' + l.rank + "</span>"; }).join("") + "</span>";
+  return '<span class="form">' + s.log.slice(-5).map(function (l) { return '<span class="pip' + (l.rank <= 3 ? " r" + l.rank : "") + '" title="' + esc(l.cup.cup) + ": " + l.rank + ord(l.rank) + " of " + l.field + (l.character ? " as " + esc(l.character) : "") + '">' + l.rank + "</span>"; }).join("") + "</span>";
 }
 var TABLE_HEAD = '<thead><tr><th class="l">Pos</th><th class="l">Player</th><th>Cups</th><th>Pts</th><th>Pct</th><th class="opt">Back</th><th>Wins</th><th class="opt">Podiums</th><th class="opt">Avg fin</th><th class="l opt">Last 5</th></tr></thead>';
 function viewStandings(st, m, demo) {
@@ -164,12 +216,12 @@ function viewStandings(st, m, demo) {
   if (demo) out += demoNote();
   var lead = m.ranked[0];
   var mostWins = m.ranked.concat(m.unranked).slice().sort(function (a, b) { return b.wins - a.wins; })[0];
-  var bestCup = null; m.byId.forEach(function (s) { if (s.best && (!bestCup || s.best.pts / s.best.max > bestCup.best.pts / bestCup.best.max)) bestCup = s; });
+  var topChar = m.chars[0];
   if (lead) {
     out += '<div class="strip">' +
       tile("Leader", lead.player.name, pctTxt(lead.pct) + " of possible points") +
       tile("Most cup wins", mostWins && mostWins.wins ? mostWins.player.name : "None yet", mostWins && mostWins.wins ? mostWins.wins + " win" + (mostWins.wins === 1 ? "" : "s") : "") +
-      tile("Best single cup", bestCup ? bestCup.player.name : "–", bestCup ? bestCup.best.pts + "/" + bestCup.best.max + " in " + bestCup.best.cup.cup : "") +
+      tile("Most picked character", topChar ? topChar.name : "–", topChar ? topChar.picks + " pick" + (topChar.picks === 1 ? "" : "s") + " · " + pctTxt(topChar.pts / topChar.max) + " avg" : "") +
       tile("Qualifying mark", m.need + " cup" + (m.need === 1 ? "" : "s"), L.minParticipation + "% of cups played so far") +
       "</div>";
   }
@@ -191,15 +243,24 @@ function viewStandings(st, m, demo) {
   }
   var sel = ui.sel && m.byId.get(ui.sel);
   if (sel && sel.cp) out += detailHTML(sel);
-  else if (m.ranked.length) out += '<p class="muted small" style="margin:0">Select a player to see their season.</p>';
+  else if (m.ranked.length) out += '<p class="muted small" style="margin:0">Select a player to see their season and character picks.</p>';
+  if (m.chars.length) out += charChartHTML(m.chars);
   return out;
+}
+function charChartHTML(chars) {
+  var top = chars.slice(0, 10), most = top[0].picks;
+  return '<section class="section-h"><h2>Most picked characters</h2><span class="muted small">Every league result with a character, unclaimed ones included</span></section>' +
+    '<div class="panel panel-pad chars">' + top.map(function (c) {
+      return '<div class="char-row"><span class="cn">' + esc(c.name) + '</span><span class="hbar"><i style="width:' + (c.picks / most * 100).toFixed(1) + '%;background:var(--accent)"></i></span><span class="cs num">' + c.picks + ' <span class="muted">pick' + (c.picks === 1 ? "" : "s") + " · " + pctTxt(c.pts / c.max) + " avg · " + c.wins + " win" + (c.wins === 1 ? "" : "s") + "</span></span></div>";
+    }).join("") + "</div>";
 }
 function tile(k, v, s) { return '<div class="tile"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span><span class="s">' + esc(s) + "</span></div>"; }
 function rowHTML(s, rank) {
   var p = s.player;
   return '<tr class="row' + (ui.sel === p.id ? " sel" : "") + '" data-act="sel" data-key="' + esc(p.id) + '" tabindex="0">' +
     '<td class="l">' + (rank ? posHTML(rank) : '<span class="pos">–</span>') + "</td>" +
-    '<td class="l"><span class="who"><span class="dot" style="background:' + esc(p.color) + '"></span><span class="name">' + esc(p.name) + "</span></span></td>" +
+    '<td class="l"><span class="who"><span class="dot" style="background:' + esc(p.color) + '"></span><span class="who-txt"><span class="name">' + esc(p.name) + "</span>" + (p.registeredAt ? '<span class="opt"> ' + joinedBadge(p) + "</span>" : "") +
+    (s.main ? '<span class="main">' + esc(s.main.name) + " ×" + s.main.n + "</span>" : "") + "</span></span></td>" +
     '<td class="num">' + s.cp + "</td>" +
     '<td class="num">' + s.pts + '<span class="muted">/' + s.max + "</span></td>" +
     '<td><div class="pct">' + pctTxt(s.pct) + '</div><div class="bar"><i style="width:' + (s.pct * 100).toFixed(1) + '%"></i></div></td>' +
@@ -233,24 +294,33 @@ function sparkSVG(trend) {
 }
 function detailHTML(s) {
   var p = s.player;
-  var log = s.log.slice().reverse().map(function (l) { return '<tr><td class="l num">' + l.num + '</td><td class="l">' + esc(l.cup.cup) + '</td><td class="l muted">' + fmtDate(l.cup.date) + '</td><td class="num">' + l.pts + '<span class="muted">/' + l.max + '</span></td><td class="num">' + l.rank + ord(l.rank) + '<span class="muted"> of ' + l.field + "</span></td></tr>"; }).join("");
-  return '<section class="panel panel-pad detail"><div class="detail-head"><h3><span class="dot" style="width:14px;height:14px;background:' + esc(p.color) + '"></span>' + esc(p.name) + '</h3><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
-    '<div class="stats">' + stat("Pct", pctTxt(s.pct)) + stat("Points", s.pts + "/" + s.max) + stat("Cups", s.cp) + stat("Wins", s.wins) + stat("Podiums", s.pods) + stat("Avg finish", s.avg != null ? s.avg.toFixed(2) : "–") + stat("Best cup", s.best ? s.best.pts + "/" + s.best.max : "–") + "</div>" +
-    '<div class="cols"><div><div class="eyebrow" style="margin-bottom:6px">Season pct, cup by cup</div>' + sparkSVG(s.trend) + '</div><div style="min-width:0"><div class="eyebrow" style="margin-bottom:6px">Cup log</div><div style="overflow-x:auto"><table class="mini"><thead><tr><th class="l">#</th><th class="l">Cup</th><th class="l">Date</th><th>Pts</th><th>Finish</th></tr></thead><tbody>' + log + "</tbody></table></div></div></div></section>";
+  var log = s.log.slice().reverse().map(function (l) { return '<tr><td class="l num">' + l.num + '</td><td class="l">' + esc(l.cup.cup) + ' <span class="muted small">wk ' + l.cup.week + '</span></td><td class="l">' + esc(l.character || "–") + '</td><td class="num">' + l.pts + '<span class="muted">/' + l.max + '</span></td><td class="num">' + l.rank + ord(l.rank) + '<span class="muted"> of ' + l.field + "</span></td></tr>"; }).join("");
+  var charRows = s.charList.length ? s.charList.map(function (c) {
+    var picks = s.log.filter(function (l) { return l.character === c.name; });
+    var pts = picks.reduce(function (a, l) { return a + l.pts; }, 0), max = picks.reduce(function (a, l) { return a + l.max; }, 0);
+    return '<div class="char-row"><span class="cn">' + esc(c.name) + '</span><span class="hbar"><i style="width:' + (c.n / s.charList[0].n * 100).toFixed(1) + "%;background:" + esc(p.color) + '"></i></span><span class="cs num">' + c.n + '<span class="muted"> · ' + pctTxt(pts / max) + "</span></span></div>";
+  }).join("") : '<p class="muted small" style="margin:0">No characters recorded yet.</p>';
+  return '<section class="panel panel-pad detail"><div class="detail-head"><h3><span class="dot" style="width:14px;height:14px;background:' + esc(p.color) + '"></span>' + esc(p.name) + "</h3>" + joinedBadge(p, true) + '<span class="nav-spacer"></span><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
+    '<div class="stats">' + stat("Pct", pctTxt(s.pct)) + stat("Points", s.pts + "/" + s.max) + stat("Cups", s.cp) + stat("Wins", s.wins) + stat("Podiums", s.pods) + stat("Avg finish", s.avg != null ? s.avg.toFixed(2) : "–") + stat("Main", s.main ? s.main.name : "–") + "</div>" +
+    '<div class="cols"><div style="display:grid;gap:14px"><div><div class="eyebrow" style="margin-bottom:6px">Season pct, cup by cup</div>' + sparkSVG(s.trend) + '</div><div><div class="eyebrow" style="margin-bottom:6px">Character picks</div><div class="chars">' + charRows + "</div></div></div>" +
+    '<div style="min-width:0"><div class="eyebrow" style="margin-bottom:6px">Cup log</div><div style="overflow-x:auto"><table class="mini"><thead><tr><th class="l">#</th><th class="l">Cup</th><th class="l">Character</th><th>Pts</th><th>Finish</th></tr></thead><tbody>' + log + "</tbody></table></div></div></div></section>";
 }
 function stat(k, v) { return '<div class="stat"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + "</span></div>"; }
 
 function viewCups(st, m, demo) {
   var out = "";
   if (demo) out += demoNote();
-  out += '<section class="section-h"><h2>Cup log</h2><span class="muted small">' + m.total + " cup" + (m.total === 1 ? "" : "s") + " recorded · newest first</span></section>";
+  out += '<section class="section-h"><h2>Cup log</h2><span class="muted small">' + m.total + " cup" + (m.total === 1 ? "" : "s") + " recorded · newest week first</span></section>";
   if (!m.cups.length) return out + '<div class="panel empty"><b>No cups yet.</b></div>';
+  var lastWeek = null;
   out += '<div class="cup-list">';
   m.cups.slice().reverse().forEach(function (c) {
     var info = m.cupInfo.get(c.id);
+    if (c.week !== lastWeek) { lastWeek = c.week; out += '<h3 class="wk-h">Week ' + c.week + ' <span class="muted small">' + (m.byWeek[c.week] || 0) + " cup" + (m.byWeek[c.week] === 1 ? "" : "s") + "</span></h3>"; }
     var rows = info.res.map(function (r) {
-      var p = st.players.find(function (x) { return x.id === r.p; });
-      return '<div class="res-row"><span class="r' + (r.rank <= 3 ? " p" + r.rank : "") + '">' + r.rank + '</span><span class="n">' + esc(p ? p.name : "?") + '</span><span class="hbar"><i style="width:' + (r.pts / info.max * 100).toFixed(1) + "%;background:" + esc(p ? p.color : "var(--muted)") + '"></i></span><span class="t">' + r.pts + '<span class="muted">/' + info.max + "</span></span></div>";
+      var p = r.p ? st.players.find(function (x) { return x.id === r.p; }) : null;
+      var who = p ? esc(p.name) : '<a class="unc" href="#unclaimed">Unclaimed</a>';
+      return '<div class="res-row"><span class="r' + (r.rank <= 3 ? " p" + r.rank : "") + '">' + r.rank + '</span><span class="n">' + who + (r.character ? '<span class="ch">' + esc(r.character) + "</span>" : "") + '</span><span class="hbar"><i style="width:' + (r.pts / info.max * 100).toFixed(1) + "%;background:" + esc(p ? p.color : "var(--muted)") + '"></i></span><span class="t">' + r.pts + '<span class="muted">/' + info.max + "</span></span></div>";
     }).join("");
     var actions = "";
     if (isAdmin() && !demo) {
@@ -271,10 +341,38 @@ function viewCups(st, m, demo) {
   return out + "</div>" + (ui.error ? '<div class="error">' + esc(ui.error) + "</div>" : "");
 }
 
+function viewUnclaimed(st, m, demo) {
+  var out = (demo ? demoNote() : "") + '<section class="section-h"><h2>Unclaimed points</h2><span class="muted small">' + m.unclaimed.length + " result" + (m.unclaimed.length === 1 ? "" : "s") + "</span></section>" +
+    '<p class="muted" style="margin:0;max-width:68ch">These came from highlighted (human) rows on a results photo that weren\'t matched to a player. If one was you, press <b>That was me</b>, fix the character if it\'s wrong, and an admin will add the points to your record.</p>';
+  if (!m.unclaimed.length) return out + '<div class="panel empty"><b>Nothing unclaimed.</b><span class="muted">Every human result is matched to a player.</span></div>';
+  var mine = myPlayer();
+  if (ui.error && ui.view === "unclaimed") out += '<div class="error">' + esc(ui.error) + "</div>";
+  out += '<div class="tbl-wrap"><table class="mini unc-tbl"><thead><tr><th class="l">Cup</th><th class="l">Character</th><th>Points</th><th>Finish</th><th class="l"></th></tr></thead><tbody>' +
+    m.unclaimed.map(function (u) {
+      var key = u.cup.id + "|" + u.r.rid, act;
+      var pending = myClaims.find(function (c) { return c.cupId === u.cup.id && c.rid === u.r.rid && c.status === "pending"; });
+      var inCup = mine && m.cupInfo.get(u.cup.id).res.some(function (r) { return r.p === mine.id; });
+      if (demo) act = '<span class="muted small">Example</span>';
+      else if (!signedIn()) act = '<a class="btn btn-sm" href="#account">Sign in to claim</a>';
+      else if (pending) act = '<span class="chip st-pending">Requested</span> <button class="btn-link small" data-act="withdraw-claim" data-key="' + esc(pending.id) + '">Withdraw</button>';
+      else if (inCup) act = '<span class="muted small">You already have a result in this cup</span>';
+      else act = '<button class="btn btn-sm btn-primary" data-act="claim-open" data-key="' + esc(key) + '" data-char="' + esc(u.r.character) + '">That was me</button>';
+      var row = '<tr><td class="l"><b>#' + u.num + " " + esc(u.cup.cup) + '</b><br><span class="muted small">Week ' + u.cup.week + " · " + fmtDate(u.cup.date) + '</span></td><td class="l">' + esc(u.r.character || "Unknown") + '</td><td class="num">' + u.r.pts + '<span class="muted">/' + u.max + '</span></td><td class="num">' + u.r.rank + ord(u.r.rank) + '<span class="muted"> of ' + u.field + '</span></td><td class="l">' + act + "</td></tr>";
+      if (ui.claimFor === key) {
+        row += '<tr class="claim-form"><td colspan="5"><div class="keyrow"><label class="f" for="cl-char">You raced as<select id="cl-char" data-cl="character">' + charOptions(ui.claimForm.character) + '</select></label>' +
+          '<label class="f" for="cl-note" style="flex:1 1 220px">Note for the admin (optional)<input id="cl-note" maxlength="200" data-cl="note" value="' + esc(ui.claimForm.note) + '" placeholder="e.g. I was the green Yoshi"></label>' +
+          '<button class="btn btn-primary btn-sm" data-act="claim-send" data-key="' + esc(key) + '"' + (ui.busy ? " disabled" : "") + ">Send request</button><button class=\"btn btn-sm\" data-act=\"claim-cancel\">Cancel</button></div>" +
+          (mine ? "" : '<p class="small muted" style="margin:6px 0 0">You don\'t have a league player yet. One is created for you when an admin approves this.</p>') + "</td></tr>";
+      }
+      return row;
+    }).join("") + "</tbody></table></div>";
+  return out;
+}
+
 function viewPlayoffs(st, m, demo) {
   var L = st.league, K = Number(L.playoffSpots) || 4;
   var seeds = m.ranked.slice(0, K);
-  var out = '<section class="panel soon-hero"><div class="flag" aria-hidden="true"></div><div class="eyebrow">Playoffs</div><h2>Coming soon</h2><p style="margin:0;max-width:60ch">The playoff bracket opens after the regular season ends at Cup ' + L.seasonLength + ". The top " + K + " qualified players by points percentage get in. Format, race count and seeding perks will be announced before then.</p></section>";
+  var out = '<section class="panel soon-hero"><div class="flag" aria-hidden="true"></div><div class="eyebrow">Playoffs</div><h2>Coming soon</h2><p style="margin:0;max-width:60ch">The playoff bracket opens after the regular season ends with week ' + L.seasonWeeks + ". The top " + K + " qualified players by points percentage get in. Format, race count and seeding perks will be announced before then.</p></section>";
   if (seeds.length >= 2) {
     out += '<section class="section-h"><h2>If the season ended today</h2><span class="muted small">' + (demo ? "From the example standings" : "Projected from current standings") + "</span></section>";
     var pairs = []; for (var i = 0; i < Math.floor(seeds.length / 2); i++) pairs.push([seeds[i], seeds[seeds.length - 1 - i], i + 1, seeds.length - i]);
@@ -289,15 +387,17 @@ function viewRules(L) {
   var pt = RACE_POINTS.map(function (p, i) { return "<span><b>" + p + "</b><small>" + (i + 1) + ord(i + 1) + "</small></span>"; }).join("");
   return '<section class="section-h"><h2>Regular season rules</h2><span class="muted small">' + esc(L.season) + "</span></section>" +
     '<div class="panel panel-pad rules"><ol>' +
-    "<li><h4>Race scoring</h4><p>Every race is scored with the game's 12-racer points table. A cup is 4 races, so the most anyone can score in a cup is " + L.defaultMax + ' points.</p><div class="ptable">' + pt + "</div></li>" +
-    "<li><h4>Standard settings</h4><p>150cc, CPUs on Hard, items Normal, any kart or bike. If a cup is raced with different settings that change the points available (no CPUs, fewer races), the admins record that cup's max points so percentages stay fair.</p></li>" +
-    "<li><h4>The photo is the record</h4><p>When a cup ends, someone takes an iPhone photo of the final results screen before anyone presses a button. Any member can submit it; an admin approves it before it counts. CPU racers are ignored; only league players are recorded.</p></li>" +
+    "<li><h4>Season format</h4><p>The regular season runs " + L.seasonWeeks + " weeks with about " + L.cupsPerWeek + " cups a week (" + seasonCups(L) + " cups). Each cup is 4 races.</p></li>" +
+    "<li><h4>Race scoring</h4><p>Every race is scored with the game's 12-racer points table, so the most anyone can score in a cup is " + L.defaultMax + ' points.</p><div class="ptable">' + pt + "</div></li>" +
+    "<li><h4>Standard settings</h4><p>150cc, CPUs on Hard, items Normal, any character and any kart or bike. If a cup is raced with settings that change the points available (no CPUs, fewer races), the admins record that cup's max points so percentages stay fair.</p></li>" +
+    "<li><h4>The photo is the record</h4><p>When a cup ends, someone photographs the final results screen before anyone presses a button. Human players' rows are highlighted; each one is recorded with its character and points. CPU rows don't count. Any member can submit the photo; an admin approves it.</p></li>" +
+    "<li><h4>Unclaimed points</h4><p>A highlighted row that isn't matched to a player goes on the Unclaimed page. If it was you, request it there and fix the character if needed. Once an admin approves, the points count for you. Unclaimed rows still hold their place in that cup's finishing order.</p></li>" +
     "<li><h4>Ranking stat: points percentage</h4><p>Your rank is your points earned divided by the points you could have earned in the cups you played. Missing a cup doesn't lower your percentage.</p></li>" +
     "<li><h4>Qualifying</h4><p>To be ranked you must have played at least " + L.minParticipation + "% of the cups held so far, rounded up. Everyone else is listed under Not yet qualified until they catch up.</p></li>" +
-    "<li><h4>Cup wins and podiums</h4><p>Finishing order counts league players only. The league player with the most points in a cup wins it; 2nd and 3rd complete the podium. Players tied on points share the place.</p></li>" +
+    "<li><h4>Cup wins and podiums</h4><p>Finishing order counts human players only. The most points in a cup wins it; 2nd and 3rd complete the podium. Players tied on points share the place.</p></li>" +
     "<li><h4>Tiebreakers</h4><p>Equal percentages are split by, in order: cup wins, head-to-head points across cups both players played, total points, then a single-race runoff on a track an admin picks.</p></li>" +
-    "<li><h4>Abandoned cups</h4><p>A cup that isn't finished (power cut, rage quit, controller disconnect that ends it) doesn't count and is raced again from the start. No make-up cups for missed nights.</p></li>" +
-    "<li><h4>Season length and playoffs</h4><p>The regular season is " + L.seasonLength + " cups. After that the standings lock and the top " + L.playoffSpots + " qualified players advance to the playoffs.</p></li>" +
+    "<li><h4>Abandoned cups</h4><p>A cup that isn't finished (power cut, rage quit, controller disconnect that ends it) doesn't count and is raced again from the start.</p></li>" +
+    "<li><h4>Playoffs</h4><p>After week " + L.seasonWeeks + " the standings lock and the top " + L.playoffSpots + " qualified players advance to the playoffs.</p></li>" +
     "<li><h4>Disputes</h4><p>The photo settles it. If a photo is unreadable, players in that cup agree on the scores or the cup is replayed. Admins can correct any recorded cup.</p></li>" +
     "</ol></div>";
 }
@@ -316,25 +416,38 @@ function viewAccount() {
     out += '<div class="panel panel-pad keys"><b>This league has no owner yet.</b><p style="margin:0">The owner is the permanent admin: they can promote other admins and can\'t be demoted. Only claim this if you run the league. It can be claimed once.</p><div><button class="btn btn-primary" data-act="claim"' + (ui.busy ? " disabled" : "") + ">Claim league ownership</button></div></div>";
   }
   if (!p) return out + '<div class="loading"><span class="spin"></span>Setting up your profile…</div>';
+
+  var pl = myPlayer();
+  out += '<div class="panel panel-pad keys"><div class="eyebrow">Your league player</div>' + (pl
+    ? '<div class="who"><span class="dot" style="background:' + esc(pl.color) + '"></span><b>' + esc(pl.name) + "</b>" + joinedBadge(pl, true) + '<a class="btn-link small" href="#standings" data-act="sel-go" data-key="' + esc(pl.id) + '">See your season</a></div>'
+    : '<p style="margin:0">Your account isn\'t linked to a league player yet. Find your results on the <a href="#unclaimed">Unclaimed</a> page and request them, or ask an admin to link you.</p>') + "</div>";
+
   var swatches = COLORS.map(function (c) { return '<button type="button" class="swatch' + (p.color === c ? " on" : "") + '" style="background:' + c + '" data-act="pick-color" data-key="' + c + '" aria-label="Color ' + c + '"' + (p.color === c ? ' aria-pressed="true"' : "") + "></button>"; }).join("");
   out += '<div class="panel panel-pad keys"><div class="eyebrow">Profile</div><div class="form-grid">' +
     '<label class="f" for="p-name">Display name<input id="p-name" maxlength="40" data-p="displayName" value="' + esc(p.displayName) + '"></label>' +
-    '<label class="f" for="p-char">Favorite character<select id="p-char" data-p="favoriteCharacter"><option value="">None</option>' + CHARACTERS.map(function (c) { return "<option" + (c === p.favoriteCharacter ? " selected" : "") + ">" + c + "</option>"; }).join("") + "</select></label>" +
+    '<label class="f" for="p-char">Favorite character<select id="p-char" data-p="favoriteCharacter">' + charOptions(p.favoriteCharacter) + "</select></label>" +
     '<label class="f" for="p-veh">Favorite kart or bike<input id="p-veh" maxlength="40" data-p="favoriteVehicle" value="' + esc(p.favoriteVehicle) + '" placeholder="e.g. Flame Runner"></label></div>' +
     '<div><div class="f" style="margin-bottom:6px">Color</div><div class="swatches">' + swatches + "</div></div>" +
     (ui.error && ui.view === "account" ? '<div class="error">' + esc(ui.error) + "</div>" : "") +
     '<div><button class="btn btn-primary" data-act="save-profile"' + (ui.busy ? " disabled" : "") + ">" + (ui.busy ? "Saving…" : "Save profile") + "</button></div></div>";
 
-  // submissions
+  out += '<section class="section-h"><h2>Your point requests</h2><a class="btn btn-sm" href="#unclaimed">Unclaimed points</a></section>';
+  if (!myClaims.length) out += '<p class="muted small" style="margin:0">Requests you make on the Unclaimed page show up here.</p>';
+  else out += '<div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">Cup</th><th class="l">Character</th><th class="l">Sent</th><th class="l">Status</th><th></th></tr></thead><tbody>' +
+    myClaims.map(function (c) {
+      var cup = state.cups.find(function (x) { return x.id === c.cupId; });
+      return '<tr><td class="l">' + esc(cup ? cup.cup + " · wk " + cup.week : "Deleted cup") + '</td><td class="l">' + esc(c.character || "–") + '</td><td class="l muted">' + fmtWhen(c.createdAt) + '</td><td class="l"><span class="chip st-' + esc(c.status) + '">' + esc(c.status) + "</span>" + (c.reviewNote ? ' <span class="small muted">' + esc(c.reviewNote) + "</span>" : "") + "</td><td>" +
+        (c.status === "pending" ? '<button class="btn btn-sm" data-act="withdraw-claim" data-key="' + esc(c.id) + '">Withdraw</button>' : "") + "</td></tr>";
+    }).join("") + "</tbody></table></div>";
+
   out += '<section class="section-h"><h2>Your submissions</h2><a class="btn btn-sm" href="#add" data-act="new-cup">' + (isAdmin() ? "+ Add cup" : "+ Submit a cup") + "</a></section>";
   if (!mySubs.length) out += '<p class="muted small" style="margin:0">' + (isAdmin() ? "As an admin, cups you add go straight into the standings." : "Cups you submit show up here while an admin reviews them.") + "</p>";
   else out += '<div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">Cup</th><th class="l">Raced</th><th class="l">Sent</th><th class="l">Status</th><th></th></tr></thead><tbody>' +
     mySubs.map(function (s) {
-      return '<tr><td class="l">' + esc(s.cup) + '</td><td class="l">' + fmtDate(s.date) + '</td><td class="l muted">' + fmtWhen(s.submittedAt) + '</td><td class="l"><span class="chip st-' + esc(s.status) + '">' + esc(s.status) + "</span>" + (s.reviewNote ? ' <span class="small muted">' + esc(s.reviewNote) + "</span>" : "") + "</td><td>" +
+      return '<tr><td class="l">' + esc(s.cup) + " · wk " + s.week + '</td><td class="l">' + fmtDate(s.date) + '</td><td class="l muted">' + fmtWhen(s.submittedAt) + '</td><td class="l"><span class="chip st-' + esc(s.status) + '">' + esc(s.status) + "</span>" + (s.reviewNote ? ' <span class="small muted">' + esc(s.reviewNote) + "</span>" : "") + "</td><td>" +
         (s.status === "pending" ? '<button class="btn btn-sm" data-act="withdraw" data-key="' + esc(s.id) + '">Withdraw</button>' : "") + "</td></tr>";
     }).join("") + "</tbody></table></div>";
 
-  // sign-in & security
   var isPw = (me.user.identities || []).some(function (d) { return d.provider === "email"; }) || (me.user.app_metadata && me.user.app_metadata.provider === "email");
   var ak = lsGet(KEY_AI);
   out += '<section class="section-h"><h2>Sign-in and security</h2></section><div class="panel panel-pad keys">' +
@@ -342,20 +455,21 @@ function viewAccount() {
     '<div class="keyrow">' + (isPw ? '<button class="btn btn-sm" data-act="change-pw">Change password</button>' : "") + '<button class="btn btn-sm" data-act="signout">Sign out</button></div>' +
     (isPw && ui.changingPw ? pwFormHTML() : "") +
     '<div><label class="f" for="k-ai">Anthropic API key (optional, this device only)</label><div class="keyrow"><input id="k-ai" type="password" autocomplete="off" placeholder="sk-ant-…" value="' + esc(ak) + '"><button class="btn btn-sm" data-act="save-ai">Save</button>' + (ak ? '<span class="ok small">Saved</span>' : "") + "</div>" +
-    '<p class="small muted" style="margin:6px 0 0">With a key, Claude reads the names and points from a results photo for you. It\'s stored in this browser only and costs a few cents per photo. Create one in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic Console</a> and set a spend limit.</p></div>' +
+    '<p class="small muted" style="margin:6px 0 0">With a key, Claude reads each highlighted player\'s character and points from a results photo for you. It\'s stored in this browser only and costs a few cents per photo. Create one in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic Console</a> and set a spend limit.</p></div>' +
     (isOwner() ? "" : ui.confirmDeleteAccount
-      ? '<div class="keyrow"><span class="small"><b>Delete your account?</b> Your profile is removed and you\'re signed out. Cups already in the standings stay.</span><button class="btn btn-danger btn-sm" data-act="delete-account-yes">Delete account</button><button class="btn btn-sm" data-act="delete-account-no">Keep it</button></div>'
+      ? '<div class="keyrow"><span class="small"><b>Delete your account?</b> Your profile is removed and you\'re signed out. Your league player and its results stay.</span><button class="btn btn-danger btn-sm" data-act="delete-account-yes">Delete account</button><button class="btn btn-sm" data-act="delete-account-no">Keep it</button></div>'
       : '<div><button class="btn-link small" data-act="delete-account">Delete my account</button></div>') +
     "</div>";
   return out;
 }
 function pwFormHTML() {
-  return '<div class="keyrow"><input id="new-pw" type="password" autocomplete="new-password" minlength="6" placeholder="New password (6+ characters)" data-a="newPassword" value="' + esc(ui.form.newPassword || "") + '"><button class="btn btn-primary btn-sm" data-act="set-pw"' + (ui.busy ? " disabled" : "") + '>Save password</button></div>';
+  return '<div class="keyrow"><input id="new-pw" type="password" autocomplete="new-password" minlength="6" placeholder="New password (6+ characters)" data-a="newPassword" value="' + esc(ui.form.newPassword || "") + '"><button class="btn btn-primary btn-sm" data-act="set-pw"' + (ui.busy ? " disabled" : "") + ">Save password</button></div>";
 }
 function authFormHTML() {
   var up = ui.authMode === "signup", f = ui.form;
   return '<section class="section-h"><h2>' + (up ? "Create an account" : "Sign in") + "</h2></section>" +
     '<div class="panel panel-pad keys" style="max-width:440px">' +
+    (up ? '<p class="small muted" style="margin:0">If an admin already added you as a player, sign up with the email they used and your results link up automatically once you confirm it.</p>' : "") +
     '<button class="btn google" data-act="google"' + (ui.busy ? " disabled" : "") + '><svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continue with Google</button>' +
     '<div class="or"><span>or with email</span></div>' +
     '<form id="auth-form" style="display:grid;gap:12px">' +
@@ -372,63 +486,104 @@ function authFormHTML() {
 }
 
 // ---------- admin page ----------
+function profileName(id) { var u = adminData.users.find(function (x) { return x.id === id; }); return u ? (u.displayName || u.email) : "A member"; }
 function viewAdmin() {
-  var out = '<section class="section-h"><h2>Submissions to review</h2><span class="muted small">' + adminData.pending.length + " waiting</span></section>";
+  var m = compute(state);
+  var out = (ui.error && ui.view === "admin" ? '<div class="error">' + esc(ui.error) + "</div>" : "");
+  // point claims
+  out += '<section class="section-h"><h2>Point requests</h2><span class="muted small">' + adminData.claims.length + " waiting</span></section>";
+  if (!adminData.claims.length) out += '<p class="muted small" style="margin:0">Nothing waiting. Requests for unclaimed points appear here.</p>';
+  else out += '<div class="cup-list">' + adminData.claims.slice().sort(function (a, b) { return a.createdAt - b.createdAt; }).map(function (c) {
+    var cup = state.cups.find(function (x) { return x.id === c.cupId; }), info = cup && m.cupInfo.get(cup.id);
+    var r = info && info.res.find(function (x) { return x.rid === c.rid; });
+    var pl = state.players.find(function (p) { return p.userId === c.userId; });
+    var others = adminData.claims.filter(function (x) { return x.id !== c.id && x.cupId === c.cupId && x.rid === c.rid; }).length;
+    return '<article class="panel panel-pad" style="display:grid;gap:8px"><div class="cup-head"><b>' + esc(profileName(c.userId)) + '</b><span class="muted small">asks for</span><span class="cup-name">' + esc(cup ? cup.cup : "a deleted cup") + "</span>" + (cup ? '<span class="muted small">week ' + cup.week + " · " + fmtDate(cup.date) + "</span>" : "") + "</div>" +
+      '<div class="small">' + (r ? "<b>" + r.pts + "/" + info.max + "</b> pts · " + r.rank + ord(r.rank) + " of " + info.res.length + " · photo says <b>" + esc(r.character || "unknown") + "</b>" + (c.character && c.character !== r.character ? ", they say <b>" + esc(c.character) + "</b>" : "") : '<span class="error">These points are no longer unclaimed.</span>') +
+      (c.note ? ' · "' + esc(c.note) + '"' : "") + "</div>" +
+      '<div class="small muted">' + (pl ? "Points go to their player <b>" + esc(pl.name) + "</b>." : "They don't have a player yet; approving creates one.") + (others ? " " + others + " other request" + (others === 1 ? "" : "s") + " for the same result will be declined." : "") + "</div>" +
+      (ui.rejectId === "c:" + c.id
+        ? '<div class="keyrow"><input id="rej-note" data-rej="1" maxlength="200" placeholder="Reason (shown to them)" value="' + esc(ui.rejectNote) + '"><button class="btn btn-danger btn-sm" data-act="claim-reject-yes" data-key="' + esc(c.id) + '">Decline</button><button class="btn btn-sm" data-act="reject-no">Cancel</button></div>'
+        : '<div class="keyrow"><button class="btn btn-primary btn-sm" data-act="claim-approve" data-key="' + esc(c.id) + '"' + (ui.busy || !r ? " disabled" : "") + '>Approve</button><button class="btn btn-sm" data-act="claim-reject" data-key="' + esc(c.id) + '">Decline</button></div>') +
+      "</article>";
+  }).join("") + "</div>";
+
+  // submissions
+  out += '<section class="section-h"><h2>Submissions to review</h2><span class="muted small">' + adminData.pending.length + " waiting</span></section>";
   if (!adminData.pending.length) out += '<p class="muted small" style="margin:0">Nothing waiting. Cups that members submit appear here.</p>';
   else out += '<div class="cup-list">' + adminData.pending.slice().sort(function (a, b) { return a.submittedAt - b.submittedAt; }).map(function (s) {
     var rows = (s.rows || []).filter(function (r) { return r.assign !== "ignore"; });
-    return '<article class="panel panel-pad" style="display:grid;gap:10px"><div class="cup-head"><span class="cup-name">' + esc(s.cup) + '</span><span class="muted small">raced ' + fmtDate(s.date) + " · sent by " + esc(s.submitterName || "a member") + " " + fmtWhen(s.submittedAt) + (s.hasPhoto ? " · photo attached" : "") + "</span></div>" +
-      '<div class="small">' + rows.map(function (r) { return "<b>" + esc(r.assign === "new" ? r.newName + " (new)" : playerName(r.assign)) + "</b> " + esc(r.pts); }).join(" · ") + "</div>" +
-      (ui.rejectId === s.id
+    return '<article class="panel panel-pad" style="display:grid;gap:10px"><div class="cup-head"><span class="cup-name">' + esc(s.cup) + '</span><span class="muted small">week ' + s.week + " · raced " + fmtDate(s.date) + " · sent by " + esc(s.submitterName || "a member") + " " + fmtWhen(s.submittedAt) + (s.hasPhoto ? " · photo attached" : "") + "</span></div>" +
+      '<div class="small">' + rows.map(function (r) { return "<b>" + esc(r.assign === "new" ? r.newName + " (new)" : r.assign === "unclaimed" ? "Unclaimed" : playerName(r.assign)) + "</b> " + esc(r.pts) + (r.character ? ' <span class="muted">' + esc(r.character) + "</span>" : ""); }).join(" · ") + "</div>" +
+      (ui.rejectId === "s:" + s.id
         ? '<div class="keyrow"><input id="rej-note" data-rej="1" maxlength="200" placeholder="Reason (shown to the member)" value="' + esc(ui.rejectNote) + '"><button class="btn btn-danger btn-sm" data-act="reject-yes" data-key="' + esc(s.id) + '">Reject</button><button class="btn btn-sm" data-act="reject-no">Cancel</button></div>'
         : '<div class="keyrow"><button class="btn btn-primary btn-sm" data-act="review" data-key="' + esc(s.id) + '">Review and approve</button><button class="btn btn-sm" data-act="reject" data-key="' + esc(s.id) + '">Reject</button></div>') +
       "</article>";
   }).join("") + "</div>";
+
+  out += playersHTML(m);
   out += settingsHTML();
-  out += '<section class="section-h"><h2>Members</h2><span class="muted small">' + adminData.users.length + " account" + (adminData.users.length === 1 ? "" : "s") + "</span></section>";
-  out += '<div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">Name</th><th class="l">Email</th><th class="l">Role</th></tr></thead><tbody>' +
+  out += '<section class="section-h"><h2>Members and roles</h2><span class="muted small">' + adminData.users.length + " account" + (adminData.users.length === 1 ? "" : "s") + "</span></section>";
+  out += '<div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">Name</th><th class="l">Email</th><th class="l">Player</th><th class="l">Role</th></tr></thead><tbody>' +
     adminData.users.slice().sort(function (a, b) { return (a.displayName || "").localeCompare(b.displayName || ""); }).map(function (u) {
-      var r = roleOf(u);
+      var r = roleOf(u), pl = state.players.find(function (p) { return p.userId === u.id; });
       var ctl = r === "owner" ? '<span class="chip">Owner</span>'
         : '<select data-role="' + esc(u.id) + '" aria-label="Role for ' + esc(u.displayName) + '"><option value="member"' + (r === "member" ? " selected" : "") + '>Member</option><option value="admin"' + (r === "admin" ? " selected" : "") + ">Admin</option></select>";
-      return '<tr><td class="l"><span class="who"><span class="dot" style="background:' + esc(u.color || "var(--muted)") + '"></span>' + esc(u.displayName || "—") + (me.user && u.id === me.user.id ? ' <span class="muted small">(you)</span>' : "") + '</span></td><td class="l small muted">' + esc(u.email || "") + '</td><td class="l">' + ctl + "</td></tr>";
+      return '<tr><td class="l"><span class="who"><span class="dot" style="background:' + esc(u.color || "var(--muted)") + '"></span>' + esc(u.displayName || "—") + (me.user && u.id === me.user.id ? ' <span class="muted small">(you)</span>' : "") + '</span></td><td class="l small muted">' + esc(u.email || "") + '</td><td class="l small">' + (pl ? esc(pl.name) : '<span class="muted">—</span>') + '</td><td class="l">' + ctl + "</td></tr>";
     }).join("") + "</tbody></table></div>";
   return out;
 }
-function settingsHTML() {
-  var s = settingsDraft || (settingsDraft = clone({ league: state.league, players: state.players }));
-  var counts = {}; state.cups.forEach(function (c) { c.results.forEach(function (r) { counts[r.p] = (counts[r.p] || 0) + 1; }); });
-  var pl = s.players.map(function (p, i) {
-    return '<tr><td><span class="dot" style="background:' + esc(p.color) + '"></span></td><td class="l"><input id="pl-' + esc(p.id) + '" data-set="pname" data-i="' + i + '" value="' + esc(p.name) + '" aria-label="Player name"></td><td class="l small muted">' + (counts[p.id] || 0) + " cups" + (p.aliases && p.aliases.length ? " · also reads as " + esc(p.aliases.join(", ")) : "") + "</td><td>" + (counts[p.id] ? "" : '<button class="btn btn-sm" data-act="rm-player" data-i="' + i + '">Remove</button>') + "</td></tr>";
+function playersHTML(m) {
+  if (!playersDraft) playersDraft = state.players.map(function (p) {
+    var inv = adminData.invites.find(function (i) { return i.playerId === p.id; });
+    return { id: p.id, name: p.name, color: p.color, email: inv ? inv.email : "", userId: p.userId || "", registeredAt: p.registeredAt, isNew: false, remove: false };
+  });
+  var acctOpts = function (sel) { return '<option value="">— Not linked —</option>' + adminData.users.map(function (u) { return '<option value="' + esc(u.id) + '"' + (u.id === sel ? " selected" : "") + ">" + esc((u.displayName || "") + " · " + (u.email || "")) + "</option>"; }).join(""); };
+  var rows = playersDraft.map(function (p, i) {
+    var cups = (m.byId.get(p.id) || { cp: 0 }).cp;
+    var status = p.userId ? '<span class="badge">' + (p.registeredAt ? "Joined " + esc(fmtDay(p.registeredAt)) : "Linked") + "</span>" : p.email ? '<span class="badge off">Invited</span>' : '<span class="badge off">No account</span>';
+    return '<tr class="' + (p.remove ? "ign" : "") + '"><td><span class="dot" style="background:' + esc(p.color) + '"></span></td>' +
+      '<td class="l"><input id="pl-n-' + i + '" data-pl="name" data-i="' + i + '" maxlength="40" value="' + esc(p.name) + '" aria-label="Player name"></td>' +
+      '<td class="l"><input id="pl-e-' + i + '" type="email" data-pl="email" data-i="' + i + '" value="' + esc(p.email) + '" placeholder="their@email.com" aria-label="Invite email"></td>' +
+      '<td class="l"><select id="pl-u-' + i + '" data-pl="userId" data-i="' + i + '" aria-label="Linked account">' + acctOpts(p.userId) + "</select></td>" +
+      '<td class="l">' + status + '</td><td class="num">' + cups + "</td>" +
+      "<td>" + (cups ? "" : '<button class="btn btn-sm" data-act="pl-remove" data-i="' + i + '">' + (p.remove ? "Undo" : "Remove") + "</button>") + "</td></tr>";
   }).join("");
+  return '<section class="section-h"><h2>Players and accounts</h2><span class="muted small">' + state.players.length + " player" + (state.players.length === 1 ? "" : "s") + "</span></section>" +
+    '<div class="panel panel-pad" style="display:grid;gap:12px"><p class="small muted" style="margin:0;max-width:72ch">Add people before they sign up. Put their email on the player: when they create an account with that email and confirm it, the account is linked automatically and their registration date shows as a badge. You can also link an existing account by hand.</p>' +
+    (playersDraft.length ? '<div style="overflow-x:auto"><table class="mini rows-tbl"><thead><tr><th></th><th class="l">Name</th><th class="l">Invite email</th><th class="l">Account</th><th class="l">Status</th><th>Cups</th><th></th></tr></thead><tbody>' + rows + "</tbody></table></div>" : "") +
+    '<div class="keyrow"><button class="btn btn-sm" data-act="pl-add">+ Add player</button><button class="btn btn-primary btn-sm" data-act="pl-save"' + (ui.busy ? " disabled" : "") + ">" + (ui.busy ? "Saving…" : "Save players") + "</button></div></div>";
+}
+function settingsHTML() {
+  var s = settingsDraft || (settingsDraft = clone(state.league));
   return '<section class="section-h"><h2>League settings</h2><span class="muted small">Admins only</span></section>' +
     '<div class="panel panel-pad" style="display:grid;gap:16px"><div class="form-grid">' +
-    field("League name", "set-name", "text", s.league.name, "name") +
-    field("Season", "set-season", "text", s.league.season, "season") +
-    field("Cups in regular season", "set-len", "number", s.league.seasonLength, "seasonLength") +
-    field("Playoff spots", "set-spots", "number", s.league.playoffSpots, "playoffSpots") +
-    field("Qualifying % of cups", "set-min", "number", s.league.minParticipation, "minParticipation") +
-    field("Default max points per cup", "set-max", "number", s.league.defaultMax, "defaultMax") +
-    "</div>" + (s.players.length ? '<div><div class="eyebrow" style="margin-bottom:6px">Players</div><div style="overflow-x:auto"><table class="mini"><tbody>' + pl + "</tbody></table></div></div>" : '<p class="muted small" style="margin:0">Players are added automatically when a cup is saved.</p>') +
-    (ui.error && ui.view === "admin" ? '<div class="error">' + esc(ui.error) + "</div>" : "") +
-    '<div><button class="btn btn-primary" data-act="save-settings"' + (ui.busy ? " disabled" : "") + ">" + (ui.busy ? "Saving…" : "Save settings") + "</button></div></div>";
+    field("League name", "set-name", "text", s.name, "name") +
+    field("Season", "set-season", "text", s.season, "season") +
+    field("Weeks in regular season", "set-weeks", "number", s.seasonWeeks, "seasonWeeks") +
+    field("Cups per week", "set-per", "number", s.cupsPerWeek, "cupsPerWeek") +
+    field("Playoff spots", "set-spots", "number", s.playoffSpots, "playoffSpots") +
+    field("Qualifying % of cups", "set-min", "number", s.minParticipation, "minParticipation") +
+    field("Default max points per cup", "set-max", "number", s.defaultMax, "defaultMax") +
+    '</div><div><button class="btn btn-primary" data-act="save-settings"' + (ui.busy ? " disabled" : "") + ">" + (ui.busy ? "Saving…" : "Save settings") + "</button></div></div>";
 }
 function field(label, id, type, val, key) { return '<label class="f" for="' + id + '">' + esc(label) + '<input id="' + id + '" type="' + type + '" data-set="league" data-key="' + key + '" value="' + esc(val) + '"' + (type === "number" ? ' min="1" step="1"' : "") + "></label>"; }
 
 // ---------- add / edit / submit / review a cup ----------
 // draft.mode: "add" (admin, new cup), "edit" (admin, existing cup), "submit" (member), "review" (admin approving a submission)
-function newDraft() { return { mode: isAdmin() ? "add" : "submit", id: null, cup: CUP_NAMES[0], date: today(), max: state ? state.league.defaultMax : 60, notes: "", rows: [], photoB64: null, photoUrl: null, photoChanged: false, reading: false, saving: false, error: "", info: "" }; }
+// row.assign: "ignore" (CPU), "unclaimed" (human, unknown player), "new", or a player id
+function newDraft() { return { mode: isAdmin() ? "add" : "submit", id: null, cup: CUP_NAMES[0], date: today(), week: suggestWeek(), max: state ? state.league.defaultMax : 60, notes: "", rows: [], photoB64: null, photoUrl: null, photoChanged: false, reading: false, saving: false, error: "", info: "" }; }
 function editDraft(c) {
-  var d = newDraft(); d.mode = "edit"; d.id = c.id; d.cup = c.cup; d.date = c.date; d.max = c.max; d.notes = c.notes || "";
+  var d = newDraft(); d.mode = "edit"; d.id = c.id; d.cup = c.cup; d.date = c.date; d.week = c.week; d.max = c.max; d.notes = c.notes || "";
   var src = photoCache[c.id]; if (src && src.indexOf("data:") === 0) { d.photoUrl = src; d.photoB64 = src.split(",")[1]; }
-  d.rows = c.results.map(function (r) { return { raw: r.raw || playerName(r.p), pts: String(r.pts), assign: r.p, newName: "" }; });
+  d.rows = c.results.map(function (r) { return { rid: r.rid, raw: r.raw || (r.p ? playerName(r.p) : ""), character: r.character || "", pts: String(r.pts), assign: r.p || "unclaimed", newName: "" }; });
   return d;
 }
 function reviewDraft(s) {
-  var d = newDraft(); d.mode = "review"; d.id = s.id; d.cup = s.cup; d.date = s.date; d.max = s.max; d.notes = s.notes || ""; d.submitter = s.submitterName || "a member";
+  var d = newDraft(); d.mode = "review"; d.id = s.id; d.cup = s.cup; d.date = s.date; d.week = s.week; d.max = s.max; d.notes = s.notes || ""; d.submitter = s.submitterName || "a member";
   d.rows = (s.rows || []).map(function (r) {
-    var known = r.assign !== "new" && r.assign !== "ignore" && state.players.some(function (p) { return p.id === r.assign; });
-    return { raw: r.raw || "", pts: String(r.pts), assign: known || r.assign === "ignore" ? r.assign : "new", newName: r.newName || r.raw || "" };
+    var known = ["new", "ignore", "unclaimed"].indexOf(r.assign) < 0 && state.players.some(function (p) { return p.id === r.assign; });
+    return { rid: r.rid || uid(), raw: r.raw || "", character: r.character || "", pts: r.pts == null ? "" : String(r.pts), assign: known || r.assign === "ignore" || r.assign === "unclaimed" ? r.assign : "new", newName: r.newName || r.raw || "" };
   });
   if (s.hasPhoto) {
     d.photoLoading = true;
@@ -441,7 +596,8 @@ function reviewDraft(s) {
 function viewAdd() {
   var d = draft || (draft = newDraft());
   if (d.mode === "add" || d.mode === "submit") d.mode = isAdmin() ? "add" : "submit"; // follow the current role
-  var title ={ add: "Add a cup", edit: "Edit cup", submit: "Submit a cup", review: "Review submission" }[d.mode];
+  var L = state.league;
+  var title = { add: "Add a cup", edit: "Edit cup", submit: "Submit a cup", review: "Review submission" }[d.mode];
   var out = '<section class="section-h"><h2>' + title + '</h2><a class="btn btn-sm" href="' + (d.mode === "review" ? "#admin" : d.mode === "submit" ? "#account" : "#cups") + '" data-act="cancel-draft">Cancel</a></section>';
   if (d.mode === "submit") out += '<div class="note">An admin checks your submission against the photo before it counts in the standings.</div>';
   if (d.mode === "review") out += '<div class="note">Sent by ' + esc(d.submitter) + ". Check the scores against the photo, fix anything, then approve.</div>";
@@ -453,34 +609,42 @@ function viewAdd() {
     if (d.reading) out += '<div class="busy"><span class="spin"></span>Claude is reading the results screen…</div><div><button class="btn btn-sm" data-act="stop-read">Stop</button></div>';
     else {
       out += '<div style="display:flex;gap:8px;flex-wrap:wrap">' + (hasKey ? '<button class="btn btn-sm" data-act="read">Read photo' + (d.rows.length ? " again" : "") + "</button>" : "") + '<label class="btn btn-sm" for="photo-in">Use a different photo</label></div>';
-      if (!hasKey) out += '<p class="small muted" style="margin:0">Add an Anthropic API key on your <a href="#account">account page</a> to read photos automatically. For now, type the scores below.</p>';
+      if (!hasKey) out += '<p class="small muted" style="margin:0">Add an Anthropic API key on your <a href="#account">account page</a> to read photos automatically. For now, type the highlighted rows below.</p>';
     }
     out += '<input id="photo-in" type="file" accept="image/*" hidden></div></div>';
   } else {
-    out += '<label class="drop" for="photo-in" id="drop"><input id="photo-in" type="file" accept="image/*"><b>Add the results-screen photo</b><span class="muted small">' + (hasKey ? "Claude reads the names and points for you. You check them before saving." : "It's kept with the cup as the record. Type the scores below.") + '</span><span class="btn btn-primary btn-sm">Choose photo</span></label>';
+    out += '<label class="drop" for="photo-in" id="drop"><input id="photo-in" type="file" accept="image/*"><b>Add the results-screen photo</b><span class="muted small">' + (hasKey ? "Claude reads each highlighted player's character and points. You check them before saving." : "It's kept with the cup as the record. Type the highlighted rows below.") + '</span><span class="btn btn-primary btn-sm">Choose photo</span></label>';
   }
   if (d.info) out += '<div class="note">' + esc(d.info) + "</div>";
   if (d.error) out += '<div class="error">' + esc(d.error) + "</div>";
+  var weekOpts = ""; for (var w = 1; w <= Math.max(L.seasonWeeks, d.week); w++) weekOpts += '<option value="' + w + '"' + (w === Number(d.week) ? " selected" : "") + ">Week " + w + "</option>";
   out += '<div class="form-grid"><label class="f" for="d-cup">Cup<select id="d-cup" data-d="cup">' + CUP_NAMES.map(function (n) { return "<option" + (n === d.cup ? " selected" : "") + ">" + n + "</option>"; }).join("") + "</select></label>" +
+    '<label class="f" for="d-week">Week<select id="d-week" data-d="week">' + weekOpts + "</select></label>" +
     '<label class="f" for="d-date">Date<input id="d-date" type="date" data-d="date" value="' + esc(d.date) + '"></label>' +
     '<label class="f" for="d-max">Max points per player<input id="d-max" type="number" min="1" step="1" data-d="max" value="' + esc(d.max) + '"></label></div>';
-  var opts = function (sel) { return '<option value="ignore"' + (sel === "ignore" ? " selected" : "") + ">Not in league (CPU)</option>" + state.players.map(function (p) { return '<option value="' + esc(p.id) + '"' + (sel === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + '<option value="new"' + (sel === "new" ? " selected" : "") + ">+ New player…</option>"; };
+  var opts = function (sel) {
+    return '<option value="ignore"' + (sel === "ignore" ? " selected" : "") + ">CPU (not counted)</option>" +
+      '<option value="unclaimed"' + (sel === "unclaimed" ? " selected" : "") + ">Unclaimed (someone can request it)</option>" +
+      state.players.map(function (p) { return '<option value="' + esc(p.id) + '"' + (sel === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") +
+      '<option value="new"' + (sel === "new" ? " selected" : "") + ">+ New player…</option>";
+  };
   out += '<div><div class="eyebrow" style="margin-bottom:6px">Results</div>';
   if (d.rows.length) {
-    out += '<div style="overflow-x:auto"><table class="rows-tbl"><thead><tr><th class="l">Name on screen</th><th>Points</th><th class="l">League player</th><th></th></tr></thead><tbody>' +
+    out += '<div style="overflow-x:auto"><table class="rows-tbl"><thead><tr><th class="l">Name on screen</th><th class="l">Character</th><th>Points</th><th class="l">League player</th><th></th></tr></thead><tbody>' +
       d.rows.map(function (r, i) {
-        return '<tr class="' + (r.assign === "ignore" ? "ign" : "") + '"><td class="l"><input id="r-raw-' + i + '" data-r="raw" data-i="' + i + '" value="' + esc(r.raw) + '" aria-label="Name on screen"></td>' +
+        return '<tr class="' + (r.assign === "ignore" ? "ign" : "") + '"><td class="l"><input id="r-raw-' + i + '" data-r="raw" data-i="' + i + '" value="' + esc(r.raw) + '" aria-label="Name on screen" placeholder="(not shown)"></td>' +
+          '<td class="l"><select id="r-ch-' + i + '" data-r="character" data-i="' + i + '" aria-label="Character">' + charOptions(r.character) + "</select></td>" +
           '<td><input class="ptsin" id="r-pts-' + i + '" type="number" min="0" step="1" inputmode="numeric" data-r="pts" data-i="' + i + '" value="' + esc(r.pts) + '" aria-label="Points"></td>' +
-          '<td class="l"><div style="display:grid;gap:4px;min-width:170px"><select id="r-as-' + i + '" data-r="assign" data-i="' + i + '" aria-label="League player">' + opts(r.assign) + "</select>" +
+          '<td class="l"><div style="display:grid;gap:4px;min-width:190px"><select id="r-as-' + i + '" data-r="assign" data-i="' + i + '" aria-label="League player">' + opts(r.assign) + "</select>" +
           (r.assign === "new" ? '<input id="r-new-' + i + '" data-r="newName" data-i="' + i + '" value="' + esc(r.newName) + '" placeholder="New player name" aria-label="New player name">' : "") + "</div></td>" +
           '<td><button class="btn btn-sm" data-act="rm-row" data-i="' + i + '" aria-label="Remove row">✕</button></td></tr>';
       }).join("") + "</tbody></table></div>";
-  } else out += '<p class="muted small" style="margin:0 0 8px">No rows yet. ' + (hasKey ? "Add a photo above, or " : "") + "add a row for each league player.</p>";
+  } else out += '<p class="muted small" style="margin:0 0 8px">No rows yet. ' + (hasKey ? "Add a photo above, or " : "") + "add a row for each highlighted (human) player.</p>";
   out += '<div style="margin-top:8px"><button class="btn btn-sm" data-act="add-row">+ Add row</button></div></div>';
   out += '<label class="f" for="d-notes">Notes (optional)<textarea id="d-notes" data-d="notes" maxlength="500" placeholder="Anything worth remembering about this cup">' + esc(d.notes) + "</textarea></label>";
   var label = d.saving ? "Saving…" : { add: "Save cup", edit: "Save changes", submit: "Submit for review", review: "Approve and add to standings" }[d.mode];
   out += '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-primary" data-act="save-cup"' + (d.saving || d.reading || d.photoLoading ? " disabled" : "") + ">" + label + "</button>" +
-    (d.mode === "submit" ? '<span class="muted small">You can withdraw it from your account page while it\'s pending.</span>' : '<span class="muted small">Updates the standings for everyone right away.</span>') + "</div>";
+    (d.mode === "submit" ? '<span class="muted small">You can withdraw it from your account page while it\'s pending.</span>' : '<span class="muted small">Updates the standings for everyone right away. Unclaimed rows show on the Unclaimed page.</span>') + "</div>";
   return out + "</div>";
 }
 function matchPlayer(players, name) {
@@ -490,8 +654,10 @@ function matchPlayer(players, name) {
 function mapRow(r) {
   var name = String(r && r.name || "").trim();
   var pts = (r && r.points != null && !isNaN(Number(r.points))) ? String(Math.round(Number(r.points))) : "";
-  var m = matchPlayer(state.players, name);
-  return { raw: name, pts: pts, assign: m ? m.id : (r && r.cpu ? "ignore" : "new"), newName: m ? "" : name };
+  var ch = r && CHARACTERS.indexOf(r.character) >= 0 ? r.character : "";
+  var human = !!(r && r.human);
+  var m = human ? matchPlayer(state.players, name) : null;
+  return { rid: uid(), raw: name, character: ch, pts: pts, assign: !human ? "ignore" : m ? m.id : "unclaimed", newName: "" };
 }
 // Downscales to JPEG and keeps each photo well under the database's size limit.
 function prepImage(file) {
@@ -531,8 +697,14 @@ var RESULT_SCHEMA = {
   type: "object", additionalProperties: false, required: ["cup", "rows"],
   properties: {
     cup: { type: ["string", "null"] },
-    rows: { type: "array", items: { type: "object", additionalProperties: false, required: ["pos", "name", "points", "cpu"],
-      properties: { pos: { type: "integer" }, name: { type: "string" }, points: { type: ["integer", "null"] }, cpu: { type: "boolean" } } } }
+    rows: { type: "array", items: { type: "object", additionalProperties: false, required: ["pos", "name", "character", "points", "human"],
+      properties: {
+        pos: { type: "integer" },
+        name: { type: "string" },
+        character: { type: "string", enum: CHARACTERS.concat(["Unknown"]) },
+        points: { type: ["integer", "null"] },
+        human: { type: "boolean" }
+      } } }
   }
 };
 var sdkPromise = null;
@@ -542,11 +714,11 @@ function loadSDK() {
 }
 function readPrompt() {
   var known = state.players.map(function (p) { return [p.name].concat(p.aliases || []).join(" / "); }).join("; ") || "(none yet)";
-  return "This is a phone photo of a TV showing the final results screen of Mario Kart Wii after a 4-race cup (Grand Prix or VS race). " +
-    "The screen lists up to 12 racers from 1st down, each with total points for the cup (per race: 15,12,10,8,7,6,5,4,3,2,1,0, so at most 60).\n" +
-    "Human players show their Mii or player names. Computer racers show character names such as " + CHARACTERS.slice(0, -1).join(", ") + "; mark those rows cpu: true.\n" +
-    "League players we already know (use these exact spellings when a row clearly matches one): " + known + ".\n" +
-    "Read every row you can, in screen order. If a points value is unreadable, use null. Set cup to the cup name if it is visible on screen, otherwise null.";
+  return "This is a phone photo of a TV showing the Mario Kart Wii standings screen after 4 races: up to 12 rows from 1st down, each with a character icon, usually a name, and total points for the 4 races (per race 15,12,10,8,7,6,5,4,3,2,1,0, so at most 60).\n" +
+    "Rows for human players are highlighted (a brighter or colored row background); CPU rows are not. Set human: true only for highlighted rows.\n" +
+    "For every row, identify the character from its icon (Mii if it shows a Mii; Unknown if you can't tell), read the name if one is shown (empty string if not), and the total points (null if unreadable).\n" +
+    "League players we already know (use these exact spellings when a highlighted row's name clearly matches one): " + known + ".\n" +
+    "Read every row you can, in screen order. Set cup to the cup name if it is visible, otherwise null.";
 }
 function readPhoto() {
   var key = lsGet(KEY_AI);
@@ -579,8 +751,9 @@ function readPhoto() {
     if (!rows.length) throw { code: "no_rows" };
     if (out.cup) { var g = String(out.cup).toLowerCase().split(" ")[0]; var hit = CUP_NAMES.find(function (n) { return n.toLowerCase().split(" ")[0] === g; }); if (hit) d.cup = hit; }
     d.rows = rows.map(mapRow);
-    var lp = d.rows.filter(function (r) { return r.assign !== "ignore"; }).length;
-    d.info = "Read " + rows.length + " racers; " + lp + " look like league players. Check every score against the photo before saving.";
+    var humans = d.rows.filter(function (r) { return r.assign !== "ignore"; });
+    var unc = humans.filter(function (r) { return r.assign === "unclaimed"; }).length;
+    d.info = "Read " + rows.length + " racers; " + humans.length + " highlighted" + (unc ? ", " + unc + " not matched to a player (they'll be unclaimed unless you pick someone)" : "") + ". Check each character and score against the photo before saving.";
   }).catch(function (e) {
     if (ctl === readCtl) d.error = readErr(e, Anthropic);
   }).then(function () {
@@ -588,20 +761,20 @@ function readPhoto() {
   });
 }
 function readErr(e, A) {
-  if (e && e.code === "refused") return "Claude declined to read that photo. Type the scores below.";
-  if (e && e.code === "no_rows") return "No results table found in that photo. Retake it straight on with the whole list in frame, or type the scores below.";
+  if (e && e.code === "refused") return "Claude declined to read that photo. Type the rows below.";
+  if (e && e.code === "no_rows") return "No results table found in that photo. Retake it straight on with the whole list in frame, or type the rows below.";
   if (A) {
     if (e instanceof A.APIUserAbortError) return "";
     if (e instanceof A.AuthenticationError) return "Anthropic rejected the API key. Check it on your account page.";
     if (e instanceof A.PermissionDeniedError) return "This API key isn't allowed to use " + CONFIG.model + ". Check the key's workspace in the Anthropic Console.";
     if (e instanceof A.RateLimitError) return "Too many requests, or the key's spend limit was reached. Wait a minute and press Read photo again.";
-    if (e instanceof A.BadRequestError) return "Anthropic couldn't process that photo (" + (e.message || "bad request") + "). Try another photo or type the scores below.";
+    if (e instanceof A.BadRequestError) return "Anthropic couldn't process that photo (" + (e.message || "bad request") + "). Try another photo or type the rows below.";
     if (e instanceof A.APIConnectionError) return "Couldn't reach Anthropic. Check your connection and press Read photo again.";
-    if (e instanceof A.APIError) return "Reading the photo failed (error " + e.status + "). Press Read photo again, or type the scores below.";
+    if (e instanceof A.APIError) return "Reading the photo failed (error " + e.status + "). Press Read photo again, or type the rows below.";
   }
   if (e && e.name === "AbortError") return "";
   if (!A) return "Couldn't load the Claude library. Check your connection and press Read photo again.";
-  return "Reading the photo failed. Press Read photo again, or type the scores below.";
+  return "Reading the photo failed. Press Read photo again, or type the rows below.";
 }
 
 // ---------- Supabase ----------
@@ -628,12 +801,13 @@ function authErr(e) {
     over_email_send_rate_limit: "Too many emails sent. Wait a few minutes and try again.",
     over_request_rate_limit: "Too many attempts. Wait a few minutes and try again.",
     signup_disabled: "New sign-ups are switched off for this league.",
-    provider_disabled: "Google sign-in isn't switched on in Supabase yet.",
+    provider_disabled: "Google sign-in isn't switched on yet. Use email and password for now.",
     same_password: "That's already your password. Pick a different one.",
     reauthentication_needed: "For security, sign out and back in, then try again."
   };
   if (map[c]) return map[c];
   if (/Invalid login credentials/i.test(m)) return map.invalid_credentials;
+  if (/provider is not enabled/i.test(m)) return map.provider_disabled;
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return "Couldn't reach the sign-in server. Check your connection.";
   return m || "Sign-in failed.";
 }
@@ -644,18 +818,20 @@ function loadSupabase() {
     sb = m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key, { auth: { flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   });
 }
-function mapCup(c) { return { id: c.id, cup: c.cup, date: c.date, max: c.max, results: c.results || [], notes: c.notes || "", hasPhoto: !!c.has_photo, addedAt: Number(c.added_at) || 0 }; }
+function mapCup(c) { return { id: c.id, cup: c.cup, date: c.date, week: c.week, max: c.max, results: c.results || [], notes: c.notes || "", hasPhoto: !!c.has_photo, addedAt: Number(c.added_at) || 0 }; }
 function mapProfile(u) { return { id: u.id, displayName: u.display_name, email: u.email, role: u.role, color: u.color, favoriteCharacter: u.favorite_character, favoriteVehicle: u.favorite_vehicle }; }
-function mapSub(s) { return { id: s.id, cup: s.cup, date: s.date, max: s.max, rows: s.rows || [], notes: s.notes || "", hasPhoto: !!s.has_photo, status: s.status, submittedBy: s.submitted_by, submitterName: s.submitter_name, submittedAt: Number(s.submitted_at) || 0, reviewNote: s.review_note || "" }; }
+function mapSub(s) { return { id: s.id, cup: s.cup, date: s.date, week: s.week || 1, max: s.max, rows: s.rows || [], notes: s.notes || "", hasPhoto: !!s.has_photo, status: s.status, submittedBy: s.submitted_by, submitterName: s.submitter_name, submittedAt: Number(s.submitted_at) || 0, reviewNote: s.review_note || "" }; }
+function mapClaim(c) { return { id: c.id, cupId: c.cup_id, rid: c.rid, userId: c.user_id, character: c.character || "", note: c.note || "", status: c.status, createdAt: Number(c.created_at) || 0, reviewNote: c.review_note || "" }; }
 function loadPublic() {
   return Promise.all([
     q(sb.from("league").select("settings").eq("id", 1).maybeSingle()),
-    q(sb.from("players").select("id,name,color,aliases")),
-    q(sb.from("cups").select("id,cup,date,max,results,notes,has_photo,added_at")),
+    q(sb.from("players").select("id,name,color,aliases,user_id,registered_at")),
+    q(sb.from("cups").select("id,cup,date,week,max,results,notes,has_photo,added_at")),
     q(sb.rpc("league_has_owner"))
   ]).then(function (r) {
     state = normalize({ league: r[0] ? r[0].settings : {}, players: r[1], cups: r[2].map(mapCup) });
     me.hasOwner = !!r[3]; me.ownerKnown = true;
+    if (playersDraft && !playersDraft.dirty) playersDraft = null;
     render();
   });
 }
@@ -665,11 +841,19 @@ function loadMine() {
   return q(sb.from("profiles").select("*").eq("id", uidNow).maybeSingle()).then(function (p) {
     if (!me.user || me.user.id !== uidNow) return;
     me.profile = p ? mapProfile(p) : null;
-    var jobs = [q(sb.from("submissions").select("*").eq("submitted_by", uidNow)).then(function (rows) { mySubs = rows.map(mapSub).sort(function (a, b) { return b.submittedAt - a.submittedAt; }); })];
+    var jobs = [
+      q(sb.from("submissions").select("*").eq("submitted_by", uidNow)).then(function (rows) { mySubs = rows.map(mapSub).sort(function (a, b) { return b.submittedAt - a.submittedAt; }); }),
+      q(sb.from("claims").select("*").eq("user_id", uidNow)).then(function (rows) { myClaims = rows.map(mapClaim).sort(function (a, b) { return b.createdAt - a.createdAt; }); })
+    ];
     if (isAdmin()) {
       jobs.push(q(sb.from("submissions").select("*").eq("status", "pending")).then(function (rows) { adminData.pending = rows.map(mapSub); }));
       jobs.push(q(sb.from("profiles").select("*")).then(function (rows) { adminData.users = rows.map(mapProfile); }));
-    } else adminData = { pending: [], users: [] };
+      jobs.push(q(sb.from("claims").select("*").eq("status", "pending")).then(function (rows) { adminData.claims = rows.map(mapClaim); }));
+      jobs.push(q(sb.from("player_invites").select("*")).then(function (rows) {
+        adminData.invites = rows.map(function (i) { return { playerId: i.player_id, email: i.email }; });
+        if (playersDraft && !playersDraft.dirty) playersDraft = null; // rebuild with the fresh invites unless there are unsaved edits
+      }));
+    } else adminData = { pending: [], users: [], claims: [], invites: [] };
     return Promise.all(jobs);
   }).catch(function () {}).then(render);
 }
@@ -693,7 +877,7 @@ function startAuth() {
     var changed = (me.user && me.user.id) !== (user && user.id);
     me.user = user; me.ready = true;
     if (event === "PASSWORD_RECOVERY") { me.recovery = true; location.hash = "account"; }
-    if (changed) { me.profile = null; profileDraft = null; mySubs = []; adminData = { pending: [], users: [] }; ui.msg = ""; ui.error = ""; ui.changingPw = false; }
+    if (changed) { me.profile = null; profileDraft = null; playersDraft = null; mySubs = []; myClaims = []; adminData = { pending: [], users: [], claims: [], invites: [] }; ui.msg = ""; ui.error = ""; ui.changingPw = false; ui.claimFor = null; }
     // Supabase advises not awaiting its own calls inside this callback.
     setTimeout(function () { if (changed || event === "USER_UPDATED") loadMine(); else render(); }, 0);
   });
@@ -705,13 +889,14 @@ function validateDraft(d) {
   if (!d.date) return "Pick the date the cup was raced.";
   if (!(max > 0 && Math.round(max) === max)) return "Max points per player must be a whole number above 0.";
   var active = d.rows.filter(function (r) { return r.assign !== "ignore"; });
-  if (!active.length) return "Add at least one league player's result.";
+  if (!active.length) return "Add at least one human player's result.";
   if (d.rows.length > 24) return "A cup can have at most 24 rows.";
   var seen = {};
   for (var i = 0; i < active.length; i++) {
     var r = active[i], p = r.pts === "" ? NaN : Number(r.pts);
-    var label = r.raw || r.newName || "a row";
+    var label = r.raw || r.newName || r.character || "row " + (d.rows.indexOf(r) + 1);
     if (!(p >= 0 && p <= max && Math.round(p) === p)) return "Points for " + label + " must be a whole number from 0 to " + max + ".";
+    if (r.assign === "unclaimed") continue;
     var key;
     if (r.assign === "new") { var nm = String(r.newName || "").trim(); if (!nm) return "Give the new player from " + label + " a name."; var ex = matchPlayer(state.players, nm); key = ex ? ex.id : "new:" + nm.toLowerCase(); }
     else key = r.assign;
@@ -728,8 +913,8 @@ function saveDraft() {
   var call, done;
   if (d.mode === "submit") {
     call = q(sb.rpc("submit_cup", {
-      p_sub: { id: uid(), cup: d.cup, date: d.date, max: Number(d.max), notes: String(d.notes || "").trim(),
-        rows: d.rows.map(function (r) { return { raw: String(r.raw || "").trim(), pts: r.pts === "" ? null : Number(r.pts), assign: r.assign, newName: r.assign === "new" ? String(r.newName || "").trim() : "" }; }) },
+      p_sub: { id: uid(), cup: d.cup, date: d.date, week: Number(d.week), max: Number(d.max), notes: String(d.notes || "").trim(),
+        rows: d.rows.map(function (r) { return { rid: r.rid || uid(), raw: String(r.raw || "").trim(), character: r.character || "", pts: r.pts === "" ? null : Number(r.pts), assign: r.assign, newName: r.assign === "new" ? String(r.newName || "").trim() : "" }; }) },
       p_photo: d.photoB64 || null
     }));
     done = { view: "account", flash: "Submitted. An admin will review it." };
@@ -738,22 +923,24 @@ function saveDraft() {
     var players = state.players.map(function (p) { return Object.assign({}, p, { aliases: (p.aliases || []).slice() }); });
     var touched = {}, results = [];
     d.rows.filter(function (r) { return r.assign !== "ignore"; }).forEach(function (r) {
-      var pid = r.assign;
-      if (pid === "new" || !players.some(function (p) { return p.id === pid; })) {
-        var nm = String(r.newName || r.raw).trim();
-        var ex = matchPlayer(players, nm);
-        if (ex) pid = ex.id; else { var np = { id: uid(), name: nm, color: nextColor(players), aliases: [] }; players.push(np); pid = np.id; touched[pid] = 1; }
+      var raw = String(r.raw || "").trim(), pid = null;
+      if (r.assign !== "unclaimed") {
+        pid = r.assign;
+        if (pid === "new" || !players.some(function (p) { return p.id === pid; })) {
+          var nm = String(r.newName || r.raw).trim();
+          var ex = matchPlayer(players, nm);
+          if (ex) pid = ex.id; else { var np = { id: uid(), name: nm, color: nextColor(players), aliases: [] }; players.push(np); pid = np.id; touched[pid] = 1; }
+        }
+        var p = players.find(function (x) { return x.id === pid; });
+        if (p && raw && raw.toLowerCase() !== p.name.toLowerCase() && !p.aliases.some(function (a) { return a.toLowerCase() === raw.toLowerCase(); })) { p.aliases.push(raw); touched[pid] = 1; }
       }
-      var p = players.find(function (x) { return x.id === pid; });
-      var raw = String(r.raw || "").trim();
-      if (p && raw && raw.toLowerCase() !== p.name.toLowerCase() && !p.aliases.some(function (a) { return a.toLowerCase() === raw.toLowerCase(); })) { p.aliases.push(raw); touched[pid] = 1; }
-      results.push({ p: pid, pts: Number(r.pts), raw: raw });
+      results.push({ rid: r.rid || uid(), p: pid, pts: Number(r.pts), character: r.character || "", raw: raw });
     });
     var old = state.cups.find(function (c) { return c.id === cupId; });
     call = q(sb.rpc("save_cup", {
-      p_cup: { id: cupId, cup: d.cup, date: d.date, max: Number(d.max), results: results, notes: String(d.notes || "").trim(),
+      p_cup: { id: cupId, cup: d.cup, date: d.date, week: Number(d.week), max: Number(d.max), results: results, notes: String(d.notes || "").trim(),
         has_photo: !!d.photoB64 || !!(old && old.hasPhoto), added_at: old ? old.addedAt : Date.now() },
-      p_players: players.filter(function (p) { return touched[p.id]; }),
+      p_players: players.filter(function (p) { return touched[p.id]; }).map(function (p) { return { id: p.id, name: p.name, color: p.color, aliases: p.aliases }; }),
       p_photo: d.photoB64 && d.photoChanged ? d.photoB64 : null,
       p_submission: d.mode === "review" ? d.id : null
     })).then(function () { if (d.photoB64 && d.photoChanged) photoCache[cupId] = d.photoUrl; });
@@ -766,22 +953,37 @@ function saveDraft() {
 }
 function saveSettings() {
   var s = settingsDraft; if (!s || ui.busy) return;
-  var L = s.league, n = { name: String(L.name || "").trim(), season: String(L.season || "").trim(), seasonLength: Number(L.seasonLength), playoffSpots: Number(L.playoffSpots), minParticipation: Number(L.minParticipation), defaultMax: Number(L.defaultMax) };
+  var n = { name: String(s.name || "").trim(), season: String(s.season || "").trim(), seasonWeeks: Number(s.seasonWeeks), cupsPerWeek: Number(s.cupsPerWeek), playoffSpots: Number(s.playoffSpots), minParticipation: Number(s.minParticipation), defaultMax: Number(s.defaultMax) };
+  var whole = function (v, lo, hi) { return v >= lo && v <= hi && Math.round(v) === v; };
   var err = "";
   if (!n.name) err = "Give the league a name.";
   else if (!n.season) err = "Give the season a name.";
-  else if (!(n.seasonLength >= 1 && n.seasonLength <= 200 && Math.round(n.seasonLength) === n.seasonLength)) err = "Cups in regular season must be a whole number from 1 to 200.";
-  else if (!(n.playoffSpots >= 2 && n.playoffSpots <= 32 && Math.round(n.playoffSpots) === n.playoffSpots)) err = "Playoff spots must be a whole number from 2 to 32.";
+  else if (!whole(n.seasonWeeks, 1, 52)) err = "Weeks must be a whole number from 1 to 52.";
+  else if (!whole(n.cupsPerWeek, 1, 20)) err = "Cups per week must be a whole number from 1 to 20.";
+  else if (!whole(n.playoffSpots, 2, 32)) err = "Playoff spots must be a whole number from 2 to 32.";
   else if (!(n.minParticipation >= 0 && n.minParticipation <= 100)) err = "Qualifying % must be between 0 and 100.";
-  else if (!(n.defaultMax >= 1 && Math.round(n.defaultMax) === n.defaultMax)) err = "Default max points must be a whole number above 0.";
-  else if (s.players.some(function (p) { return !String(p.name).trim() || String(p.name).trim().length > 40; })) err = "Every player needs a name of up to 40 characters.";
+  else if (!whole(n.defaultMax, 1, 1000)) err = "Default max points must be a whole number above 0.";
   if (err) { ui.error = err; render(); return; }
-  var keep = {}; s.players.forEach(function (p) { keep[p.id] = String(p.name).trim(); });
-  var names = state.players.filter(function (p) { return p.id in keep && keep[p.id] !== p.name; }).map(function (p) { return { id: p.id, name: keep[p.id] }; });
-  var removed = state.players.filter(function (p) { return !(p.id in keep); }).map(function (p) { return p.id; });
   ui.busy = true; ui.error = ""; render();
-  q(sb.rpc("save_settings", { p_settings: n, p_names: names, p_removed: removed }))
+  q(sb.rpc("save_settings", { p_settings: n }))
     .then(function () { settingsDraft = null; flash("Settings saved"); reloadSoon(); }).catch(function (e) { ui.error = dbErr(e); }).then(function () { ui.busy = false; render(); });
+}
+function savePlayers() {
+  if (!playersDraft || ui.busy) return;
+  var emails = {}, accts = {}, err = "";
+  playersDraft.forEach(function (p) {
+    if (p.remove || err) return;
+    var nm = String(p.name || "").trim(), em = String(p.email || "").trim().toLowerCase();
+    if (!nm || nm.length > 40) err = "Every player needs a name of up to 40 characters.";
+    else if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) err = "“" + em + "” doesn't look like an email address.";
+    else if (em && emails[em]) err = "The email " + em + " is on two players.";
+    else if (p.userId && accts[p.userId]) err = "The same account is linked to two players.";
+    emails[em] = em ? 1 : 0; if (p.userId) accts[p.userId] = 1;
+  });
+  if (err) { ui.error = err; render(); return; }
+  ui.busy = true; ui.error = ""; render();
+  q(sb.rpc("save_players", { p_players: playersDraft.map(function (p) { return { id: p.id, name: String(p.name).trim(), color: p.color, email: String(p.email || "").trim().toLowerCase(), user_id: p.userId || "", remove: !!p.remove }; }) }))
+    .then(function () { playersDraft = null; flash("Players saved"); reloadSoon(); }).catch(function (e) { ui.error = dbErr(e); }).then(function () { ui.busy = false; render(); });
 }
 function saveProfile() {
   var p = profileDraft; if (!p || ui.busy) return;
@@ -826,7 +1028,7 @@ function setPassword() {
 function setView() {
   var h = (location.hash || "").replace("#", "");
   ui.view = VIEWS.indexOf(h) >= 0 ? h : "standings";
-  ui.confirmDel = null; ui.error = ""; ui.msg = ""; ui.confirmDeleteAccount = false; ui.rejectId = null;
+  ui.confirmDel = null; ui.error = ""; ui.msg = ""; ui.confirmDeleteAccount = false; ui.rejectId = null; ui.claimFor = null;
   if (ui.view === "add" && !draft && state && signedIn()) draft = newDraft();
   render(); window.scrollTo(0, 0);
 }
@@ -836,16 +1038,39 @@ document.addEventListener("click", function (e) {
   var t = e.target.closest("[data-act]"); if (!t) return;
   var act = t.getAttribute("data-act"), id = t.getAttribute("data-key"), i = Number(t.getAttribute("data-i"));
   if (act === "sel") { ui.sel = ui.sel === id ? null : id; render(); }
+  else if (act === "sel-go") { ui.sel = id; }
   else if (act === "unsel") { ui.sel = null; render(); }
   else if (act === "new-cup") { if (!draft || draft.mode === "edit" || draft.mode === "review") { draft = newDraft(); if (ui.view === "add") render(); } }
   else if (act === "cancel-draft") { if (readCtl) readCtl.abort(); draft = null; }
   else if (act === "edit-cup") { var c = state.cups.find(function (x) { return x.id === id; }); if (c) { draft = editDraft(c); if (c.hasPhoto && !draft.photoUrl) loadPhoto(c.id); if (ui.view === "add") render(); else location.hash = "add"; } }
   else if (act === "review") { var s = adminData.pending.find(function (x) { return x.id === id; }); if (s) { draft = reviewDraft(s); location.hash = "add"; } }
-  else if (act === "reject") { ui.rejectId = id; ui.rejectNote = ""; render(); }
+  else if (act === "reject") { ui.rejectId = "s:" + id; ui.rejectNote = ""; render(); }
+  else if (act === "claim-reject") { ui.rejectId = "c:" + id; ui.rejectNote = ""; render(); }
   else if (act === "reject-no") { ui.rejectId = null; render(); }
   else if (act === "reject-yes") {
     q(sb.rpc("reject_submission", { p_id: id, p_note: String(ui.rejectNote || "").trim().slice(0, 200) }))
       .then(function () { ui.rejectId = null; flash("Submission rejected"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); render(); });
+  }
+  else if (act === "claim-reject-yes") {
+    q(sb.rpc("reject_claim", { p_claim: id, p_note: String(ui.rejectNote || "").trim().slice(0, 200) }))
+      .then(function () { ui.rejectId = null; flash("Request declined"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); render(); });
+  }
+  else if (act === "claim-approve") {
+    ui.busy = true; ui.error = ""; render();
+    q(sb.rpc("approve_claim", { p_claim: id })).then(function () { flash("Points given. Standings updated."); reloadSoon(); })
+      .catch(function (er) { ui.error = dbErr(er); }).then(function () { ui.busy = false; render(); });
+  }
+  else if (act === "claim-open") { ui.claimFor = id; ui.claimForm = { character: t.getAttribute("data-char") || "", note: "" }; ui.error = ""; render(); }
+  else if (act === "claim-cancel") { ui.claimFor = null; render(); }
+  else if (act === "claim-send") {
+    var parts = id.split("|");
+    ui.busy = true; ui.error = ""; render();
+    q(sb.from("claims").insert({ id: uid(), cup_id: parts[0], rid: parts[1], character: ui.claimForm.character || "", note: String(ui.claimForm.note || "").trim().slice(0, 200), created_at: Date.now() }))
+      .then(function () { ui.claimFor = null; flash("Request sent. An admin will review it."); return loadMine(); })
+      .catch(function (er) { ui.error = er && er.code === "23505" ? "You already requested these points." : dbErr(er); }).then(function () { ui.busy = false; render(); });
+  }
+  else if (act === "withdraw-claim") {
+    q(sb.from("claims").delete().eq("id", id)).then(function () { flash("Request withdrawn"); return loadMine(); }).catch(function (er) { ui.error = dbErr(er); render(); });
   }
   else if (act === "withdraw") {
     q(sb.from("submissions").delete().eq("id", id)).then(function () { flash("Submission withdrawn"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); render(); });
@@ -854,14 +1079,17 @@ document.addEventListener("click", function (e) {
   else if (act === "del-no") { ui.confirmDel = null; render(); }
   else if (act === "del-yes") {
     ui.busy = true; ui.error = ""; render();
-    q(sb.from("cups").delete().eq("id", id)).then(function () { flash("Cup deleted"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); }).then(function () { ui.busy = false; ui.confirmDel = null; render(); });
+    q(sb.from("cups").delete().eq("id", id)).then(function () { flash("Cup deleted"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); })
+      .then(function () { ui.busy = false; ui.confirmDel = null; render(); });
   }
   else if (act === "read") { readPhoto(); }
   else if (act === "stop-read") { if (readCtl) readCtl.abort(); readCtl = null; if (draft) draft.reading = false; render(); }
-  else if (act === "add-row") { var free = state.players.find(function (p) { return !draft.rows.some(function (r) { return r.assign === p.id; }); }); draft.rows.push({ raw: free ? free.name : "", pts: "", assign: free ? free.id : "new", newName: "" }); render(); }
+  else if (act === "add-row") { draft.rows.push({ rid: uid(), raw: "", character: "", pts: "", assign: "unclaimed", newName: "" }); render(); }
   else if (act === "rm-row") { draft.rows.splice(i, 1); render(); }
   else if (act === "save-cup") { saveDraft(); }
-  else if (act === "rm-player") { settingsDraft.players.splice(i, 1); render(); }
+  else if (act === "pl-add") { playersDraft.dirty = true; playersDraft.push({ id: "p" + uid(), name: "", color: nextColor(playersDraft), email: "", userId: "", registeredAt: null, isNew: true, remove: false }); render(); var inp = document.getElementById("pl-n-" + (playersDraft.length - 1)); if (inp) inp.focus(); }
+  else if (act === "pl-remove") { playersDraft.dirty = true; var pr = playersDraft[i]; if (pr.isNew) playersDraft.splice(i, 1); else pr.remove = !pr.remove; render(); }
+  else if (act === "pl-save") { savePlayers(); }
   else if (act === "save-settings") { saveSettings(); }
   else if (act === "save-profile") { saveProfile(); }
   else if (act === "pick-color") { if (profileDraft) { profileDraft.color = id; render(); } }
@@ -897,19 +1125,21 @@ document.addEventListener("input", function (e) {
   var t = e.target;
   if (t.dataset.d && draft) draft[t.dataset.d] = t.value;
   else if (t.dataset.r && draft) { var row = draft.rows[Number(t.dataset.i)]; if (row && t.dataset.r !== "assign") row[t.dataset.r] = t.value; }
-  else if (t.dataset.set === "league" && settingsDraft) settingsDraft.league[t.dataset.key] = t.value;
-  else if (t.dataset.set === "pname" && settingsDraft) settingsDraft.players[Number(t.dataset.i)].name = t.value;
+  else if (t.dataset.set === "league" && settingsDraft) settingsDraft[t.dataset.key] = t.value;
+  else if (t.dataset.pl && playersDraft) { var pr = playersDraft[Number(t.dataset.i)]; if (pr) { pr[t.dataset.pl] = t.value; playersDraft.dirty = true; } }
   else if (t.dataset.a) ui.form[t.dataset.a] = t.value;
   else if (t.dataset.p && profileDraft) profileDraft[t.dataset.p] = t.value;
+  else if (t.dataset.cl) ui.claimForm[t.dataset.cl] = t.value;
   else if (t.dataset.rej) ui.rejectNote = t.value;
 });
 document.addEventListener("change", function (e) {
   var t = e.target;
   if (t.id === "photo-in") { onPhoto(t.files && t.files[0]); t.value = ""; }
   else if (t.dataset.r === "assign" && draft) { var row = draft.rows[Number(t.dataset.i)]; row.assign = t.value; if (t.value === "new" && !row.newName) row.newName = row.raw; render(); var n = document.getElementById("r-new-" + t.dataset.i); if (n) n.focus(); }
+  else if (t.dataset.r && draft) { var rw = draft.rows[Number(t.dataset.i)]; if (rw) rw[t.dataset.r] = t.value; }
+  else if (t.dataset.pl && playersDraft) { var pr = playersDraft[Number(t.dataset.i)]; if (pr) { pr[t.dataset.pl] = t.value; playersDraft.dirty = true; render(); } }
   else if (t.dataset.role) {
-    var target = t.dataset.role, role = t.value;
-    q(sb.rpc("set_role", { p_user: target, p_role: role })).then(function () { flash("Role updated"); return loadMine(); })
+    q(sb.rpc("set_role", { p_user: t.dataset.role, p_role: t.value })).then(function () { flash("Role updated"); return loadMine(); })
       .catch(function (er) { ui.error = dbErr(er); render(); });
   }
 });
