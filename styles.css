@@ -284,3 +284,48 @@ a.unc{color:var(--muted);font-style:italic;font-weight:700}
 .match div{display:flex;gap:10px;align-items:center;padding:10px 12px}
 .match div+div{border-top:1px solid var(--line)}
 .seed{font-family:var(--f-display);font-size:.8rem;color:var(--muted);width:2ch}
+
+/* ---------- race night ---------- */
+.tab .soon.live{background:var(--good);color:#04210f;animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.tab .soon.live{animation:none}}
+.chip.live{background:rgba(61,220,132,.16);color:var(--good);vertical-align:3px}
+.live-cup{padding:18px;display:grid;gap:16px;border-color:rgba(61,220,132,.45)}
+.live-head{display:flex;align-items:center;gap:12px}
+.live-note{text-decoration:none;color:var(--ink);border-color:rgba(61,220,132,.45);background:rgba(61,220,132,.08)}
+.races{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.races{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.races{grid-template-columns:minmax(0,1fr)}}
+.rcard{display:grid;gap:10px;align-content:start;padding:14px;border-radius:14px;background:var(--bg-2);border:1px solid var(--line);min-width:0}
+.rnum{font-family:var(--f-display);font-size:.72rem;letter-spacing:.06em;color:var(--accent)}
+.rmap{font-weight:800;font-size:1.02rem;line-height:1.25;min-height:2.5em}
+.saved{font-family:var(--f-data);font-size:.8rem;color:var(--good)}
+.rp{font-family:var(--f-data);font-weight:600}
+.rp.r1{color:var(--gold)}.rp.r2{color:var(--silver)}.rp.r3{color:var(--bronze)}
+td.clash{background:var(--bad-soft)}
+td.clash .rp{color:var(--bad)}
+.warn{color:var(--bad);font-weight:700}
+.finish{display:grid;gap:14px;padding:16px;border-radius:14px;border:1px dashed var(--accent);background:rgba(255,210,63,.05)}
+
+/* ---------- cup builder ---------- */
+.builder{display:grid;gap:16px}
+.build-maps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.build-maps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.build-maps{grid-template-columns:minmax(0,1fr)}}
+.bmap{padding:12px;border-radius:12px;background:var(--bg-2);border:1px solid var(--line)}
+.tpl-save{padding-top:12px;border-top:1px solid var(--line)}
+.tpl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px}
+@media (max-width:640px){.tpl{grid-template-columns:auto minmax(0,1fr)}.tpl .keyrow{grid-column:1/-1}}
+.maps-line{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:.8rem;color:var(--muted)}
+.maps-line b{color:var(--accent);font-family:var(--f-display);font-weight:400;font-size:.7rem;margin-right:2px}
+
+/* ---------- cup grid & player detail additions ---------- */
+.race-grid{margin-top:12px}
+.race-grid td,.race-grid th{padding:6px 9px}
+.last3{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.maps{display:grid;gap:6px}
+.map-row{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;background:var(--bg-2);font-size:.86rem}
+.maps.good .map-row{box-shadow:inset 3px 0 0 var(--good)}
+.maps.bad .map-row{box-shadow:inset 3px 0 0 var(--bad)}
+.mn{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rr{display:inline-flex;gap:3px}

@@ -14,11 +14,21 @@ Regular-season standings for our Mario Kart Wii league. It's a static site on Gi
 
 All of these numbers are editable by admins on the Admin page.
 
-## Results photos and unclaimed points
+## Cup night workflow
 
-Upload the photo of the standings screen after a cup's 4 races. Human players' rows are highlighted on that screen. With an Anthropic API key saved on your account page, Claude reads every row and records each highlighted player's character and points; CPU rows are dropped.
+1. **Build the cup** (admin, before racing): Cup builder › pick 4 tracks by hand, from a template (the 8 game cups are built in; save your own like "Cursed Cup"), or at random. **Lock in & start racing**. The tracks can't change after this.
+2. **After each race**: every racer opens **Race night** and enters their finishing position (1st–12th) and character. Points come from the 15-12-10-8-7-6-5-4-3-2-1-0 table. Admins can enter or fix results for anyone. Two people claiming the same place gets flagged.
+3. **After the cup**: an admin presses **Finish cup**, adds the results-screen photo, and the site compares the photo's totals with what everyone entered (Claude reads the photo if an Anthropic key is saved on the account page). Fix anything that's off, then **Finalize**. Only finalized cups count. Highlighted photo rows nobody entered can be saved as unclaimed points.
 
-Highlighted rows that can't be matched to a player are saved as **unclaimed**. They appear on the Unclaimed page, where a signed-in person presses **That was me** (and can correct the character). An admin approves the request on the Admin page and the points move to that person's player, creating one if needed.
+Admins can reopen a finished cup to correct it. Cups raced without per-race entries can still be added from a results photo (Cups › "Add a finished cup from a photo").
+
+## Stats
+
+Per cup and racer: finishing position, character, points, and a race-by-race grid. Per racer overall: points percentage, total points, average points per cup, average race finish, average cup finish, wins, podiums, character usage %, last 3 characters, strongest and weakest tracks, and full cup history.
+
+## Unclaimed points
+
+Highlighted rows on a results photo that aren't matched to anyone are saved as **unclaimed**. They appear on the Unclaimed page, where a signed-in person presses **That was me** (and can correct the character). An admin approves the request on the Admin page and the points move to that person's player, creating one if needed.
 
 ## Accounts and roles
 

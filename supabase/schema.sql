@@ -103,6 +103,33 @@ create table if not exists public.claims (
   unique (cup_id, rid, user_id)
 );
 
+-- ---- added in v3: cup builder, templates, per-race results ----
+alter table public.cups add column if not exists status text not null default 'complete' check (status in ('racing', 'complete'));
+alter table public.cups add column if not exists maps text[] not null default '{}';
+alter table public.cups add column if not exists template_id text;
+
+-- Reusable track lists, e.g. "Cursed Cup". Everyone reads; admins write.
+create table if not exists public.cup_templates (
+  id text primary key,
+  name text not null check (char_length(name) between 1 and 40),
+  maps text[] not null check (array_length(maps, 1) = 4),
+  created_by uuid references auth.users on delete set null,
+  created_at bigint not null
+);
+
+-- One row per player per race, entered on the honour system (or by an admin).
+create table if not exists public.race_results (
+  cup_id text not null references public.cups on delete cascade,
+  race int not null check (race between 1 and 4),
+  player_id text not null references public.players on delete cascade,
+  position int not null check (position between 1 and 12),
+  points int not null check (points between 0 and 15),
+  character text not null default '' check (char_length(character) <= 40),
+  entered_by uuid references auth.users on delete set null,
+  entered_at bigint not null,
+  primary key (cup_id, race, player_id)
+);
+
 -- ============ helpers ============
 
 create or replace function public.is_admin() returns boolean
@@ -160,6 +187,21 @@ drop trigger if exists on_auth_user_confirmed on auth.users;
 create trigger on_auth_user_confirmed after insert or update of email_confirmed_at on auth.users
   for each row execute function public.link_invited_player();
 
+-- A cup's tracks are fixed once it exists.
+create or replace function public.lock_cup_maps() returns trigger
+language plpgsql as $$
+begin
+  if old.maps is distinct from new.maps and cardinality(old.maps) > 0 then
+    raise exception 'This cup''s tracks are locked and can''t be changed.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists cups_lock_maps on public.cups;
+create trigger cups_lock_maps before update on public.cups for each row execute function public.lock_cup_maps();
+
+create or replace function public.race_points(p_position int) returns int
+language sql immutable as $$ select (array[15,12,10,8,7,6,5,4,3,2,1,0])[p_position] $$;
+
 -- ============ row level security ============
 
 alter table public.league enable row level security;
@@ -171,12 +213,14 @@ alter table public.submissions enable row level security;
 alter table public.submission_photos enable row level security;
 alter table public.player_invites enable row level security;
 alter table public.claims enable row level security;
+alter table public.cup_templates enable row level security;
+alter table public.race_results enable row level security;
 
 -- Public league data: anyone reads; admins write.
 do $$
 declare t text;
 begin
-  foreach t in array array['league', 'players', 'cups', 'photos'] loop
+  foreach t in array array['league', 'players', 'cups', 'photos', 'cup_templates'] loop
     execute format('drop policy if exists "public read" on public.%I', t);
     execute format('drop policy if exists "admins write" on public.%I', t);
     execute format('create policy "public read" on public.%I for select to anon, authenticated using (true)', t);
@@ -222,6 +266,11 @@ create policy "request own" on public.claims for insert to authenticated
   with check (user_id = auth.uid() and status = 'pending' and reviewed_by is null and player_id is null and public.result_unclaimed(cup_id, rid));
 create policy "admins update" on public.claims for update to authenticated using (public.is_admin()) with check (public.is_admin());
 create policy "withdraw own pending or admin" on public.claims for delete to authenticated using (public.is_admin() or (user_id = auth.uid() and status = 'pending'));
+
+-- Race results: everyone reads; all writes go through enter_race / clear_race (below), which check who you are.
+drop policy if exists "public read" on public.race_results;
+create policy "public read" on public.race_results for select to anon, authenticated using (true);
+revoke insert, update, delete on public.race_results from anon, authenticated;
 
 -- ============ actions ============
 
@@ -394,6 +443,115 @@ begin
     review_note = left(coalesce(p_note, ''), 200) where id = p_claim and status = 'pending';
 end $$;
 
+-- Build a cup from 4 tracks and open it for racing. Its tracks are locked from here on.
+create or replace function public.create_cup(p_cup jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare m text[] := array(select jsonb_array_elements_text(p_cup->'maps'));
+begin
+  if not is_admin() then raise exception 'Only admins can create cups.'; end if;
+  if cardinality(m) <> 4 or exists (select 1 from unnest(m) x where coalesce(trim(x), '') = '') then
+    raise exception 'Pick all 4 tracks.';
+  end if;
+  insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, status, maps, template_id)
+  values (p_cup->>'id', left(trim(p_cup->>'cup'), 40), (p_cup->>'date')::date, coalesce((p_cup->>'week')::int, 1),
+          coalesce((p_cup->>'max')::int, 60), '[]'::jsonb, '', false, (extract(epoch from now()) * 1000)::bigint, auth.uid(),
+          'racing', m, nullif(p_cup->>'template_id', ''));
+end $$;
+
+-- Your own player, created from your profile the first time you need one.
+create or replace function public.my_player_id() returns text
+language plpgsql security definer set search_path = public as $$
+declare pid text; prof profiles;
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  select id into pid from players where user_id = auth.uid();
+  if pid is null then
+    select * into prof from profiles where id = auth.uid();
+    if not found then raise exception 'Your profile is still being set up. Refresh and try again.'; end if;
+    pid := 'p' || substr(md5(random()::text || clock_timestamp()::text), 1, 12);
+    insert into players (id, name, color, aliases, user_id, registered_at) values (pid, prof.display_name, prof.color, '{}', auth.uid(), prof.created_at);
+  end if;
+  return pid;
+end $$;
+
+-- Record a finishing position for one race. Racers enter their own; admins can enter for anyone (p_player).
+create or replace function public.enter_race(p_cup text, p_race int, p_position int, p_character text default '', p_player text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare pid text; st text;
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  select status into st from cups where id = p_cup;
+  if st is null then raise exception 'That cup doesn''t exist.'; end if;
+  if st <> 'racing' then raise exception 'This cup is finished. Ask an admin to reopen it to change results.'; end if;
+  if p_race not between 1 and 4 then raise exception 'Race must be 1 to 4.'; end if;
+  if p_position not between 1 and 12 then raise exception 'Position must be 1st to 12th.'; end if;
+  if p_player is not null then
+    if not is_admin() then raise exception 'Only admins can enter results for someone else.'; end if;
+    if not exists (select 1 from players where id = p_player) then raise exception 'That player doesn''t exist.'; end if;
+    pid := p_player;
+  else
+    pid := my_player_id();
+  end if;
+  insert into race_results (cup_id, race, player_id, position, points, character, entered_by, entered_at)
+  values (p_cup, p_race, pid, p_position, race_points(p_position), left(coalesce(p_character, ''), 40), auth.uid(), (extract(epoch from now()) * 1000)::bigint)
+  on conflict (cup_id, race, player_id) do update set position = excluded.position, points = excluded.points,
+    character = excluded.character, entered_by = excluded.entered_by, entered_at = excluded.entered_at;
+end $$;
+
+create or replace function public.clear_race(p_cup text, p_race int, p_player text default null) returns void
+language plpgsql security definer set search_path = public as $$
+declare pid text;
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  if (select status from cups where id = p_cup) is distinct from 'racing' then raise exception 'This cup is finished.'; end if;
+  if p_player is not null then
+    if not is_admin() then raise exception 'Only admins can clear someone else''s result.'; end if;
+    pid := p_player;
+  else
+    select id into pid from players where user_id = auth.uid();
+  end if;
+  delete from race_results where cup_id = p_cup and race = p_race and player_id = pid;
+end $$;
+
+-- Close a cup: totals come from the race entries; the character is the one used most in the cup (latest wins ties).
+-- p_unclaimed: [{pts, character}] for highlighted photo rows nobody entered.
+create or replace function public.finish_cup(p_cup text, p_photo text default null, p_unclaimed jsonb default '[]'::jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare res jsonb;
+begin
+  if not is_admin() then raise exception 'Only admins can finish cups.'; end if;
+  if (select status from cups where id = p_cup) is distinct from 'racing' then raise exception 'That cup isn''t in progress.'; end if;
+  with tot as (
+    select player_id, sum(points) pts from race_results where cup_id = p_cup group by player_id
+  ), ch as (
+    select distinct on (player_id) player_id, character from (
+      select player_id, character, count(*) n, max(race) last_race from race_results
+      where cup_id = p_cup and character <> '' group by player_id, character
+    ) x order by player_id, n desc, last_race desc
+  )
+  select coalesce(jsonb_agg(jsonb_build_object('rid', 'p_' || t.player_id, 'p', t.player_id, 'pts', t.pts,
+           'character', coalesce(c.character, ''), 'raw', '') order by t.pts desc), '[]'::jsonb)
+    into res from tot t left join ch c using (player_id);
+  select res || coalesce(jsonb_agg(jsonb_build_object('rid', 'u' || substr(md5(random()::text || ord::text), 1, 10), 'p', null,
+           'pts', (u->>'pts')::int, 'character', coalesce(u->>'character', ''), 'raw', '')), '[]'::jsonb)
+    into res from jsonb_array_elements(p_unclaimed) with ordinality as t(u, ord);
+  if jsonb_array_length(res) = 0 then raise exception 'Nobody has entered any results for this cup yet.'; end if;
+  update cups set results = res, status = 'complete', has_photo = has_photo or p_photo is not null where id = p_cup;
+  if p_photo is not null then
+    insert into photos (cup_id, data) values (p_cup, p_photo) on conflict (cup_id) do update set data = excluded.data;
+  end if;
+end $$;
+
+-- Reopen a finished, race-by-race cup so entries can be corrected. Finishing it again rebuilds its totals.
+create or replace function public.reopen_cup(p_cup text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then raise exception 'Only admins can reopen cups.'; end if;
+  if not exists (select 1 from race_results where cup_id = p_cup) then raise exception 'Only cups raced race-by-race can be reopened.'; end if;
+  update cups set status = 'racing' where id = p_cup;
+  update claims set status = 'rejected', review_note = 'The cup was reopened.' where cup_id = p_cup and status = 'pending';
+end $$;
+
 -- Lets a signed-in person delete their own account. The owner can't.
 create or replace function public.delete_my_account() returns void
 language plpgsql security definer set search_path = public as $$
@@ -405,17 +563,19 @@ end $$;
 
 revoke execute on function public.claim_ownership, public.set_role, public.save_cup, public.reject_submission,
   public.submit_cup, public.save_settings, public.delete_my_account, public.save_players, public.approve_claim,
-  public.reject_claim from public, anon;
+  public.reject_claim, public.create_cup, public.my_player_id, public.enter_race, public.clear_race, public.finish_cup,
+  public.reopen_cup from public, anon;
 grant execute on function public.claim_ownership, public.set_role, public.save_cup, public.reject_submission,
   public.submit_cup, public.save_settings, public.delete_my_account, public.save_players, public.approve_claim,
-  public.reject_claim to authenticated;
-grant execute on function public.is_admin, public.league_has_owner, public.result_unclaimed to anon, authenticated;
+  public.reject_claim, public.create_cup, public.my_player_id, public.enter_race, public.clear_race, public.finish_cup,
+  public.reopen_cup to authenticated;
+grant execute on function public.is_admin, public.league_has_owner, public.result_unclaimed, public.race_points to anon, authenticated;
 
 -- ============ live updates ============
 do $$
 declare t text;
 begin
-  foreach t in array array['league', 'players', 'cups', 'submissions', 'profiles', 'claims'] loop
+  foreach t in array array['league', 'players', 'cups', 'submissions', 'profiles', 'claims', 'race_results', 'cup_templates'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when duplicate_object then null;

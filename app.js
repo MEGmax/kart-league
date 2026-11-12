@@ -15,7 +15,15 @@ var RACE_POINTS = [15, 12, 10, 8, 7, 6, 5, 4, 3, 2, 1, 0];
 var CUP_NAMES = ["Mushroom Cup", "Flower Cup", "Star Cup", "Special Cup", "Shell Cup", "Banana Cup", "Leaf Cup", "Lightning Cup", "Other"];
 var COLORS = ["#E5484D", "#0090FF", "#30A46C", "#F76B15", "#8E4EC6", "#E93D82", "#12A594", "#D9A400", "#6E56CF", "#A18072", "#3E63DD", "#7C8A2E"];
 var CHARACTERS = ["Mario", "Luigi", "Peach", "Daisy", "Yoshi", "Birdo", "Toad", "Toadette", "Koopa Troopa", "Diddy Kong", "Donkey Kong", "Bowser", "Bowser Jr.", "Wario", "Waluigi", "King Boo", "Rosalina", "Funky Kong", "Dry Bones", "Dry Bowser", "Baby Mario", "Baby Luigi", "Baby Peach", "Baby Daisy", "Mii"];
-var VIEWS = ["standings", "cups", "unclaimed", "playoffs", "rules", "add", "account", "admin"];
+var VIEWS = ["standings", "race", "cups", "unclaimed", "playoffs", "rules", "add", "build", "account", "admin"];
+var NITRO = ["Luigi Circuit", "Moo Moo Meadows", "Mushroom Gorge", "Toad's Factory", "Mario Circuit", "Coconut Mall", "DK Summit", "Wario's Gold Mine",
+  "Daisy Circuit", "Koopa Cape", "Maple Treeway", "Grumble Volcano", "Dry Dry Ruins", "Moonview Highway", "Bowser's Castle", "Rainbow Road"];
+var RETRO = ["GCN Peach Beach", "DS Yoshi Falls", "SNES Ghost Valley 2", "N64 Mario Raceway", "N64 Sherbet Land", "GBA Shy Guy Beach", "DS Delfino Square", "GCN Waluigi Stadium",
+  "DS Desert Hills", "GBA Bowser Castle 3", "N64 DK's Jungle Parkway", "GCN Mario Circuit", "SNES Mario Circuit 3", "DS Peach Gardens", "GCN DK Mountain", "N64 Bowser's Castle"];
+var TRACKS = NITRO.concat(RETRO);
+var BUILTIN_CUPS = ["Mushroom Cup", "Flower Cup", "Star Cup", "Special Cup", "Shell Cup", "Banana Cup", "Leaf Cup", "Lightning Cup"].map(function (n, i) {
+  return { id: "g" + i, name: n, maps: TRACKS.slice(i * 4, i * 4 + 4), builtin: true };
+});
 var DEFAULT_LEAGUE = { name: "Kart Night League", season: "Season 1", seasonWeeks: 5, cupsPerWeek: 4, playoffSpots: 4, minParticipation: 50, defaultMax: 60 };
 
 // ---------- state ----------
@@ -27,7 +35,8 @@ var mySubs = [], myClaims = [];
 var photoCache = {};                 // cupId -> data URL | "loading" | "none"
 var ui = { view: "standings", sel: null, confirmDel: null, flash: "", busy: false, error: "", loadError: "", msg: "",
   authMode: "signin", form: { email: "", password: "", name: "" }, confirmDeleteAccount: false,
-  rejectId: null, rejectNote: "", claimFor: null, claimForm: { character: "", note: "" } };
+  rejectId: null, rejectNote: "", claimFor: null, claimForm: { character: "", note: "" },
+  entry: {}, entryFor: {}, finish: null, build: null, tplName: "" };
 var draft = null, readCtl = null, settingsDraft = null, profileDraft = null, playersDraft = null;
 
 // ---------- helpers ----------
@@ -68,26 +77,43 @@ function normalize(raw) {
     }),
     cups: (raw.cups || []).map(function (c) {
       return Object.assign({ notes: "", hasPhoto: false }, c, {
-        week: Number(c.week) || 1,
+        week: Number(c.week) || 1, status: c.status || "complete", maps: c.maps || [],
         results: (c.results || []).map(function (r, i) { return { rid: r.rid || "r" + i, p: r.p || null, pts: Number(r.pts) || 0, character: r.character || "", raw: r.raw || "" }; })
       });
-    })
+    }),
+    races: (raw.races || []).map(function (r) {
+      return { cupId: r.cupId || r.cup_id, race: Number(r.race), playerId: r.playerId || r.player_id, position: Number(r.position), points: Number(r.points), character: r.character || "", enteredAt: Number(r.enteredAt || r.entered_at) || 0 };
+    }),
+    templates: (raw.templates || []).map(function (t) { return { id: t.id, name: t.name, maps: t.maps || [] }; })
   };
 }
 
-// Example data, shown only while the league has no cups yet.
+// Example data, shown only while the league has no cups yet. Built race by race so every stat has something to show.
 var DEMO = (function () {
-  var names = ["Alex", "Sam", "Jordan", "Riley", "Casey", "Morgan"];
+  var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+  var names = ["Alex", "Sam", "Jordan", "Riley", "Casey", "Morgan"], skill = [3.2, 3.6, 3.9, 5.2, 5.6, 6.6];
   var mains = [["Funky Kong", "Funky Kong", "Daisy"], ["Daisy", "Peach"], ["Rosalina", "Rosalina", "King Boo"], ["Luigi"], ["Bowser", "Dry Bowser"], ["Toad", "Baby Daisy"]];
   var players = names.map(function (n, i) { return { id: "d" + i, name: n, color: COLORS[i], aliases: [], userId: null, registeredAt: i < 4 ? "2026-09-0" + (i + 1) + "T18:00:00Z" : null }; });
-  var pts = [[52, 47, 41, 38, 30, 25], [44, 55, 39, 33, 41, 0], [49, 38, 50, 29, 35, 41], [57, 42, 36, 44, 0, 31], [41, 49, 45, 37, 33, 28], [46, 51, 40, 0, 38, 35], [53, 39, 47, 41, 30, 0], [48, 44, 52, 36, 40, 29]];
-  var cups = pts.map(function (row, ci) {
-    var d = new Date(2026, 8, 4 + Math.floor(ci / 4) * 7);
-    var results = row.map(function (p, pi) { return { rid: "r" + pi, p: "d" + pi, pts: p, character: mains[pi][ci % mains[pi].length], raw: names[pi] }; }).filter(function (r) { return r.pts > 0; });
-    if (ci === 5 || ci === 7) results.push({ rid: "rx", p: null, pts: ci === 5 ? 36 : 33, character: "Yoshi", raw: "" });
-    return { id: "dc" + ci, cup: CUP_NAMES[ci], date: d.toISOString().slice(0, 10), week: Math.floor(ci / 4) + 1, max: 60, notes: "", hasPhoto: false, addedAt: ci, results: results };
-  });
-  return { league: Object.assign({}, DEFAULT_LEAGUE), players: players, cups: cups };
+  var cups = [], races = [];
+  for (var ci = 0; ci < 8; ci++) {
+    var cupId = "dc" + ci, d = new Date(2026, 8, 4 + Math.floor(ci / 4) * 7);
+    var here = names.map(function (n, pi) { return pi; }).filter(function (pi) { return !((ci + pi) % 7 === 5); });
+    var tot = {}, chars = {};
+    for (var r = 1; r <= 4; r++) {
+      var order = here.map(function (pi) { return { pi: pi, v: skill[pi] + rnd() * 5 }; }).sort(function (a, b) { return a.v - b.v; });
+      var slot = 1;
+      order.forEach(function (o) {
+        slot += rnd() < 0.3 ? 1 : 0;
+        var pos = Math.min(12, slot++), ch = mains[o.pi][(ci + r) % mains[o.pi].length];
+        races.push({ cupId: cupId, race: r, playerId: "d" + o.pi, position: pos, points: RACE_POINTS[pos - 1], character: ch, enteredAt: ci * 10 + r });
+        tot[o.pi] = (tot[o.pi] || 0) + RACE_POINTS[pos - 1]; chars[o.pi] = ch;
+      });
+    }
+    var results = here.map(function (pi) { return { rid: "p_d" + pi, p: "d" + pi, pts: tot[pi], character: chars[pi], raw: "" }; });
+    if (ci === 5 || ci === 7) results.push({ rid: "rx", p: null, pts: ci === 5 ? 26 : 22, character: "Yoshi", raw: "" });
+    cups.push({ id: cupId, cup: BUILTIN_CUPS[ci].name, maps: BUILTIN_CUPS[ci].maps, status: "complete", date: d.toISOString().slice(0, 10), week: Math.floor(ci / 4) + 1, max: 60, notes: "", hasPhoto: false, addedAt: ci, results: results });
+  }
+  return { league: Object.assign({}, DEFAULT_LEAGUE), players: players, cups: cups, races: races, templates: [] };
 })();
 
 // ---------- original art: avatars, character chips, cup trophies, kart ----------
@@ -110,7 +136,7 @@ var CUP_STYLE = {
   "Other": ["#9AA3C7", "M8 5v14M8 5h9l-2 3 2 3H8"]
 };
 function cupIcon(cup, size) {
-  var st = CUP_STYLE[cup] || CUP_STYLE.Other, s = size || 44;
+  var st = CUP_STYLE[cup] || ["hsl(" + hashHue(cup) + " 80% 62%)", CUP_STYLE.Other[1]], s = size || 44;
   return '<svg class="cupicon" width="' + s + '" height="' + s + '" viewBox="0 0 48 48" aria-hidden="true">' +
     '<path d="M14 6h20v10a10 10 0 0 1-20 0z" fill="' + st[0] + '"/>' +
     '<path d="M14 9H8a6 6 0 0 0 7 7M34 9h6a6 6 0 0 1-7 7" fill="none" stroke="' + st[0] + '" stroke-width="3" stroke-linecap="round"/>' +
@@ -134,11 +160,22 @@ function kartSVG() {
 }
 
 // ---------- standings math ----------
+// Only finished cups count. Where a cup was raced race by race, character and track stats use each race;
+// older cups entered from a photo count their one character per cup.
 function compute(st) {
   var L = st.league;
-  var cups = st.cups.slice().sort(function (a, b) { return (a.week - b.week) || (a.date || "").localeCompare(b.date || "") || ((a.addedAt || 0) - (b.addedAt || 0)); });
+  var cups = st.cups.filter(function (c) { return c.status !== "racing"; })
+    .sort(function (a, b) { return (a.week - b.week) || (a.date || "").localeCompare(b.date || "") || ((a.addedAt || 0) - (b.addedAt || 0)); });
+  var cupIdx = {}; cups.forEach(function (c, i) { cupIdx[c.id] = i; });
+  var races = (st.races || []).filter(function (r) { return r.cupId in cupIdx; })
+    .sort(function (a, b) { return (cupIdx[a.cupId] - cupIdx[b.cupId]) || (a.race - b.race); });
+  var racesBy = {}; races.forEach(function (r) { (racesBy[r.cupId + "|" + r.playerId] = racesBy[r.cupId + "|" + r.playerId] || []).push(r); });
   var byId = new Map(), chars = {}, unclaimed = [], byWeek = {};
-  st.players.forEach(function (p) { byId.set(p.id, { player: p, cp: 0, pts: 0, max: 0, wins: 0, pods: 0, finSum: 0, best: null, log: [], trend: [], chars: {} }); });
+  st.players.forEach(function (p) { byId.set(p.id, { player: p, cp: 0, pts: 0, max: 0, wins: 0, pods: 0, finSum: 0, best: null, log: [], trend: [], charSeq: [], rc: 0, rposSum: 0, maps: {} }); });
+  function addChar(name, pts, max, win) {
+    var cs = chars[name] || (chars[name] = { name: name, picks: 0, pts: 0, max: 0, wins: 0 });
+    cs.picks++; cs.pts += pts; cs.max += max; if (win) cs.wins++;
+  }
   var cupInfo = new Map();
   cups.forEach(function (c, i) {
     byWeek[c.week] = (byWeek[c.week] || 0) + 1;
@@ -147,21 +184,28 @@ function compute(st) {
     var res = c.results.filter(function (r) { return !r.p || byId.has(r.p); }).map(function (r) { return { rid: r.rid, p: r.p || null, pts: Number(r.pts) || 0, character: r.character || "", raw: r.raw }; });
     res.sort(function (a, b) { return b.pts - a.pts; });
     res.forEach(function (r, k) { r.rank = (k > 0 && r.pts === res[k - 1].pts) ? res[k - 1].rank : k + 1; });
-    cupInfo.set(c.id, { num: i + 1, res: res, max: max, week: c.week });
+    var hasRaces = res.some(function (r) { return r.p && racesBy[c.id + "|" + r.p]; });
+    cupInfo.set(c.id, { num: i + 1, res: res, max: max, week: c.week, hasRaces: hasRaces });
     res.forEach(function (r) {
-      if (r.character) {
-        var cs = chars[r.character] || (chars[r.character] = { name: r.character, picks: 0, pts: 0, max: 0, wins: 0 });
-        cs.picks++; cs.pts += r.pts; cs.max += max; if (r.rank === 1) cs.wins++;
-      }
+      var rr = r.p ? racesBy[c.id + "|" + r.p] : null;
+      if (rr) rr.forEach(function (x) { if (x.character) addChar(x.character, x.points, 15, x.position === 1); });
+      else if (r.character) addChar(r.character, r.pts, max, r.rank === 1);
       if (!r.p) { unclaimed.push({ cup: c, num: i + 1, r: r, max: max, field: res.length }); return; }
       var s = byId.get(r.p);
       s.cp++; s.pts += r.pts; s.max += max;
       if (r.rank === 1) s.wins++;
       if (r.rank <= 3) s.pods++;
       s.finSum += r.rank;
-      if (r.character) s.chars[r.character] = (s.chars[r.character] || 0) + 1;
+      var cupChars = [];
+      if (rr) rr.forEach(function (x) {
+        if (x.character) { s.charSeq.push(x.character); if (cupChars.indexOf(x.character) < 0) cupChars.push(x.character); }
+        s.rc++; s.rposSum += x.position;
+        var map = (c.maps || [])[x.race - 1];
+        if (map) { var ms = s.maps[map] || (s.maps[map] = { map: map, n: 0, pts: 0, pos: 0 }); ms.n++; ms.pts += x.points; ms.pos += x.position; }
+      });
+      else if (r.character) { s.charSeq.push(r.character); cupChars.push(r.character); }
       if (!s.best || r.pts / max > s.best.pts / s.best.max) s.best = { pts: r.pts, max: max, cup: c, num: i + 1 };
-      s.log.push({ cup: c, num: i + 1, pts: r.pts, max: max, rank: r.rank, field: res.length, character: r.character });
+      s.log.push({ cup: c, num: i + 1, pts: r.pts, max: max, rank: r.rank, field: res.length, character: cupChars[0] || "", chars: cupChars, races: rr || [] });
       s.trend.push(s.pts / s.max);
     });
   });
@@ -169,8 +213,13 @@ function compute(st) {
   var need = total ? Math.max(1, Math.ceil(L.minParticipation / 100 * total)) : 0;
   var rows = Array.from(byId.values()).map(function (s) {
     s.pct = s.max ? s.pts / s.max : 0; s.avg = s.cp ? s.finSum / s.cp : null; s.qualified = s.cp > 0 && s.cp >= need;
-    s.charList = Object.keys(s.chars).map(function (k) { return { name: k, n: s.chars[k] }; }).sort(function (a, b) { return b.n - a.n || a.name.localeCompare(b.name); });
+    s.avgPtsCup = s.cp ? s.pts / s.cp : null; s.avgRace = s.rc ? s.rposSum / s.rc : null;
+    var cc = {}; s.charSeq.forEach(function (c) { cc[c] = (cc[c] || 0) + 1; });
+    s.charList = Object.keys(cc).map(function (k) { return { name: k, n: cc[k], share: cc[k] / s.charSeq.length }; }).sort(function (a, b) { return b.n - a.n || a.name.localeCompare(b.name); });
     s.main = s.charList[0] || null;
+    s.last3 = s.charSeq.slice(-3).reverse();
+    s.mapList = Object.keys(s.maps).map(function (k) { var m = s.maps[k]; return { map: m.map, n: m.n, avgPts: m.pts / m.n, avgPos: m.pos / m.n }; })
+      .sort(function (a, b) { return b.avgPts - a.avgPts || b.n - a.n; });
     return s;
   });
   function h2h(a, b) { var d = 0; a.log.forEach(function (l) { var o = cupInfo.get(l.cup.id).res.find(function (r) { return r.p === b.player.id; }); if (o) d += l.pts - o.pts; }); return d; }
@@ -194,9 +243,11 @@ function compute(st) {
 }
 function suggestWeek() {
   if (!state || !state.cups.length) return 1;
-  var m = compute(state), L = state.league;
-  return (m.byWeek[m.curWeek] || 0) >= L.cupsPerWeek && m.curWeek < L.seasonWeeks ? m.curWeek + 1 : m.curWeek;
+  var L = state.league, byWeek = {}, cur = 1;
+  state.cups.forEach(function (c) { byWeek[c.week] = (byWeek[c.week] || 0) + 1; if (c.week > cur) cur = c.week; });
+  return (byWeek[cur] || 0) >= L.cupsPerWeek && cur < L.seasonWeeks ? cur + 1 : cur;
 }
+function liveCups() { return state ? state.cups.filter(function (c) { return c.status === "racing"; }).sort(function (a, b) { return (a.addedAt || 0) - (b.addedAt || 0); }) : []; }
 
 // ---------- rendering ----------
 var app = document.getElementById("app");
@@ -212,8 +263,8 @@ function render() {
   var L = state.league;
   document.title = L.name;
   var v = ui.view;
-  if ((v === "add" && !signedIn()) || (v === "admin" && !isAdmin())) v = "account";
-  var body = v === "standings" ? viewStandings(st, m, demo) : v === "cups" ? viewCups(st, m, demo) : v === "unclaimed" ? viewUnclaimed(st, m, demo)
+  if ((v === "add" && !signedIn()) || ((v === "admin" || v === "build") && !isAdmin())) v = "account";
+  var body = v === "standings" ? viewStandings(st, m, demo) : v === "race" ? viewRace() : v === "build" ? viewBuild() : v === "cups" ? viewCups(st, m, demo) : v === "unclaimed" ? viewUnclaimed(st, m, demo)
     : v === "playoffs" ? viewPlayoffs(st, m, demo) : v === "rules" ? viewRules(L) : v === "account" ? viewAccount() : v === "admin" ? viewAdmin() : viewAdd();
   app.innerHTML = mast(L, demo ? compute(state) : real) + navHTML(v, demo ? 0 : real.unclaimed.length) + '<main class="wrap">' + body + "</main>" +
     '<footer class="wrap foot"><span>' + esc(L.name) + " · " + esc(L.season) + "</span>" + (SUPABASE_CONFIG ? '<a href="#account">' + (signedIn() ? "Your account" : "Sign in or create an account") + "</a>" : "") + "</footer>" +
@@ -239,21 +290,21 @@ function mast(L, m) {
 }
 function navHTML(v, unclaimedCount) {
   function t(id, label, extra) { return '<a class="tab" href="#' + id + '"' + (v === id ? ' aria-current="page"' : "") + ">" + label + (extra || "") + "</a>"; }
-  var right = "";
+  var right = "", live = liveCups().length;
   if (SUPABASE_CONFIG) {
     var waiting = adminData.pending.length + adminData.claims.length;
     if (isAdmin()) right += t("admin", "Admin", waiting ? '<span class="soon">' + waiting + "</span>" : "");
-    if (isAdmin()) right += '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">+ Add cup</a>';
-    else if (signedIn()) right += '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">+ Submit cup</a>';
+    if (isAdmin()) right += '<a class="btn btn-primary btn-sm" href="#build" data-act="new-build">+ New cup</a>';
     right += signedIn()
       ? '<a class="acct' + (v === "account" ? " on" : "") + '" href="#account" title="Your account"><span class="dot" style="background:' + esc((me.profile && me.profile.color) || "var(--muted)") + '"></span>' + esc(myName()) + "</a>"
       : (me.ready ? '<a class="btn btn-sm" href="#account">Sign in</a>' : "");
   }
-  return '<nav class="nav"><div class="wrap">' + t("standings", "Standings") + t("cups", "Cups") + t("unclaimed", "Unclaimed", unclaimedCount ? '<span class="soon">' + unclaimedCount + "</span>" : "") +
+  return '<nav class="nav"><div class="wrap">' + t("standings", "Standings") + t("race", "Race night", live ? '<span class="soon live">LIVE</span>' : "") + t("cups", "Cups") +
+    t("unclaimed", "Unclaimed", unclaimedCount ? '<span class="soon">' + unclaimedCount + "</span>" : "") +
     t("playoffs", "Playoffs", '<span class="soon">SOON</span>') + t("rules", "Rules") + '<span class="nav-spacer"></span>' + right + "</div></nav>";
 }
 function demoNote() {
-  return '<div class="note"><span><b>Example standings.</b> These made-up results show how the site works. They disappear when the first real cup is added.</span>' + (isAdmin() ? '<a class="btn btn-primary btn-sm" href="#add" data-act="new-cup">Add the first cup</a>' : "") + "</div>";
+  return '<div class="note"><span><b>Example standings.</b> These made-up results show how the site works. They disappear when the first real cup is added.</span>' + (isAdmin() ? '<a class="btn btn-primary btn-sm" href="#build" data-act="new-build">Build the first cup</a>' : "") + "</div>";
 }
 function formPips(s) {
   return '<span class="form">' + s.log.slice(-5).map(function (l) { return '<span class="pip' + (l.rank <= 3 ? " r" + l.rank : "") + '" title="' + esc(l.cup.cup) + ": " + l.rank + ord(l.rank) + " of " + l.field + (l.character ? " as " + esc(l.character) : "") + '">' + l.rank + "</span>"; }).join("") + "</span>";
@@ -345,23 +396,34 @@ function sparkSVG(trend) {
 }
 function detailHTML(s) {
   var p = s.player;
-  var log = s.log.slice().reverse().map(function (l) { return '<tr><td class="l num">' + l.num + '</td><td class="l">' + esc(l.cup.cup) + ' <span class="muted small">wk ' + l.cup.week + '</span></td><td class="l">' + (l.character ? charChip(l.character) : "–") + '</td><td class="num">' + l.pts + '<span class="muted">/' + l.max + '</span></td><td class="num">' + l.rank + ord(l.rank) + '<span class="muted"> of ' + l.field + "</span></td></tr>"; }).join("");
-  var charRows = s.charList.length ? s.charList.map(function (c) {
-    var picks = s.log.filter(function (l) { return l.character === c.name; });
-    var pts = picks.reduce(function (a, l) { return a + l.pts; }, 0), max = picks.reduce(function (a, l) { return a + l.max; }, 0);
-    return '<div class="char-row"><span class="cn">' + charChip(c.name) + '</span><span class="hbar"><i style="width:' + (c.n / s.charList[0].n * 100).toFixed(1) + "%;background:" + esc(p.color) + '"></i></span><span class="cs num">' + c.n + '<span class="muted"> · ' + pctTxt(pts / max) + "</span></span></div>";
+  var log = s.log.slice().reverse().map(function (l) {
+    var rr = l.races.length ? '<span class="rr">' + l.races.map(function (x) { return '<span class="pip' + (x.position <= 3 ? " r" + x.position : "") + '" title="Race ' + x.race + ": " + esc((l.cup.maps || [])[x.race - 1] || "") + '">' + x.position + "</span>"; }).join("") + "</span>" : "";
+    return '<tr><td class="l num">' + l.num + '</td><td class="l">' + esc(l.cup.cup) + ' <span class="muted small">wk ' + l.cup.week + '</span></td><td class="num">' + l.rank + ord(l.rank) + '<span class="muted"> of ' + l.field + '</span></td><td class="l">' + (l.chars.length ? l.chars.map(function (c) { return charChip(c); }).join(" ") : "–") + '</td><td class="num">' + l.pts + '<span class="muted">/' + l.max + "</span></td><td class=\"l\">" + rr + "</td></tr>";
+  }).join("");
+  var usage = s.charList.length ? s.charList.map(function (c) {
+    return '<div class="char-row"><span class="cn">' + charChip(c.name) + '</span><span class="hbar"><i style="width:' + (c.share * 100).toFixed(1) + "%;background:hsl(" + hashHue(c.name) + ' 80% 60%)"></i></span><span class="cs num">' + Math.round(c.share * 100) + '%<span class="muted"> · ' + c.n + "</span></span></div>";
   }).join("") : '<p class="muted small" style="margin:0">No characters recorded yet.</p>';
+  var ml = s.mapList, half = Math.ceil(ml.length / 2);
+  var strong = ml.slice(0, Math.min(3, half)), weak = ml.slice(Math.max(Math.min(3, half), ml.length - 3)).reverse();
+  function mapRows(list) { return list.map(function (m) { return '<div class="map-row"><span class="mn">' + esc(m.map) + '</span><span class="num">' + m.avgPts.toFixed(1) + ' <span class="muted">pts · avg finish ' + m.avgPos.toFixed(1) + " · " + m.n + " race" + (m.n === 1 ? "" : "s") + "</span></span></div>"; }).join(""); }
+  var maps = ml.length >= 2
+    ? '<div class="cols"><div><div class="eyebrow" style="margin-bottom:6px">Strongest tracks</div><div class="maps good">' + mapRows(strong) + '</div></div><div><div class="eyebrow" style="margin-bottom:6px">Weakest tracks</div><div class="maps bad">' + mapRows(weak) + "</div></div></div>"
+    : '<p class="muted small" style="margin:0">Track strengths appear once ' + esc(p.name) + " has raced a few different tracks race by race.</p>";
   return '<section class="panel panel-pad detail"><div class="detail-head">' + avatar(p.name, p.color, "lg") + "<h3>" + esc(p.name) + "</h3>" + joinedBadge(p, true) + '<span class="nav-spacer"></span><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
-    '<div class="stats">' + stat("Pct", pctTxt(s.pct)) + stat("Points", s.pts + "/" + s.max) + stat("Cups", s.cp) + stat("Wins", s.wins) + stat("Podiums", s.pods) + stat("Avg finish", s.avg != null ? s.avg.toFixed(2) : "–") + stat("Main", s.main ? s.main.name : "–") + "</div>" +
-    '<div class="cols"><div style="display:grid;gap:14px"><div><div class="eyebrow" style="margin-bottom:6px">Season pct, cup by cup</div>' + sparkSVG(s.trend) + '</div><div><div class="eyebrow" style="margin-bottom:6px">Character picks</div><div class="chars">' + charRows + "</div></div></div>" +
-    '<div style="min-width:0"><div class="eyebrow" style="margin-bottom:6px">Cup log</div><div style="overflow-x:auto"><table class="mini"><thead><tr><th class="l">#</th><th class="l">Cup</th><th class="l">Character</th><th>Pts</th><th>Finish</th></tr></thead><tbody>' + log + "</tbody></table></div></div></div></section>";
+    '<div class="stats">' + stat("Pct", pctTxt(s.pct)) + stat("Total points", s.pts) + stat("Avg pts / cup", s.avgPtsCup != null ? s.avgPtsCup.toFixed(1) : "–") + stat("Avg race finish", s.avgRace != null ? s.avgRace.toFixed(2) : "–") +
+      stat("Avg cup finish", s.avg != null ? s.avg.toFixed(2) : "–") + stat("Cups", s.cp) + stat("Wins", s.wins) + stat("Podiums", s.pods) + "</div>" +
+    '<div class="last3"><span class="eyebrow">Last 3 characters</span>' + (s.last3.length ? s.last3.map(function (c) { return charChip(c); }).join("") : '<span class="muted small">None yet</span>') + "</div>" +
+    '<div class="cols"><div><div class="eyebrow" style="margin-bottom:6px">Season pct, cup by cup</div>' + sparkSVG(s.trend) + '</div><div><div class="eyebrow" style="margin-bottom:6px">Character usage</div><div class="chars">' + usage + "</div></div></div>" +
+    maps +
+    '<div style="min-width:0"><div class="eyebrow" style="margin-bottom:6px">Cup history</div><div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">#</th><th class="l">Cup</th><th>Finish</th><th class="l">Character</th><th>Pts</th><th class="l">Races</th></tr></thead><tbody>' + log + "</tbody></table></div></div></section>";
 }
 function stat(k, v) { return '<div class="stat"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + "</span></div>"; }
 
 function viewCups(st, m, demo) {
   var out = "";
   if (demo) out += demoNote();
-  out += '<section class="section-h"><h2>Cup log</h2><span class="muted small">' + m.total + " cup" + (m.total === 1 ? "" : "s") + " recorded · newest week first</span></section>";
+  out += '<section class="section-h"><h2>Cup log</h2><span class="muted small">' + m.total + " cup" + (m.total === 1 ? "" : "s") + " finished · newest week first" + (isAdmin() && !demo ? ' · <a href="#add" data-act="new-cup">Add a finished cup from a photo</a>' : "") + "</span></section>";
+  liveCups().forEach(function (c) { out += '<a class="note live-note" href="#race"><span><b>' + esc(c.cup) + "</b> is being raced now. Enter your results on Race night.</span><span class=\"btn btn-primary btn-sm\">Race night</span></a>"; });
   if (!m.cups.length) return out + '<div class="panel empty"><b>No cups yet.</b></div>';
   var lastWeek = null;
   out += '<div class="cup-list">';
@@ -373,11 +435,22 @@ function viewCups(st, m, demo) {
       var who = p ? avatar(p.name, p.color, "sm") + esc(p.name) : '<span class="av sm q" aria-hidden="true">?</span><a class="unc" href="#unclaimed">Unclaimed</a>';
       return '<div class="res-row"><span class="r' + (r.rank <= 3 ? " p" + r.rank : "") + '">' + r.rank + '</span><span class="n">' + who + (r.character ? '<span class="ch">' + esc(r.character) + "</span>" : "") + '</span><span class="hbar"><i style="width:' + (r.pts / info.max * 100).toFixed(1) + "%;background:" + esc(p ? p.color : "var(--muted)") + '"></i></span><span class="t">' + r.pts + '<span class="muted">/' + info.max + "</span></span></div>";
     }).join("");
-    var actions = "";
+    var actions = "", raceGrid = "";
+    if (info.hasRaces) {
+      var rs = (st.races || []).filter(function (x) { return x.cupId === c.id; });
+      raceGrid = '<div class="tbl-wrap race-grid"><table class="mini"><thead><tr><th class="l">Racer</th>' + [1, 2, 3, 4].map(function (n) { return '<th title="' + esc((c.maps || [])[n - 1] || "") + '">R' + n + "</th>"; }).join("") + "<th>Total</th></tr></thead><tbody>" +
+        info.res.filter(function (r) { return r.p; }).map(function (r) {
+          var p = st.players.find(function (x) { return x.id === r.p; });
+          return '<tr><td class="l"><span class="who">' + avatar(p ? p.name : "?", p ? p.color : "", "sm") + esc(p ? p.name : "?") + "</span></td>" + [1, 2, 3, 4].map(function (n) {
+            var x = rs.find(function (y) { return y.playerId === r.p && y.race === n; });
+            return '<td class="num">' + (x ? '<span class="rp' + (x.position <= 3 ? " r" + x.position : "") + '">' + x.position + ord(x.position) + '</span> <span class="muted">' + x.points + "</span>" : '<span class="muted">–</span>') + "</td>";
+          }).join("") + '<td class="num"><b>' + r.pts + "</b></td></tr>";
+        }).join("") + "</tbody></table></div>";
+    }
     if (isAdmin() && !demo) {
       actions = ui.confirmDel === c.id
         ? '<div class="cup-actions"><span class="small"><b>Delete Cup ' + info.num + '?</b> Its results leave the standings.</span><button class="btn btn-danger btn-sm" data-act="del-yes" data-key="' + esc(c.id) + '"' + (ui.busy ? " disabled" : "") + ">" + (ui.busy ? "Deleting…" : "Delete cup") + '</button><button class="btn btn-sm" data-act="del-no">Keep it</button></div>'
-        : '<div class="cup-actions"><button class="btn btn-sm" data-act="edit-cup" data-key="' + esc(c.id) + '">Edit</button><button class="btn btn-sm" data-act="del-ask" data-key="' + esc(c.id) + '">Delete</button></div>';
+        : '<div class="cup-actions">' + (info.hasRaces ? '<button class="btn btn-sm" data-act="reopen" data-key="' + esc(c.id) + '">Reopen to fix results</button>' : '<button class="btn btn-sm" data-act="edit-cup" data-key="' + esc(c.id) + '">Edit</button>') + '<button class="btn btn-sm" data-act="del-ask" data-key="' + esc(c.id) + '">Delete</button></div>';
     }
     var photo = "";
     if (c.hasPhoto && !demo) {
@@ -386,8 +459,9 @@ function viewCups(st, m, demo) {
       photo = src && src !== "loading" && src !== "none" ? '<a class="photo" href="' + src + '" target="_blank" rel="noopener"><img src="' + src + '" alt="Results screen photo for ' + esc(c.cup) + '"></a>' : "";
     }
     out += '<article class="panel cup"><div style="min-width:0"><div class="cup-head">' + cupIcon(c.cup) + '<span class="cup-no">#' + info.num + '</span><span class="cup-name">' + esc(c.cup) + '</span><span class="muted small">' + fmtDate(c.date) + (info.max !== 60 ? " · max " + info.max + " pts" : "") + "</span></div>" +
+      (c.maps && c.maps.length ? '<div class="maps-line">' + c.maps.map(function (mp, k) { return '<span><b>R' + (k + 1) + "</b> " + esc(mp) + "</span>"; }).join("") + "</div>" : "") +
       (c.notes ? '<p class="small muted" style="margin:6px 0 0">' + esc(c.notes) + "</p>" : "") +
-      '<div class="res">' + rows + "</div>" + actions + "</div>" + photo + "</article>";
+      '<div class="res">' + rows + "</div>" + raceGrid + actions + "</div>" + photo + "</article>";
   });
   return out + "</div>" + (ui.error ? '<div class="error">' + esc(ui.error) + "</div>" : "");
 }
@@ -439,10 +513,12 @@ function viewRules(L) {
   return '<section class="section-h"><h2>Regular season rules</h2><span class="muted small">' + esc(L.season) + "</span></section>" +
     '<div class="panel panel-pad rules"><ol>' +
     "<li><h4>Season format</h4><p>The regular season runs " + L.seasonWeeks + " weeks with about " + L.cupsPerWeek + " cups a week (" + seasonCups(L) + " cups). Each cup is 4 races.</p></li>" +
+    "<li><h4>Building a cup</h4><p>Before the first race, an admin picks the cup's 4 tracks in the cup builder: by hand, from a saved template, or at random. Once it's locked in, the tracks can't change.</p></li>" +
     "<li><h4>Race scoring</h4><p>Every race is scored with the game's 12-racer points table, so the most anyone can score in a cup is " + L.defaultMax + ' points.</p><div class="ptable">' + pt + "</div></li>" +
-    "<li><h4>Standard settings</h4><p>150cc, CPUs on Hard, items Normal, any character and any kart or bike. If a cup is raced with settings that change the points available (no CPUs, fewer races), the admins record that cup's max points so percentages stay fair.</p></li>" +
-    "<li><h4>The photo is the record</h4><p>When a cup ends, someone photographs the final results screen before anyone presses a button. Human players' rows are highlighted; each one is recorded with its character and points. CPU rows don't count. Any member can submit the photo; an admin approves it.</p></li>" +
-    "<li><h4>Unclaimed points</h4><p>A highlighted row that isn't matched to a player goes on the Unclaimed page. If it was you, request it there and fix the character if needed. Once an admin approves, the points count for you. Unclaimed rows still hold their place in that cup's finishing order.</p></li>" +
+    "<li><h4>Entering results</h4><p>After each race, every racer enters their own finishing position and character on Race night. It's the honour system: if two people claim the same place, the site flags it and they sort it out.</p></li>" +
+    "<li><h4>The photo is the check</h4><p>When the cup ends, someone photographs the final results screen before anyone presses a button. An admin compares it with the entered totals, fixes anything that doesn't match, and finalizes the cup. Only finalized cups count in the standings.</p></li>" +
+    "<li><h4>Unclaimed points</h4><p>A highlighted human row on the photo that nobody entered can be saved as unclaimed. If it was you, request it on the Unclaimed page and an admin will add it to your record.</p></li>" +
+    "<li><h4>Standard settings</h4><p>150cc, CPUs on Hard, items Normal, any character and any kart or bike.</p></li>" +
     "<li><h4>Ranking stat: points percentage</h4><p>Your rank is your points earned divided by the points you could have earned in the cups you played. Missing a cup doesn't lower your percentage.</p></li>" +
     "<li><h4>Qualifying</h4><p>To be ranked you must have played at least " + L.minParticipation + "% of the cups held so far, rounded up. Everyone else is listed under Not yet qualified until they catch up.</p></li>" +
     "<li><h4>Cup wins and podiums</h4><p>Finishing order counts human players only. The most points in a cup wins it; 2nd and 3rd complete the podium. Players tied on points share the place.</p></li>" +
@@ -452,6 +528,184 @@ function viewRules(L) {
     "<li><h4>Disputes</h4><p>The photo settles it. If a photo is unreadable, players in that cup agree on the scores or the cup is replayed. Admins can correct any recorded cup.</p></li>" +
     "</ol></div>";
 }
+
+// ---------- race night: honour-system entry for the cup being raced ----------
+function posOptions(sel) { var o = '<option value="">—</option>'; for (var i = 1; i <= 12; i++) o += '<option value="' + i + '"' + (Number(sel) === i ? " selected" : "") + ">" + i + ord(i) + " · " + RACE_POINTS[i - 1] + " pts</option>"; return o; }
+function lastCharFor(pid) {
+  if (!pid) return "";
+  var rs = state.races.filter(function (r) { return r.playerId === pid && r.character; }).sort(function (a, b) { return b.enteredAt - a.enteredAt; });
+  return rs[0] ? rs[0].character : "";
+}
+function viewRace() {
+  var live = liveCups();
+  var out = '<section class="section-h"><h2>Race night</h2>' + (isAdmin() && live.length ? '<a class="btn btn-sm" href="#build" data-act="new-build">+ Build another cup</a>' : "") + "</section>";
+  if (ui.error && ui.view === "race") out += '<div class="error">' + esc(ui.error) + "</div>";
+  if (!live.length) {
+    return out + '<div class="panel empty">' + cupIcon("Other", 60) + "<b>No cup is being raced right now.</b><span class=\"muted\">" +
+      (isAdmin() ? "Build the next cup to open results entry." : "When an admin builds the next cup, enter your finishing position here after each race.") + "</span>" +
+      (isAdmin() ? '<a class="btn btn-primary" href="#build" data-act="new-build">Build a cup</a>' : "") + "</div>";
+  }
+  live.forEach(function (c) { out += liveCupHTML(c); });
+  return out;
+}
+function liveCupHTML(c) {
+  var rs = state.races.filter(function (r) { return r.cupId === c.id; });
+  var mine = myPlayer();
+  var forOther = isAdmin() && ui.entryFor[c.id] && ui.entryFor[c.id] !== "me";
+  var forId = forOther ? ui.entryFor[c.id] : (mine ? mine.id : null);
+  var out = '<section class="panel live-cup"><div class="live-head">' + cupIcon(c.cup, 54) + '<div><div class="cup-name">' + esc(c.cup) + ' <span class="chip live">Live</span></div><div class="muted small">Week ' + c.week + " · " + fmtDate(c.date) + "</div></div></div>";
+  if (!signedIn()) out += '<div class="note"><span>Raced tonight? Sign in to enter your finishing position after each race.</span><a class="btn btn-primary btn-sm" href="#account">Sign in</a></div>';
+  else if (isAdmin()) {
+    out += '<div class="keyrow"><label class="f" for="efor-' + esc(c.id) + '">Entering results for<select id="efor-' + esc(c.id) + '" data-efor="' + esc(c.id) + '"><option value="me">Me' + (mine ? " (" + esc(mine.name) + ")" : "") + "</option>" +
+      state.players.filter(function (p) { return !mine || p.id !== mine.id; }).map(function (p) { return '<option value="' + esc(p.id) + '"' + (forOther && forId === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select></label></div>";
+  }
+  out += '<div class="races">';
+  for (var n = 1; n <= 4; n++) {
+    var map = c.maps[n - 1] || "Track " + n;
+    var card = '<div class="rcard"><div class="rnum">Race ' + n + '</div><div class="rmap">' + esc(map) + "</div>";
+    if (signedIn()) {
+      var existing = forId ? rs.find(function (r) { return r.playerId === forId && r.race === n; }) : null;
+      var key = c.id + "|" + n + "|" + (forOther ? forId : "me");
+      var prevInCup = forId ? rs.filter(function (r) { return r.playerId === forId && r.character; }).sort(function (a, b) { return b.race - a.race; })[0] : null;
+      var f = ui.entry[key] || { pos: existing ? existing.position : "", ch: existing ? existing.character : (prevInCup ? prevInCup.character : lastCharFor(forId) || (!forOther && me.profile && me.profile.favoriteCharacter) || "") };
+      card += '<label class="f" for="en-p-' + n + "-" + esc(c.id) + '">Finish<select id="en-p-' + n + "-" + esc(c.id) + '" data-en="pos" data-key="' + esc(key) + '">' + posOptions(f.pos) + "</select></label>" +
+        '<label class="f" for="en-c-' + n + "-" + esc(c.id) + '">Character<select id="en-c-' + n + "-" + esc(c.id) + '" data-en="ch" data-key="' + esc(key) + '">' + charOptions(f.ch) + "</select></label>" +
+        '<div class="keyrow"><button class="btn btn-primary btn-sm" data-act="race-save" data-key="' + esc(key) + '"' + (ui.busy ? " disabled" : "") + ">" + (existing ? "Update" : "Save") + "</button>" +
+        (existing ? '<span class="saved">' + existing.position + ord(existing.position) + " · " + existing.points + ' pts</span><button class="btn-link small" data-act="race-clear" data-key="' + esc(key) + '">Clear</button>' : "") + "</div>";
+    }
+    out += card + "</div>";
+  }
+  out += "</div>";
+
+  // live board
+  var ids = []; rs.forEach(function (r) { if (ids.indexOf(r.playerId) < 0) ids.push(r.playerId); });
+  var clash = {}; rs.forEach(function (r) { var k = r.race + "|" + r.position; clash[k] = (clash[k] || 0) + 1; });
+  var clashes = Object.keys(clash).filter(function (k) { return clash[k] > 1; });
+  var rows = liveRows(c);
+  out += '<div class="eyebrow">Live totals · ' + ids.length + " racer" + (ids.length === 1 ? "" : "s") + " entered</div>";
+  if (!rows.length) out += '<p class="muted small" style="margin:0">Nobody has entered a result yet.</p>';
+  else {
+    out += '<div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">Racer</th>' + [1, 2, 3, 4].map(function (n) { return '<th title="' + esc(c.maps[n - 1] || "") + '">R' + n + "</th>"; }).join("") + "<th>Total</th></tr></thead><tbody>" +
+      rows.map(function (row) {
+        var p = playerById(row.pid);
+        return '<tr><td class="l"><span class="who">' + avatar(p ? p.name : "?", p ? p.color : "", "sm") + esc(p ? p.name : "?") + "</span></td>" + [1, 2, 3, 4].map(function (n) {
+          var x = row.races.find(function (r) { return r.race === n; });
+          if (!x) return '<td class="num muted">–</td>';
+          var bad = clash[n + "|" + x.position] > 1;
+          return '<td class="num' + (bad ? " clash" : "") + '" title="' + esc(x.character || "") + '"><span class="rp' + (x.position <= 3 ? " r" + x.position : "") + '">' + x.position + ord(x.position) + "</span></td>";
+        }).join("") + '<td class="num"><b>' + row.total + "</b></td></tr>";
+      }).join("") + "</tbody></table></div>";
+    if (clashes.length) out += '<div class="error">' + clashes.map(function (k) { var a = k.split("|"); return "Race " + a[0] + ": " + clash[k] + " racers entered " + a[1] + ord(Number(a[1])); }).join(" · ") + ". Someone needs to fix theirs.</div>";
+  }
+  if (isAdmin()) out += ui.finish && ui.finish.cupId === c.id ? finishPanelHTML(c, rows) : '<div class="keyrow"><button class="btn btn-primary" data-act="finish-open" data-key="' + esc(c.id) + '"' + (rows.length ? "" : " disabled") + '>Finish cup…</button><span class="muted small">Check the totals against the results photo, then lock them into the standings.</span><span class="nav-spacer"></span><button class="btn-link small" data-act="del-live" data-key="' + esc(c.id) + '">Delete this cup</button></div>';
+  if (ui.confirmDel === c.id) out += '<div class="keyrow"><span class="small"><b>Delete ' + esc(c.cup) + "?</b> Every race result entered for it is deleted too.</span><button class=\"btn btn-danger btn-sm\" data-act=\"del-yes\" data-key=\"" + esc(c.id) + '">Delete cup</button><button class="btn btn-sm" data-act="del-no">Keep it</button></div>';
+  return out + "</section>";
+}
+function liveRows(c) {
+  var rs = state.races.filter(function (r) { return r.cupId === c.id; }), ids = [];
+  rs.forEach(function (r) { if (ids.indexOf(r.playerId) < 0) ids.push(r.playerId); });
+  return ids.map(function (pid) {
+    var mineR = rs.filter(function (r) { return r.playerId === pid; });
+    return { pid: pid, total: mineR.reduce(function (a, r) { return a + r.points; }, 0), races: mineR };
+  }).sort(function (a, b) { return b.total - a.total; });
+}
+// Matches photo rows (highlighted = human) to the racers who entered results: by name first, then by a unique equal total.
+function compareTotals(rows, photoRows) {
+  var humans = (photoRows || []).map(function (r, i) { return Object.assign({ idx: i }, r); }).filter(function (r) { return r.human; });
+  var match = {}, used = {};
+  humans.forEach(function (h) {
+    var p = matchPlayer(state.players, h.name);
+    if (p && rows.some(function (r) { return r.pid === p.id; }) && !match[p.id]) { match[p.id] = h; used[h.idx] = 1; }
+  });
+  humans.forEach(function (h) {
+    if (used[h.idx]) return;
+    var cands = rows.filter(function (r) { return !match[r.pid] && r.total === h.points; });
+    if (cands.length === 1) { match[cands[0].pid] = h; used[h.idx] = 1; }
+  });
+  // Last pass: same character as the one the racer used most this cup, when that's unambiguous.
+  function mainChar(r) { var cc = {}; r.races.forEach(function (x) { if (x.character) cc[x.character] = (cc[x.character] || 0) + 1; }); return Object.keys(cc).sort(function (a, b) { return cc[b] - cc[a]; })[0] || ""; }
+  humans.forEach(function (h) {
+    if (used[h.idx] || !h.character) return;
+    var cands = rows.filter(function (r) { return !match[r.pid] && mainChar(r) === h.character; });
+    var rivals = humans.filter(function (o) { return !used[o.idx] && o.character === h.character; });
+    if (cands.length === 1 && rivals.length === 1) { match[cands[0].pid] = h; used[h.idx] = 1; }
+  });
+  var extra = humans.filter(function (h) { return !used[h.idx]; });
+  return { match: match, extra: extra, allMatched: rows.every(function (r) { return match[r.pid]; }) };
+}
+function finishPanelHTML(c, rows) {
+  var f = ui.finish, hasKey = !!lsGet(KEY_AI);
+  var out = '<div class="finish"><div class="eyebrow">Finish ' + esc(c.cup) + "</div>";
+  if (f.photoUrl) {
+    out += '<div class="preview"><img src="' + f.photoUrl + '" alt="Results screen photo"><div style="display:grid;gap:10px;align-content:start">' +
+      (f.reading ? '<div class="busy"><span class="spin"></span>Claude is reading the totals…</div>' : '<div class="keyrow">' + (hasKey ? '<button class="btn btn-sm" data-act="finish-read">Read totals' + (f.rows ? " again" : "") + "</button>" : "") + '<label class="btn btn-sm" for="finish-photo">Use a different photo</label></div>') +
+      (!hasKey ? '<p class="small muted" style="margin:0">Add an Anthropic API key on your account page to check totals automatically. You can still compare by eye.</p>' : "") +
+      '<input id="finish-photo" type="file" accept="image/*" hidden></div></div>';
+  } else {
+    out += '<label class="drop" for="finish-photo"><input id="finish-photo" type="file" accept="image/*"><b>Add the end-of-cup results photo</b><span class="muted small">' + (hasKey ? "Claude reads the highlighted totals and checks them against what everyone entered." : "It's kept as the record for this cup.") + '</span><span class="btn btn-primary btn-sm">Choose photo</span></label>';
+  }
+  if (f.error) out += '<div class="error">' + esc(f.error) + "</div>";
+  var cmp = compareTotals(rows, f.rows), issues = 0;
+  out += '<div class="tbl-wrap"><table class="mini"><thead><tr><th class="l">Racer</th><th>Races</th><th>Entered</th>' + (f.rows ? "<th>Photo</th>" : "") + '<th class="l">Check</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      var p = playerById(r.pid), h = cmp.match[r.pid], status;
+      var missing = [1, 2, 3, 4].filter(function (n) { return !r.races.some(function (x) { return x.race === n; }); });
+      if (missing.length) { status = '<span class="warn">Missing race ' + missing.join(", ") + "</span>"; issues++; }
+      else if (!f.rows) status = '<span class="muted">No photo checked</span>';
+      else if (!h) { status = '<span class="warn">Not found on the photo</span>'; issues++; }
+      else if (h.points !== r.total) { status = '<span class="warn">Photo says ' + h.points + "</span>"; issues++; }
+      else status = '<span class="ok">Matches</span>';
+      return '<tr><td class="l"><span class="who">' + avatar(p ? p.name : "?", p ? p.color : "", "sm") + esc(p ? p.name : "?") + '</span></td><td class="num">' + r.races.length + '/4</td><td class="num"><b>' + r.total + "</b></td>" + (f.rows ? '<td class="num">' + (h ? h.points : "–") + "</td>" : "") + '<td class="l">' + status + "</td></tr>";
+    }).join("") + "</tbody></table></div>";
+  if (cmp.extra.length) {
+    out += '<div class="keys"><div class="small">Highlighted on the photo but not matched to anyone who entered results. Ticked rows are saved as <a href="#unclaimed">unclaimed points</a> someone can request' + (cmp.allMatched ? "" : " (left unticked because someone above isn't matched yet; one of these may be them)") + ":</div>" +
+      cmp.extra.map(function (h) { var on = h.idx in f.addUnc ? f.addUnc[h.idx] : cmp.allMatched; return '<label class="keyrow small"><input type="checkbox" data-unc="' + h.idx + '"' + (on ? " checked" : "") + ' style="width:auto"> ' + (h.character ? charChip(h.character) : "Unknown character") + " · <b>" + h.points + " pts</b>" + (h.name ? " · “" + esc(h.name) + "”" : "") + "</label>"; }).join("") + "</div>";
+  }
+  out += '<div class="keyrow"><button class="btn btn-primary" data-act="finish-go" data-key="' + esc(c.id) + '"' + (f.saving || f.reading ? " disabled" : "") + ">" + (f.saving ? "Finishing…" : issues ? "Finalize anyway" : "Finalize cup") + '</button><button class="btn btn-sm" data-act="finish-cancel">Cancel</button>' +
+    '<span class="muted small">' + (issues ? issues + " thing" + (issues === 1 ? "" : "s") + " to check above. " : "") + "Finalizing puts these totals in the standings; an admin can reopen it later.</span></div>";
+  return out + "</div>";
+}
+
+// ---------- cup builder ----------
+function trackOptions(sel) {
+  function grp(label, list) { return '<optgroup label="' + label + '">' + list.map(function (t) { return "<option" + (t === sel ? " selected" : "") + ">" + esc(t) + "</option>"; }).join("") + "</optgroup>"; }
+  return '<option value="">Pick a track</option>' + grp("Nitro", NITRO) + grp("Retro", RETRO);
+}
+function newBuild() { return { name: "Cup " + (state.cups.length + 1), week: suggestWeek(), date: today(), maps: ["", "", "", ""], templateId: "", confirm: false, error: "" }; }
+function viewBuild() {
+  var b = ui.build || (ui.build = newBuild());
+  var tpls = state.templates || [];
+  var out = '<section class="section-h"><h2>Cup builder</h2><a class="btn btn-sm" href="#race">Race night</a></section>';
+  out += '<div class="panel panel-pad builder"><div class="form-grid">' +
+    '<label class="f" for="b-tpl">Start from<select id="b-tpl" data-b="tpl"><option value="">Scratch</option><optgroup label="Game cups">' +
+      BUILTIN_CUPS.map(function (t) { return '<option value="' + t.id + '"' + (b.templateId === t.id ? " selected" : "") + ">" + esc(t.name) + "</option>"; }).join("") + "</optgroup>" +
+      (tpls.length ? '<optgroup label="Your templates">' + tpls.map(function (t) { return '<option value="' + esc(t.id) + '"' + (b.templateId === t.id ? " selected" : "") + ">" + esc(t.name) + "</option>"; }).join("") + "</optgroup>" : "") + "</select></label>" +
+    '<label class="f" for="b-name">Cup name<input id="b-name" maxlength="40" data-b="name" value="' + esc(b.name) + '"></label>' +
+    '<label class="f" for="b-week">Week<select id="b-week" data-b="week">' + (function () { var o = ""; for (var w = 1; w <= Math.max(state.league.seasonWeeks, b.week); w++) o += '<option value="' + w + '"' + (w === Number(b.week) ? " selected" : "") + ">Week " + w + "</option>"; return o; })() + "</select></label>" +
+    '<label class="f" for="b-date">Date<input id="b-date" type="date" data-b="date" value="' + esc(b.date) + '"></label></div>' +
+    '<div class="keyrow"><span class="eyebrow">Random</span><button class="btn btn-sm" data-act="rand" data-key="all">Any 4 tracks</button><button class="btn btn-sm" data-act="rand" data-key="nitro">Nitro only</button><button class="btn btn-sm" data-act="rand" data-key="retro">Retro only</button></div>' +
+    '<div class="build-maps">' + [0, 1, 2, 3].map(function (i) {
+      return '<label class="f bmap" for="b-m' + i + '"><span class="rnum">Race ' + (i + 1) + '</span><select id="b-m' + i + '" data-bm="' + i + '">' + trackOptions(b.maps[i]) + "</select></label>";
+    }).join("") + "</div>";
+  var dup = b.maps.filter(function (m, i) { return m && b.maps.indexOf(m) !== i; });
+  if (dup.length) out += '<div class="note">' + esc(dup[0]) + " is in this cup more than once. That's allowed, just checking it's on purpose.</div>";
+  if (b.error) out += '<div class="error">' + esc(b.error) + "</div>";
+  out += b.confirm
+    ? '<div class="note"><span><b>Lock in ' + esc(b.name) + "?</b> Its 4 tracks can't be changed afterwards, and Race night opens for results.</span><span class=\"keyrow\"><button class=\"btn btn-primary btn-sm\" data-act=\"build-go\"" + (ui.busy ? " disabled" : "") + ">" + (ui.busy ? "Locking in…" : "Lock it in") + '</button><button class="btn btn-sm" data-act="build-back">Keep editing</button></span></div>'
+    : '<div class="keyrow"><button class="btn btn-primary" data-act="build-lock">Lock in &amp; start racing</button><span class="muted small">Pick the tracks before the first race.</span></div>';
+  out += '<div class="keyrow tpl-save"><input id="tpl-name" maxlength="40" data-tpl="1" placeholder="Template name, e.g. Cursed Cup" value="' + esc(ui.tplName) + '"><button class="btn btn-sm" data-act="tpl-save">Save these tracks as a template</button></div></div>';
+  if (tpls.length) {
+    out += '<section class="section-h"><h2>Your templates</h2><span class="muted small">' + tpls.length + "</span></section>" +
+      '<div class="cup-list">' + tpls.map(function (t) {
+        return '<div class="panel tpl">' + cupIcon(t.name, 40) + '<div style="min-width:0"><b>' + esc(t.name) + '</b><div class="maps-line">' + t.maps.map(function (m, k) { return "<span><b>R" + (k + 1) + "</b> " + esc(m) + "</span>"; }).join("") + "</div></div>" +
+          '<div class="keyrow"><button class="btn btn-sm" data-act="tpl-use" data-key="' + esc(t.id) + '">Use</button><button class="btn-link small" data-act="tpl-del" data-key="' + esc(t.id) + '">Delete</button></div></div>';
+      }).join("") + "</div>";
+  }
+  out += '<p class="muted small" style="margin:0">Raced a cup without entering each race? <a href="#add" data-act="new-cup">Add a finished cup from its results photo</a> instead.</p>';
+  return out;
+}
+function pickRandom(pool) { var a = pool.slice(), out = []; while (out.length < 4 && a.length) out.push(a.splice(Math.floor(Math.random() * a.length), 1)[0]); return out; }
+function templateById(id) { return BUILTIN_CUPS.concat(state.templates || []).find(function (t) { return t.id === id; }); }
 
 // ---------- account page ----------
 function viewAccount() {
@@ -704,7 +958,7 @@ function matchPlayer(players, name) {
 }
 function mapRow(r) {
   var name = String(r && r.name || "").trim();
-  var pts = (r && r.points != null && !isNaN(Number(r.points))) ? String(Math.round(Number(r.points))) : "";
+  var pts = (r && r.points != null && !isNaN(Number(r.points))) ? String(r.points) : "";
   var ch = r && CHARACTERS.indexOf(r.character) >= 0 ? r.character : "";
   var human = !!(r && r.human);
   var m = human ? matchPlayer(state.players, name) : null;
@@ -771,16 +1025,13 @@ function readPrompt() {
     "League players we already know (use these exact spellings when a highlighted row's name clearly matches one): " + known + ".\n" +
     "Read every row you can, in screen order. Set cup to the cup name if it is visible, otherwise null.";
 }
-function readPhoto() {
+var AnthropicLib = null;
+// Sends one results photo to Claude and resolves with the parsed {cup, rows}. Rejects with {code} or an SDK error.
+function claudeRead(b64, signal) {
   var key = lsGet(KEY_AI);
-  if (!key || !draft || !draft.photoB64) return;
-  if (readCtl) readCtl.abort();
-  var ctl = readCtl = new AbortController();
-  var d = draft, Anthropic;
-  d.reading = true; d.error = ""; d.info = ""; render();
-  loadSDK().then(function (A) {
-    Anthropic = A;
-    var client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+  return loadSDK().then(function (A) {
+    AnthropicLib = A;
+    var client = new A({ apiKey: key, dangerouslyAllowBrowser: true });
     return client.beta.messages.create({
       model: CONFIG.model,
       max_tokens: 16000,
@@ -788,28 +1039,45 @@ function readPhoto() {
       fallbacks: "default",
       output_config: { effort: "medium", format: { type: "json_schema", schema: RESULT_SCHEMA } },
       messages: [{ role: "user", content: [
-        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: d.photoB64 } },
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: readPrompt() }
       ] }]
-    }, { signal: ctl.signal });
+    }, { signal: signal });
   }).then(function (response) {
-    if (ctl !== readCtl) return;
     if (response.stop_reason === "refusal") throw { code: "refused" };
     if (response.stop_reason === "max_tokens") throw { code: "no_rows" };
     var text = response.content.filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("");
     var out; try { out = JSON.parse(text); } catch (e) { throw { code: "no_rows" }; }
-    var rows = out && Array.isArray(out.rows) ? out.rows : [];
-    if (!rows.length) throw { code: "no_rows" };
+    if (!out || !Array.isArray(out.rows) || !out.rows.length) throw { code: "no_rows" };
+    out.rows = out.rows.map(function (r) { return { name: String(r.name || "").trim(), character: CHARACTERS.indexOf(r.character) >= 0 ? r.character : "", points: r.points == null ? null : Math.round(Number(r.points)), human: !!r.human }; });
+    return out;
+  });
+}
+function readPhoto() {
+  if (!lsGet(KEY_AI) || !draft || !draft.photoB64) return;
+  if (readCtl) readCtl.abort();
+  var ctl = readCtl = new AbortController();
+  var d = draft;
+  d.reading = true; d.error = ""; d.info = ""; render();
+  claudeRead(d.photoB64, ctl.signal).then(function (out) {
+    if (ctl !== readCtl) return;
     if (out.cup) { var g = String(out.cup).toLowerCase().split(" ")[0]; var hit = CUP_NAMES.find(function (n) { return n.toLowerCase().split(" ")[0] === g; }); if (hit) d.cup = hit; }
-    d.rows = rows.map(mapRow);
+    d.rows = out.rows.map(mapRow);
     var humans = d.rows.filter(function (r) { return r.assign !== "ignore"; });
     var unc = humans.filter(function (r) { return r.assign === "unclaimed"; }).length;
-    d.info = "Read " + rows.length + " racers; " + humans.length + " highlighted" + (unc ? ", " + unc + " not matched to a player (they'll be unclaimed unless you pick someone)" : "") + ". Check each character and score against the photo before saving.";
+    d.info = "Read " + out.rows.length + " racers; " + humans.length + " highlighted" + (unc ? ", " + unc + " not matched to a player (they'll be unclaimed unless you pick someone)" : "") + ". Check each character and score against the photo before saving.";
   }).catch(function (e) {
-    if (ctl === readCtl) d.error = readErr(e, Anthropic);
+    if (ctl === readCtl) d.error = readErr(e, AnthropicLib);
   }).then(function () {
     if (ctl === readCtl) { readCtl = null; d.reading = false; render(); }
   });
+}
+function readFinishPhoto() {
+  var f = ui.finish; if (!f || !f.photoB64 || !lsGet(KEY_AI)) return;
+  f.reading = true; f.error = ""; render();
+  claudeRead(f.photoB64).then(function (out) { if (ui.finish === f) { f.rows = out.rows; f.addUnc = {}; } })
+    .catch(function (e) { if (ui.finish === f) f.error = readErr(e, AnthropicLib); })
+    .then(function () { f.reading = false; render(); });
 }
 function readErr(e, A) {
   if (e && e.code === "refused") return "Claude declined to read that photo. Type the rows below.";
@@ -869,7 +1137,7 @@ function loadSupabase() {
     sb = m.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key, { auth: { flowType: "pkce", persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   });
 }
-function mapCup(c) { return { id: c.id, cup: c.cup, date: c.date, week: c.week, max: c.max, results: c.results || [], notes: c.notes || "", hasPhoto: !!c.has_photo, addedAt: Number(c.added_at) || 0 }; }
+function mapCup(c) { return { id: c.id, cup: c.cup, date: c.date, week: c.week, max: c.max, results: c.results || [], notes: c.notes || "", hasPhoto: !!c.has_photo, addedAt: Number(c.added_at) || 0, status: c.status || "complete", maps: c.maps || [] }; }
 function mapProfile(u) { return { id: u.id, displayName: u.display_name, email: u.email, role: u.role, color: u.color, favoriteCharacter: u.favorite_character, favoriteVehicle: u.favorite_vehicle }; }
 function mapSub(s) { return { id: s.id, cup: s.cup, date: s.date, week: s.week || 1, max: s.max, rows: s.rows || [], notes: s.notes || "", hasPhoto: !!s.has_photo, status: s.status, submittedBy: s.submitted_by, submitterName: s.submitter_name, submittedAt: Number(s.submitted_at) || 0, reviewNote: s.review_note || "" }; }
 function mapClaim(c) { return { id: c.id, cupId: c.cup_id, rid: c.rid, userId: c.user_id, character: c.character || "", note: c.note || "", status: c.status, createdAt: Number(c.created_at) || 0, reviewNote: c.review_note || "" }; }
@@ -877,10 +1145,13 @@ function loadPublic() {
   return Promise.all([
     q(sb.from("league").select("settings").eq("id", 1).maybeSingle()),
     q(sb.from("players").select("id,name,color,aliases,user_id,registered_at")),
-    q(sb.from("cups").select("id,cup,date,week,max,results,notes,has_photo,added_at")),
-    q(sb.rpc("league_has_owner"))
+    q(sb.from("cups").select("*")),
+    q(sb.rpc("league_has_owner")),
+    // These two tables arrive with the race-by-race update; an older database just has none yet.
+    q(sb.from("race_results").select("*")).catch(function () { return []; }),
+    q(sb.from("cup_templates").select("*")).catch(function () { return []; })
   ]).then(function (r) {
-    state = normalize({ league: r[0] ? r[0].settings : {}, players: r[1], cups: r[2].map(mapCup) });
+    state = normalize({ league: r[0] ? r[0].settings : {}, players: r[1], cups: r[2].map(mapCup), races: r[4], templates: r[5] });
     me.hasOwner = !!r[3]; me.ownerKnown = true;
     if (playersDraft && !playersDraft.dirty) playersDraft = null;
     render();
@@ -1080,6 +1351,7 @@ function setView() {
   var h = (location.hash || "").replace("#", "");
   ui.view = VIEWS.indexOf(h) >= 0 ? h : "standings";
   ui.confirmDel = null; ui.error = ""; ui.msg = ""; ui.confirmDeleteAccount = false; ui.rejectId = null; ui.claimFor = null;
+  if (ui.view !== "race") ui.finish = null;
   if (ui.view === "add" && !draft && state && signedIn()) draft = newDraft();
   render(); window.scrollTo(0, 0);
 }
@@ -1134,6 +1406,69 @@ document.addEventListener("click", function (e) {
       .then(function () { ui.busy = false; ui.confirmDel = null; render(); });
   }
   else if (act === "read") { readPhoto(); }
+  else if (act === "new-build") { if (!ui.build) ui.build = null; }
+  else if (act === "rand" && ui.build) {
+    var b0 = ui.build, pool = id === "nitro" ? NITRO : id === "retro" ? RETRO : TRACKS;
+    var wasDefault = /^Cup \d+$/.test(b0.name) || b0.name === "Random Cup" || (templateById(b0.templateId) || {}).name === b0.name;
+    b0.maps = pickRandom(pool); b0.templateId = ""; b0.confirm = false; b0.error = "";
+    if (wasDefault) b0.name = "Random Cup";
+    render();
+  }
+  else if (act === "tpl-use") { var tu = templateById(id); if (tu) { ui.build = ui.build || newBuild(); ui.build.maps = tu.maps.slice(); ui.build.name = tu.name; ui.build.templateId = tu.id; ui.build.confirm = false; render(); window.scrollTo(0, 0); } }
+  else if (act === "tpl-save") {
+    var tb = ui.build, tn = String(ui.tplName || "").trim();
+    if (!tn) { tb.error = "Name the template first."; render(); return; }
+    if (tb.maps.some(function (m) { return !m; })) { tb.error = "Pick all 4 tracks before saving a template."; render(); return; }
+    q(sb.from("cup_templates").insert({ id: "t" + uid(), name: tn.slice(0, 40), maps: tb.maps.slice(), created_at: Date.now() }))
+      .then(function () { ui.tplName = ""; tb.error = ""; flash("Template saved: " + tn); reloadSoon(); }).catch(function (er) { tb.error = dbErr(er); render(); });
+  }
+  else if (act === "tpl-del") { q(sb.from("cup_templates").delete().eq("id", id)).then(function () { flash("Template deleted"); reloadSoon(); }).catch(function (er) { ui.error = dbErr(er); render(); }); }
+  else if (act === "build-lock") {
+    var bl = ui.build; bl.error = "";
+    if (!String(bl.name || "").trim()) bl.error = "Give the cup a name.";
+    else if (bl.maps.some(function (m) { return !m; })) bl.error = "Pick all 4 tracks.";
+    else if (!bl.date) bl.error = "Pick the date.";
+    else bl.confirm = true;
+    render();
+  }
+  else if (act === "build-back") { ui.build.confirm = false; render(); }
+  else if (act === "build-go") {
+    var bg = ui.build; ui.busy = true; render();
+    q(sb.rpc("create_cup", { p_cup: { id: uid(), cup: String(bg.name).trim(), date: bg.date, week: Number(bg.week), max: state.league.defaultMax, maps: bg.maps, template_id: bg.templateId || "" } }))
+      .then(function () { ui.build = null; flash(bg.name + " is locked in. Start racing!"); reloadSoon(); location.hash = "race"; })
+      .catch(function (er) { bg.error = dbErr(er); bg.confirm = false; }).then(function () { ui.busy = false; render(); });
+  }
+  else if (act === "race-save" || act === "race-clear") {
+    var kp = id.split("|"), cupId = kp[0], raceNo = Number(kp[1]), who = kp[2] === "me" ? null : kp[2];
+    var posEl = document.querySelector('select[data-en="pos"][data-key="' + id + '"]'), chEl = document.querySelector('select[data-en="ch"][data-key="' + id + '"]');
+    var call;
+    if (act === "race-save") {
+      var pos = posEl ? Number(posEl.value) : 0;
+      if (!pos) { ui.error = "Pick your finishing position for race " + raceNo + " first."; render(); return; }
+      call = q(sb.rpc("enter_race", { p_cup: cupId, p_race: raceNo, p_position: pos, p_character: chEl ? chEl.value : "", p_player: who }));
+    } else call = q(sb.rpc("clear_race", { p_cup: cupId, p_race: raceNo, p_player: who }));
+    ui.busy = true; ui.error = ""; render();
+    call.then(function () { delete ui.entry[id]; flash(act === "race-save" ? "Race " + raceNo + " saved" : "Race " + raceNo + " cleared"); reloadSoon(); })
+      .catch(function (er) { ui.error = dbErr(er); }).then(function () { ui.busy = false; render(); });
+  }
+  else if (act === "finish-open") { ui.finish = { cupId: id, photoB64: null, photoUrl: null, rows: null, addUnc: {}, reading: false, saving: false, error: "" }; render(); }
+  else if (act === "finish-cancel") { ui.finish = null; render(); }
+  else if (act === "finish-read") { readFinishPhoto(); }
+  else if (act === "finish-go") {
+    var ff = ui.finish, fc = state.cups.find(function (x) { return x.id === id; });
+    if (!ff || !fc) return;
+    var cmpr = compareTotals(liveRows(fc), ff.rows);
+    var unc = cmpr.extra.filter(function (h) { return (h.idx in ff.addUnc ? ff.addUnc[h.idx] : cmpr.allMatched) && h.points != null; }).map(function (h) { return { pts: h.points, character: h.character || "" }; });
+    ff.saving = true; ff.error = ""; render();
+    q(sb.rpc("finish_cup", { p_cup: id, p_photo: ff.photoB64 || null, p_unclaimed: unc }))
+      .then(function () { if (ff.photoB64) photoCache[id] = ff.photoUrl; ui.finish = null; flash(fc.cup + " is final. Standings updated."); reloadSoon(); location.hash = "cups"; })
+      .catch(function (er) { ff.error = dbErr(er); }).then(function () { ff.saving = false; render(); });
+  }
+  else if (act === "del-live") { ui.confirmDel = id; render(); }
+  else if (act === "reopen") {
+    q(sb.rpc("reopen_cup", { p_cup: id })).then(function () { flash("Reopened. Fix the entries, then finish it again."); reloadSoon(); location.hash = "race"; })
+      .catch(function (er) { ui.error = dbErr(er); render(); });
+  }
   else if (act === "stop-read") { if (readCtl) readCtl.abort(); readCtl = null; if (draft) draft.reading = false; render(); }
   else if (act === "add-row") { draft.rows.push({ rid: uid(), raw: "", character: "", pts: "", assign: "unclaimed", newName: "" }); render(); }
   else if (act === "rm-row") { draft.rows.splice(i, 1); render(); }
@@ -1181,11 +1516,30 @@ document.addEventListener("input", function (e) {
   else if (t.dataset.a) ui.form[t.dataset.a] = t.value;
   else if (t.dataset.p && profileDraft) profileDraft[t.dataset.p] = t.value;
   else if (t.dataset.cl) ui.claimForm[t.dataset.cl] = t.value;
+  else if (t.dataset.b && ui.build && t.dataset.b !== "tpl") ui.build[t.dataset.b] = t.value;
+  else if (t.dataset.tpl) ui.tplName = t.value;
   else if (t.dataset.rej) ui.rejectNote = t.value;
 });
 document.addEventListener("change", function (e) {
   var t = e.target;
   if (t.id === "photo-in") { onPhoto(t.files && t.files[0]); t.value = ""; }
+  else if (t.id === "finish-photo" && ui.finish) {
+    var ff = ui.finish, file = t.files && t.files[0]; t.value = "";
+    if (file) prepImage(file).then(function (b64) { ff.photoB64 = b64; ff.photoUrl = "data:image/jpeg;base64," + b64; ff.rows = null; ff.error = ""; render(); readFinishPhoto(); })
+      .catch(function () { ff.error = "This browser can't open that photo format. On iPhone, set Settings › Camera › Formats to Most Compatible, or upload a screenshot of it."; render(); });
+  }
+  else if (t.dataset.unc != null && ui.finish) { ui.finish.addUnc[t.dataset.unc] = t.checked; }
+  else if (t.dataset.b === "tpl" && ui.build) {
+    var tp = templateById(t.value); ui.build.templateId = t.value;
+    if (tp) { ui.build.maps = tp.maps.slice(); ui.build.name = tp.name; }
+    ui.build.confirm = false; render();
+  }
+  else if (t.dataset.bm != null && ui.build) { ui.build.maps[Number(t.dataset.bm)] = t.value; ui.build.templateId = ""; ui.build.confirm = false; render(); }
+  else if (t.dataset.en) {
+    var ek = t.dataset.key, pe = document.querySelector('select[data-en="pos"][data-key="' + ek + '"]'), ce = document.querySelector('select[data-en="ch"][data-key="' + ek + '"]');
+    ui.entry[ek] = { pos: pe ? pe.value : "", ch: ce ? ce.value : "" };
+  }
+  else if (t.dataset.efor) { ui.entryFor[t.dataset.efor] = t.value; render(); }
   else if (t.dataset.r === "assign" && draft) { var row = draft.rows[Number(t.dataset.i)]; row.assign = t.value; if (t.value === "new" && !row.newName) row.newName = row.raw; render(); var n = document.getElementById("r-new-" + t.dataset.i); if (n) n.focus(); }
   else if (t.dataset.r && draft) { var rw = draft.rows[Number(t.dataset.i)]; if (rw) rw[t.dataset.r] = t.value; }
   else if (t.dataset.pl && playersDraft) { var pr = playersDraft[Number(t.dataset.i)]; if (pr) { pr[t.dataset.pl] = t.value; playersDraft.dirty = true; render(); } }
