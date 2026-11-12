@@ -90,6 +90,49 @@ var DEMO = (function () {
   return { league: Object.assign({}, DEFAULT_LEAGUE), players: players, cups: cups };
 })();
 
+// ---------- original art: avatars, character chips, cup trophies, kart ----------
+function hashHue(s) { var h = 0; s = String(s || ""); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+function initials(name) { var w = String(name || "?").trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase(); }
+function avatar(name, color, cls) { return '<span class="av' + (cls ? " " + cls : "") + '" style="--c:' + esc(color || "var(--muted)") + '" aria-hidden="true">' + esc(initials(name)) + "</span>"; }
+function charChip(name, extra) {
+  if (!name) return "";
+  return '<span class="cchip"><span class="cdot" style="--h:' + hashHue(name) + '" aria-hidden="true">' + esc(initials(name)) + "</span>" + esc(name) + (extra ? '<span class="cx">' + extra + "</span>" : "") + "</span>";
+}
+var CUP_STYLE = {
+  "Mushroom Cup": ["#FF5A5F", "M5 13a7 6 0 0 1 14 0zM10 13h4v5h-4z"],
+  "Flower Cup": ["#FF8A1F", "M12 7a2.6 2.6 0 1 1 0 .01zM8 11a2.6 2.6 0 1 1 0 .01zM16 11a2.6 2.6 0 1 1 0 .01zM9.6 15.4a2.6 2.6 0 1 1 0 .01zM14.4 15.4a2.6 2.6 0 1 1 0 .01z"],
+  "Star Cup": ["#FFD23F", "M12 5l2.1 4.4 4.8.6-3.5 3.3.9 4.8L12 15.8 7.7 18.1l.9-4.8L5.1 10l4.8-.6z"],
+  "Special Cup": ["#B07CFF", "M6 16l-1-8 4 3 3-5 3 5 4-3-1 8z"],
+  "Shell Cup": ["#33D17A", "M12 6a6 6 0 1 1-6 6h3a3 3 0 1 0 3-3z"],
+  "Banana Cup": ["#F5E050", "M7 7c0 6 4 10 11 9-1 2-4 3-7 2-4-1-6-6-4-11z"],
+  "Leaf Cup": ["#2DD4BF", "M6 18C6 10 11 6 18 6c0 7-4 12-12 12zM7 17l7-7"],
+  "Lightning Cup": ["#38BDF8", "M13 4L7 13h4l-1 7 6-9h-4z"],
+  "Other": ["#9AA3C7", "M8 5v14M8 5h9l-2 3 2 3H8"]
+};
+function cupIcon(cup, size) {
+  var st = CUP_STYLE[cup] || CUP_STYLE.Other, s = size || 44;
+  return '<svg class="cupicon" width="' + s + '" height="' + s + '" viewBox="0 0 48 48" aria-hidden="true">' +
+    '<path d="M14 6h20v10a10 10 0 0 1-20 0z" fill="' + st[0] + '"/>' +
+    '<path d="M14 9H8a6 6 0 0 0 7 7M34 9h6a6 6 0 0 1-7 7" fill="none" stroke="' + st[0] + '" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M21 25h6v7h-6zM15 32h18l2 7H13z" fill="' + st[0] + '" opacity=".85"/>' +
+    '<g transform="translate(14 2) scale(.84)"><path d="' + st[1] + '" fill="#0B0E1F" fill-opacity=".72" stroke="#0B0E1F" stroke-opacity=".72" stroke-width="1" stroke-linejoin="round"/></g></svg>';
+}
+function kartSVG() {
+  return '<svg class="kart" viewBox="0 0 260 130" aria-hidden="true">' +
+    '<g class="speed"><rect x="0" y="54" width="62" height="5" rx="2.5"/><rect x="14" y="70" width="44" height="5" rx="2.5"/><rect x="4" y="86" width="56" height="5" rx="2.5"/></g>' +
+    '<ellipse cx="160" cy="118" rx="88" ry="8" fill="#000" opacity=".35"/>' +
+    '<rect x="86" y="84" width="34" height="30" rx="9" fill="#14182B"/><rect x="186" y="88" width="30" height="26" rx="8" fill="#14182B"/>' +
+    '<rect x="93" y="93" width="20" height="12" rx="4" fill="#3A4366"/><rect x="192" y="95" width="18" height="10" rx="4" fill="#3A4366"/>' +
+    '<path d="M78 92c0-12 8-20 22-22l36-4 30-14c10-4 22-4 32 2l26 18c6 4 8 10 6 16l-2 6H82c-3 0-4-1-4-2z" fill="#FF3B48"/>' +
+    '<path d="M100 74l64-10 20 8-82 12z" fill="#FFD23F"/>' +
+    '<path d="M214 84l20-2c4 0 6 3 4 6l-4 6h-22z" fill="#FFD23F"/>' +
+    '<path d="M70 68h20l6 18H76z" fill="#2B3152"/><rect x="66" y="64" width="30" height="7" rx="3" fill="#FF3B48"/>' +
+    '<circle cx="146" cy="44" r="21" fill="#F4F6FF"/><path d="M146 23a21 21 0 0 1 20 15h-23c-3 0-4-2-3-4z" fill="#FF3B48"/>' +
+    '<path d="M152 39h16a3 3 0 0 1 3 3v4a3 3 0 0 1-3 3h-14z" fill="#2EC4FF"/>' +
+    '<path d="M166 62l14 4" stroke="#14182B" stroke-width="5" stroke-linecap="round"/>' +
+    '<rect x="96" y="96" width="14" height="4" rx="2" fill="#FFD23F"/></svg>';
+}
+
 // ---------- standings math ----------
 function compute(st) {
   var L = st.league;
@@ -178,16 +221,21 @@ function render() {
 }
 function mast(L, m) {
   var W = Math.max(1, Number(L.seasonWeeks) || 5), per = Math.max(1, Number(L.cupsPerWeek) || 4), blocks = "";
+  var cw = Math.min(m.curWeek, W);
   for (var w = 1; w <= W; w++) {
     var n = m.byWeek[w] || 0, segs = "";
     for (var i = 0; i < Math.max(per, n); i++) segs += '<i class="seg' + (i < n ? " on" : "") + '"></i>';
-    blocks += '<div class="wk' + (w === m.curWeek && m.total ? " cur" : "") + '"><span>Week ' + w + '</span><div class="track" style="grid-template-columns:repeat(' + Math.max(per, n) + ',minmax(0,1fr))">' + segs + "</div></div>";
+    blocks += '<div class="wk' + (w === cw && m.total ? " cur" : "") + (n >= per ? " full" : "") + '"><span>Wk ' + w + '</span><div class="track" style="grid-template-columns:repeat(' + Math.max(per, n) + ',minmax(0,1fr))">' + segs + "</div></div>";
   }
   var left = Math.max(0, W * per - m.total);
   var done = m.curWeek >= W && (m.byWeek[W] || 0) >= per;
-  return '<header class="wrap mast"><div class="eyebrow">' + esc(L.season) + " · Regular season</div><h1>" + esc(L.name) + "</h1>" +
-    '<div class="progress"><div class="progress-label"><span><b>Week ' + Math.min(m.curWeek, W) + " of " + W + "</b> · " + m.total + " cup" + (m.total === 1 ? "" : "s") + " played</span><span>" + (done ? "Regular season complete" : left + " cup" + (left === 1 ? "" : "s") + " to go before playoffs") + "</span></div>" +
-    '<div class="weeks" style="grid-template-columns:repeat(' + W + ',minmax(0,1fr))" aria-hidden="true">' + blocks + "</div></div></header>";
+  return '<header class="hero"><div class="sky" aria-hidden="true"></div><div class="wrap hero-in">' +
+    '<div class="hero-copy"><div class="eyebrow">' + esc(L.season) + " · Regular season</div><h1>" + esc(L.name) + "</h1>" +
+    '<div class="lap"><span class="lap-k">Week</span><span class="lap-v">' + cw + '<small>/' + W + "</small></span>" +
+    '<span class="lap-sub">' + m.total + " cup" + (m.total === 1 ? "" : "s") + " raced · " + (done ? "regular season complete" : left + " to go") + "</span></div></div>" +
+    kartSVG() + "</div>" +
+    '<div class="wrap"><div class="weeks" style="grid-template-columns:repeat(' + W + ',minmax(0,1fr))" aria-hidden="true">' + blocks + "</div></div>" +
+    '<div class="road" aria-hidden="true"></div></header>';
 }
 function navHTML(v, unclaimedCount) {
   function t(id, label, extra) { return '<a class="tab" href="#' + id + '"' + (v === id ? ' aria-current="page"' : "") + ">" + label + (extra || "") + "</a>"; }
@@ -210,16 +258,33 @@ function demoNote() {
 function formPips(s) {
   return '<span class="form">' + s.log.slice(-5).map(function (l) { return '<span class="pip' + (l.rank <= 3 ? " r" + l.rank : "") + '" title="' + esc(l.cup.cup) + ": " + l.rank + ord(l.rank) + " of " + l.field + (l.character ? " as " + esc(l.character) : "") + '">' + l.rank + "</span>"; }).join("") + "</span>";
 }
-var TABLE_HEAD = '<thead><tr><th class="l">Pos</th><th class="l">Player</th><th>Cups</th><th>Pts</th><th>Pct</th><th class="opt">Back</th><th>Wins</th><th class="opt">Podiums</th><th class="opt">Avg fin</th><th class="l opt">Last 5</th></tr></thead>';
+function podiumHTML(m) {
+  var top = m.ranked.slice(0, 3);
+  if (top.length < 2) return "";
+  var order = top.length === 3 ? [top[1], top[0], top[2]] : [top[1], top[0]];
+  return '<section class="podium" aria-label="Top of the standings">' + order.map(function (s) {
+    var p = s.player;
+    return '<button class="step s' + s.rank + '" data-act="sel" data-key="' + esc(p.id) + '">' +
+      avatar(p.name, p.color, "lg") + '<span class="pn">' + esc(p.name) + "</span>" + (s.main ? '<span class="pm">' + esc(s.main.name) + "</span>" : "") +
+      '<span class="block"><span class="place">' + s.rank + "<sup>" + ord(s.rank) + '</sup></span><span class="ppct">' + pctTxt(s.pct) + "</span></span></button>";
+  }).join("") + "</section>";
+}
+function boardHTML(list, ranked, L) {
+  var out = '<div class="board" role="list">';
+  list.forEach(function (s, i) {
+    out += boardRow(s, ranked ? s.rank : null);
+    if (ranked && i === L.playoffSpots - 1 && list.length > L.playoffSpots) out += '<div class="cutline" role="separator">Playoff line</div>';
+  });
+  return out + "</div>";
+}
 function viewStandings(st, m, demo) {
   var L = st.league, out = "";
   if (demo) out += demoNote();
-  var lead = m.ranked[0];
+  out += podiumHTML(m);
   var mostWins = m.ranked.concat(m.unranked).slice().sort(function (a, b) { return b.wins - a.wins; })[0];
   var topChar = m.chars[0];
-  if (lead) {
+  if (m.ranked.length) {
     out += '<div class="strip">' +
-      tile("Leader", lead.player.name, pctTxt(lead.pct) + " of possible points") +
       tile("Most cup wins", mostWins && mostWins.wins ? mostWins.player.name : "None yet", mostWins && mostWins.wins ? mostWins.wins + " win" + (mostWins.wins === 1 ? "" : "s") : "") +
       tile("Most picked character", topChar ? topChar.name : "–", topChar ? topChar.picks + " pick" + (topChar.picks === 1 ? "" : "s") + " · " + pctTxt(topChar.pts / topChar.max) + " avg" : "") +
       tile("Qualifying mark", m.need + " cup" + (m.need === 1 ? "" : "s"), L.minParticipation + "% of cups played so far") +
@@ -227,23 +292,14 @@ function viewStandings(st, m, demo) {
   }
   out += '<section class="section-h"><h2>Standings</h2><span class="muted small">Ranked by points percentage · top ' + L.playoffSpots + " make the playoffs</span></section>";
   if (!m.ranked.length) out += '<div class="panel empty"><b>No qualified players yet.</b><span class="muted">Players appear here once they have played ' + m.need + " cups.</span></div>";
-  else {
-    out += '<div class="tbl-wrap"><table>' + TABLE_HEAD + "<tbody>";
-    m.ranked.forEach(function (s, i) {
-      out += rowHTML(s, s.rank);
-      if (i === L.playoffSpots - 1 && m.ranked.length > L.playoffSpots) out += '<tr class="cut"><td colspan="10"><div class="cutline">Playoff line</div></td></tr>';
-    });
-    out += "</tbody></table></div>";
-  }
+  else out += boardHTML(m.ranked, true, L);
   if (m.unranked.length) {
     out += '<section class="section-h"><h2>Not yet qualified</h2><span class="muted small">Need ' + m.need + " cups to be ranked</span></section>";
-    out += '<div class="tbl-wrap"><table>' + TABLE_HEAD + "<tbody>";
-    m.unranked.forEach(function (s) { out += rowHTML(s, null); });
-    out += "</tbody></table></div>";
+    out += boardHTML(m.unranked, false, L);
   }
   var sel = ui.sel && m.byId.get(ui.sel);
   if (sel && sel.cp) out += detailHTML(sel);
-  else if (m.ranked.length) out += '<p class="muted small" style="margin:0">Select a player to see their season and character picks.</p>';
+  else if (m.ranked.length) out += '<p class="muted small" style="margin:0">Select a racer to see their season and character picks.</p>';
   if (m.chars.length) out += charChartHTML(m.chars);
   return out;
 }
@@ -251,24 +307,19 @@ function charChartHTML(chars) {
   var top = chars.slice(0, 10), most = top[0].picks;
   return '<section class="section-h"><h2>Most picked characters</h2><span class="muted small">Every league result with a character, unclaimed ones included</span></section>' +
     '<div class="panel panel-pad chars">' + top.map(function (c) {
-      return '<div class="char-row"><span class="cn">' + esc(c.name) + '</span><span class="hbar"><i style="width:' + (c.picks / most * 100).toFixed(1) + '%;background:var(--accent)"></i></span><span class="cs num">' + c.picks + ' <span class="muted">pick' + (c.picks === 1 ? "" : "s") + " · " + pctTxt(c.pts / c.max) + " avg · " + c.wins + " win" + (c.wins === 1 ? "" : "s") + "</span></span></div>";
+      return '<div class="char-row"><span class="cn">' + charChip(c.name) + '</span><span class="hbar"><i style="width:' + (c.picks / most * 100).toFixed(1) + '%;background:hsl(' + hashHue(c.name) + ' 80% 60%)"></i></span><span class="cs num">' + c.picks + ' <span class="muted">pick' + (c.picks === 1 ? "" : "s") + " · " + pctTxt(c.pts / c.max) + " avg · " + c.wins + " win" + (c.wins === 1 ? "" : "s") + "</span></span></div>";
     }).join("") + "</div>";
 }
 function tile(k, v, s) { return '<div class="tile"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span><span class="s">' + esc(s) + "</span></div>"; }
-function rowHTML(s, rank) {
+function boardRow(s, rank) {
   var p = s.player;
-  return '<tr class="row' + (ui.sel === p.id ? " sel" : "") + '" data-act="sel" data-key="' + esc(p.id) + '" tabindex="0">' +
-    '<td class="l">' + (rank ? posHTML(rank) : '<span class="pos">–</span>') + "</td>" +
-    '<td class="l"><span class="who"><span class="dot" style="background:' + esc(p.color) + '"></span><span class="who-txt"><span class="name">' + esc(p.name) + "</span>" + (p.registeredAt ? '<span class="opt"> ' + joinedBadge(p) + "</span>" : "") +
-    (s.main ? '<span class="main">' + esc(s.main.name) + " ×" + s.main.n + "</span>" : "") + "</span></span></td>" +
-    '<td class="num">' + s.cp + "</td>" +
-    '<td class="num">' + s.pts + '<span class="muted">/' + s.max + "</span></td>" +
-    '<td><div class="pct">' + pctTxt(s.pct) + '</div><div class="bar"><i style="width:' + (s.pct * 100).toFixed(1) + '%"></i></div></td>' +
-    '<td class="num opt">' + (rank ? (rank === 1 ? "–" : "−" + s.back.toFixed(1)) : "") + "</td>" +
-    '<td class="num">' + s.wins + "</td>" +
-    '<td class="num opt">' + s.pods + "</td>" +
-    '<td class="num opt">' + (s.avg != null ? s.avg.toFixed(2) : "–") + "</td>" +
-    '<td class="l opt">' + formPips(s) + "</td></tr>";
+  return '<div class="brow' + (ui.sel === p.id ? " sel" : "") + (rank && rank <= 3 ? " top" : "") + '" role="listitem" data-act="sel" data-key="' + esc(p.id) + '" tabindex="0" style="--c:' + esc(p.color) + '">' +
+    '<div class="bpos">' + (rank ? posHTML(rank) : '<span class="pos">–</span>') + "</div>" +
+    '<div class="bwho">' + avatar(p.name, p.color) + '<div class="who-txt"><span class="name">' + esc(p.name) + (p.registeredAt ? " " + joinedBadge(p) : "") + "</span>" +
+      (s.main ? charChip(s.main.name, "×" + s.main.n) : '<span class="muted small">No character yet</span>') + "</div></div>" +
+    '<div class="bpct"><span class="pct">' + pctTxt(s.pct) + '</span><div class="bar"><i style="width:' + (s.pct * 100).toFixed(1) + '%"></i></div><span class="muted small num">' + s.pts + "/" + s.max + " pts</span></div>" +
+    '<div class="bstats"><span><b class="num">' + s.cp + "</b> cups</span><span><b class=\"num\">" + s.wins + "</b> wins</span><span><b class=\"num\">" + s.pods + "</b> podiums</span>" +
+      (rank && rank > 1 ? '<span><b class="num">−' + s.back.toFixed(1) + "</b> back</span>" : "") + formPips(s) + "</div></div>";
 }
 function sparkSVG(trend) {
   var W = 320, H = 110, pl = 40, pr = 12, pt = 12, pb = 20;
@@ -294,13 +345,13 @@ function sparkSVG(trend) {
 }
 function detailHTML(s) {
   var p = s.player;
-  var log = s.log.slice().reverse().map(function (l) { return '<tr><td class="l num">' + l.num + '</td><td class="l">' + esc(l.cup.cup) + ' <span class="muted small">wk ' + l.cup.week + '</span></td><td class="l">' + esc(l.character || "–") + '</td><td class="num">' + l.pts + '<span class="muted">/' + l.max + '</span></td><td class="num">' + l.rank + ord(l.rank) + '<span class="muted"> of ' + l.field + "</span></td></tr>"; }).join("");
+  var log = s.log.slice().reverse().map(function (l) { return '<tr><td class="l num">' + l.num + '</td><td class="l">' + esc(l.cup.cup) + ' <span class="muted small">wk ' + l.cup.week + '</span></td><td class="l">' + (l.character ? charChip(l.character) : "–") + '</td><td class="num">' + l.pts + '<span class="muted">/' + l.max + '</span></td><td class="num">' + l.rank + ord(l.rank) + '<span class="muted"> of ' + l.field + "</span></td></tr>"; }).join("");
   var charRows = s.charList.length ? s.charList.map(function (c) {
     var picks = s.log.filter(function (l) { return l.character === c.name; });
     var pts = picks.reduce(function (a, l) { return a + l.pts; }, 0), max = picks.reduce(function (a, l) { return a + l.max; }, 0);
-    return '<div class="char-row"><span class="cn">' + esc(c.name) + '</span><span class="hbar"><i style="width:' + (c.n / s.charList[0].n * 100).toFixed(1) + "%;background:" + esc(p.color) + '"></i></span><span class="cs num">' + c.n + '<span class="muted"> · ' + pctTxt(pts / max) + "</span></span></div>";
+    return '<div class="char-row"><span class="cn">' + charChip(c.name) + '</span><span class="hbar"><i style="width:' + (c.n / s.charList[0].n * 100).toFixed(1) + "%;background:" + esc(p.color) + '"></i></span><span class="cs num">' + c.n + '<span class="muted"> · ' + pctTxt(pts / max) + "</span></span></div>";
   }).join("") : '<p class="muted small" style="margin:0">No characters recorded yet.</p>';
-  return '<section class="panel panel-pad detail"><div class="detail-head"><h3><span class="dot" style="width:14px;height:14px;background:' + esc(p.color) + '"></span>' + esc(p.name) + "</h3>" + joinedBadge(p, true) + '<span class="nav-spacer"></span><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
+  return '<section class="panel panel-pad detail"><div class="detail-head">' + avatar(p.name, p.color, "lg") + "<h3>" + esc(p.name) + "</h3>" + joinedBadge(p, true) + '<span class="nav-spacer"></span><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
     '<div class="stats">' + stat("Pct", pctTxt(s.pct)) + stat("Points", s.pts + "/" + s.max) + stat("Cups", s.cp) + stat("Wins", s.wins) + stat("Podiums", s.pods) + stat("Avg finish", s.avg != null ? s.avg.toFixed(2) : "–") + stat("Main", s.main ? s.main.name : "–") + "</div>" +
     '<div class="cols"><div style="display:grid;gap:14px"><div><div class="eyebrow" style="margin-bottom:6px">Season pct, cup by cup</div>' + sparkSVG(s.trend) + '</div><div><div class="eyebrow" style="margin-bottom:6px">Character picks</div><div class="chars">' + charRows + "</div></div></div>" +
     '<div style="min-width:0"><div class="eyebrow" style="margin-bottom:6px">Cup log</div><div style="overflow-x:auto"><table class="mini"><thead><tr><th class="l">#</th><th class="l">Cup</th><th class="l">Character</th><th>Pts</th><th>Finish</th></tr></thead><tbody>' + log + "</tbody></table></div></div></div></section>";
@@ -319,7 +370,7 @@ function viewCups(st, m, demo) {
     if (c.week !== lastWeek) { lastWeek = c.week; out += '<h3 class="wk-h">Week ' + c.week + ' <span class="muted small">' + (m.byWeek[c.week] || 0) + " cup" + (m.byWeek[c.week] === 1 ? "" : "s") + "</span></h3>"; }
     var rows = info.res.map(function (r) {
       var p = r.p ? st.players.find(function (x) { return x.id === r.p; }) : null;
-      var who = p ? esc(p.name) : '<a class="unc" href="#unclaimed">Unclaimed</a>';
+      var who = p ? avatar(p.name, p.color, "sm") + esc(p.name) : '<span class="av sm q" aria-hidden="true">?</span><a class="unc" href="#unclaimed">Unclaimed</a>';
       return '<div class="res-row"><span class="r' + (r.rank <= 3 ? " p" + r.rank : "") + '">' + r.rank + '</span><span class="n">' + who + (r.character ? '<span class="ch">' + esc(r.character) + "</span>" : "") + '</span><span class="hbar"><i style="width:' + (r.pts / info.max * 100).toFixed(1) + "%;background:" + esc(p ? p.color : "var(--muted)") + '"></i></span><span class="t">' + r.pts + '<span class="muted">/' + info.max + "</span></span></div>";
     }).join("");
     var actions = "";
@@ -334,7 +385,7 @@ function viewCups(st, m, demo) {
       if (!src) loadPhoto(c.id);
       photo = src && src !== "loading" && src !== "none" ? '<a class="photo" href="' + src + '" target="_blank" rel="noopener"><img src="' + src + '" alt="Results screen photo for ' + esc(c.cup) + '"></a>' : "";
     }
-    out += '<article class="panel cup"><div style="min-width:0"><div class="cup-head"><span class="cup-no">#' + info.num + '</span><span class="cup-name">' + esc(c.cup) + '</span><span class="muted small">' + fmtDate(c.date) + (info.max !== 60 ? " · max " + info.max + " pts" : "") + "</span></div>" +
+    out += '<article class="panel cup"><div style="min-width:0"><div class="cup-head">' + cupIcon(c.cup) + '<span class="cup-no">#' + info.num + '</span><span class="cup-name">' + esc(c.cup) + '</span><span class="muted small">' + fmtDate(c.date) + (info.max !== 60 ? " · max " + info.max + " pts" : "") + "</span></div>" +
       (c.notes ? '<p class="small muted" style="margin:6px 0 0">' + esc(c.notes) + "</p>" : "") +
       '<div class="res">' + rows + "</div>" + actions + "</div>" + photo + "</article>";
   });
@@ -357,7 +408,7 @@ function viewUnclaimed(st, m, demo) {
       else if (pending) act = '<span class="chip st-pending">Requested</span> <button class="btn-link small" data-act="withdraw-claim" data-key="' + esc(pending.id) + '">Withdraw</button>';
       else if (inCup) act = '<span class="muted small">You already have a result in this cup</span>';
       else act = '<button class="btn btn-sm btn-primary" data-act="claim-open" data-key="' + esc(key) + '" data-char="' + esc(u.r.character) + '">That was me</button>';
-      var row = '<tr><td class="l"><b>#' + u.num + " " + esc(u.cup.cup) + '</b><br><span class="muted small">Week ' + u.cup.week + " · " + fmtDate(u.cup.date) + '</span></td><td class="l">' + esc(u.r.character || "Unknown") + '</td><td class="num">' + u.r.pts + '<span class="muted">/' + u.max + '</span></td><td class="num">' + u.r.rank + ord(u.r.rank) + '<span class="muted"> of ' + u.field + '</span></td><td class="l">' + act + "</td></tr>";
+      var row = '<tr><td class="l"><span class="ucup">' + cupIcon(u.cup.cup, 34) + '<span><b>#' + u.num + " " + esc(u.cup.cup) + '</b><br><span class="muted small">Week ' + u.cup.week + " · " + fmtDate(u.cup.date) + '</span></span></span></td><td class="l">' + (u.r.character ? charChip(u.r.character) : '<span class="muted">Unknown</span>') + '</td><td class="num">' + u.r.pts + '<span class="muted">/' + u.max + '</span></td><td class="num">' + u.r.rank + ord(u.r.rank) + '<span class="muted"> of ' + u.field + '</span></td><td class="l">' + act + "</td></tr>";
       if (ui.claimFor === key) {
         row += '<tr class="claim-form"><td colspan="5"><div class="keyrow"><label class="f" for="cl-char">You raced as<select id="cl-char" data-cl="character">' + charOptions(ui.claimForm.character) + '</select></label>' +
           '<label class="f" for="cl-note" style="flex:1 1 220px">Note for the admin (optional)<input id="cl-note" maxlength="200" data-cl="note" value="' + esc(ui.claimForm.note) + '" placeholder="e.g. I was the green Yoshi"></label>' +
@@ -377,7 +428,7 @@ function viewPlayoffs(st, m, demo) {
     out += '<section class="section-h"><h2>If the season ended today</h2><span class="muted small">' + (demo ? "From the example standings" : "Projected from current standings") + "</span></section>";
     var pairs = []; for (var i = 0; i < Math.floor(seeds.length / 2); i++) pairs.push([seeds[i], seeds[seeds.length - 1 - i], i + 1, seeds.length - i]);
     out += '<div class="bracket">' + pairs.map(function (pr) {
-      return '<div class="match">' + [0, 1].map(function (j) { var s = pr[j]; return '<div><span class="seed">' + pr[2 + j] + '</span><span class="dot" style="background:' + esc(s.player.color) + '"></span><span class="name">' + esc(s.player.name) + '</span><span class="nav-spacer"></span><span class="num muted small">' + pctTxt(s.pct) + "</span></div>"; }).join("") + "</div>";
+      return '<div class="match">' + [0, 1].map(function (j) { var s = pr[j]; return '<div><span class="seed">' + pr[2 + j] + "</span>" + avatar(s.player.name, s.player.color, "sm") + '<span class="name">' + esc(s.player.name) + '</span><span class="nav-spacer"></span><span class="num muted small">' + pctTxt(s.pct) + "</span></div>"; }).join("") + "</div>";
     }).join("") + (seeds.length % 2 ? '<div class="match"><div><span class="seed">' + Math.ceil(seeds.length / 2) + '</span><span class="name">' + esc(seeds[Math.floor(seeds.length / 2)].player.name) + '</span><span class="nav-spacer"></span><span class="chip">Bye</span></div></div>' : "") + "</div>";
   }
   return out;
