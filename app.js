@@ -120,9 +120,20 @@ var DEMO = (function () {
 function hashHue(s) { var h = 0; s = String(s || ""); for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
 function initials(name) { var w = String(name || "?").trim().split(/\s+/); return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).toUpperCase(); }
 function avatar(name, color, cls) { return '<span class="av' + (cls ? " " + cls : "") + '" style="--c:' + esc(color || "var(--muted)") + '" aria-hidden="true">' + esc(initials(name)) + "</span>"; }
+// Character art lives in assets/characters (added by the league; see README). Characters without a file fall back to initials.
+var CHAR_ART = ["Mario", "Luigi", "Peach", "Yoshi", "Birdo", "Toad", "Koopa Troopa", "Diddy Kong", "Donkey Kong", "Bowser", "Bowser Jr.", "Wario", "Waluigi", "King Boo", "Dry Bones", "Baby Mario", "Baby Luigi", "Baby Peach", "Baby Daisy"];
+function charSrc(name, full) { return CHAR_ART.indexOf(name) >= 0 ? "assets/characters/" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + (full ? "" : "-face") + ".webp" : null; }
+// A round character portrait; `ring` is a player colour for the outline.
+function charFace(name, cls, ring) {
+  var src = charSrc(name);
+  var style = ring ? ' style="--c:' + esc(ring) + '"' : "";
+  if (!src) return '<span class="cface none' + (cls ? " " + cls : "") + '"' + style + ' title="' + esc(name || "No character") + '"><span class="cdot" style="--h:' + hashHue(name) + '">' + esc(name ? initials(name) : "?") + "</span></span>";
+  return '<span class="cface' + (cls ? " " + cls : "") + '"' + style + ' title="' + esc(name) + '"><img src="' + src + '" alt="' + esc(name) + '" loading="lazy"></span>';
+}
 function charChip(name, extra) {
   if (!name) return "";
-  return '<span class="cchip"><span class="cdot" style="--h:' + hashHue(name) + '" aria-hidden="true">' + esc(initials(name)) + "</span>" + esc(name) + (extra ? '<span class="cx">' + extra + "</span>" : "") + "</span>";
+  var src = charSrc(name);
+  return '<span class="cchip">' + (src ? '<img class="cimg" src="' + src + '" alt="" loading="lazy">' : '<span class="cdot" style="--h:' + hashHue(name) + '" aria-hidden="true">' + esc(initials(name)) + "</span>") + esc(name) + (extra ? '<span class="cx">' + extra + "</span>" : "") + "</span>";
 }
 var CUP_STYLE = {
   "Mushroom Cup": ["#FF5A5F", "M5 13a7 6 0 0 1 14 0zM10 13h4v5h-4z"],
@@ -315,8 +326,9 @@ function podiumHTML(m) {
   var order = top.length === 3 ? [top[1], top[0], top[2]] : [top[1], top[0]];
   return '<section class="podium" aria-label="Top of the standings">' + order.map(function (s) {
     var p = s.player;
+    var art = s.main && charSrc(s.main.name, true);
     return '<button class="step s' + s.rank + '" data-act="sel" data-key="' + esc(p.id) + '">' +
-      avatar(p.name, p.color, "lg") + '<span class="pn">' + esc(p.name) + "</span>" + (s.main ? '<span class="pm">' + esc(s.main.name) + "</span>" : "") +
+      (art ? '<img class="pod-art" src="' + art + '" alt="' + esc(s.main.name) + '">' : avatar(p.name, p.color, "lg")) + '<span class="pn">' + esc(p.name) + "</span>" + (s.main ? '<span class="pm">' + esc(s.main.name) + "</span>" : "") +
       '<span class="block"><span class="place">' + s.rank + "<sup>" + ord(s.rank) + '</sup></span><span class="ppct">' + pctTxt(s.pct) + "</span></span></button>";
   }).join("") + "</section>";
 }
@@ -366,7 +378,7 @@ function boardRow(s, rank) {
   var p = s.player;
   return '<div class="brow' + (ui.sel === p.id ? " sel" : "") + (rank && rank <= 3 ? " top" : "") + '" role="listitem" data-act="sel" data-key="' + esc(p.id) + '" tabindex="0" style="--c:' + esc(p.color) + '">' +
     '<div class="bpos">' + (rank ? posHTML(rank) : '<span class="pos">–</span>') + "</div>" +
-    '<div class="bwho">' + avatar(p.name, p.color) + '<div class="who-txt"><span class="name">' + esc(p.name) + (p.registeredAt ? " " + joinedBadge(p) : "") + "</span>" +
+    '<div class="bwho">' + (s.main ? charFace(s.main.name, "", p.color) : avatar(p.name, p.color)) + '<div class="who-txt"><span class="name">' + esc(p.name) + (p.registeredAt ? " " + joinedBadge(p) : "") + "</span>" +
       (s.main ? charChip(s.main.name, "×" + s.main.n) : '<span class="muted small">No character yet</span>') + "</div></div>" +
     '<div class="bpct"><span class="pct">' + pctTxt(s.pct) + '</span><div class="bar"><i style="width:' + (s.pct * 100).toFixed(1) + '%"></i></div><span class="muted small num">' + s.pts + "/" + s.max + " pts</span></div>" +
     '<div class="bstats"><span><b class="num">' + s.cp + "</b> cups</span><span><b class=\"num\">" + s.wins + "</b> wins</span><span><b class=\"num\">" + s.pods + "</b> podiums</span>" +
@@ -409,7 +421,8 @@ function detailHTML(s) {
   var maps = ml.length >= 2
     ? '<div class="cols"><div><div class="eyebrow" style="margin-bottom:6px">Strongest tracks</div><div class="maps good">' + mapRows(strong) + '</div></div><div><div class="eyebrow" style="margin-bottom:6px">Weakest tracks</div><div class="maps bad">' + mapRows(weak) + "</div></div></div>"
     : '<p class="muted small" style="margin:0">Track strengths appear once ' + esc(p.name) + " has raced a few different tracks race by race.</p>";
-  return '<section class="panel panel-pad detail"><div class="detail-head">' + avatar(p.name, p.color, "lg") + "<h3>" + esc(p.name) + "</h3>" + joinedBadge(p, true) + '<span class="nav-spacer"></span><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
+  var art = s.main && charSrc(s.main.name, true);
+  return '<section class="panel panel-pad detail">' + (art ? '<img class="detail-art" src="' + art + '" alt="">' : "") + '<div class="detail-head">' + avatar(p.name, p.color, "lg") + "<h3>" + esc(p.name) + "</h3>" + joinedBadge(p, true) + '<span class="nav-spacer"></span><button class="btn btn-sm" data-act="unsel">Close</button></div>' +
     '<div class="stats">' + stat("Pct", pctTxt(s.pct)) + stat("Total points", s.pts) + stat("Avg pts / cup", s.avgPtsCup != null ? s.avgPtsCup.toFixed(1) : "–") + stat("Avg race finish", s.avgRace != null ? s.avgRace.toFixed(2) : "–") +
       stat("Avg cup finish", s.avg != null ? s.avg.toFixed(2) : "–") + stat("Cups", s.cp) + stat("Wins", s.wins) + stat("Podiums", s.pods) + "</div>" +
     '<div class="last3"><span class="eyebrow">Last 3 characters</span>' + (s.last3.length ? s.last3.map(function (c) { return charChip(c); }).join("") : '<span class="muted small">None yet</span>') + "</div>" +
@@ -432,8 +445,8 @@ function viewCups(st, m, demo) {
     if (c.week !== lastWeek) { lastWeek = c.week; out += '<h3 class="wk-h">Week ' + c.week + ' <span class="muted small">' + (m.byWeek[c.week] || 0) + " cup" + (m.byWeek[c.week] === 1 ? "" : "s") + "</span></h3>"; }
     var rows = info.res.map(function (r) {
       var p = r.p ? st.players.find(function (x) { return x.id === r.p; }) : null;
-      var who = p ? avatar(p.name, p.color, "sm") + esc(p.name) : '<span class="av sm q" aria-hidden="true">?</span><a class="unc" href="#unclaimed">Unclaimed</a>';
-      return '<div class="res-row"><span class="r' + (r.rank <= 3 ? " p" + r.rank : "") + '">' + r.rank + '</span><span class="n">' + who + (r.character ? '<span class="ch">' + esc(r.character) + "</span>" : "") + '</span><span class="hbar"><i style="width:' + (r.pts / info.max * 100).toFixed(1) + "%;background:" + esc(p ? p.color : "var(--muted)") + '"></i></span><span class="t">' + r.pts + '<span class="muted">/' + info.max + "</span></span></div>";
+      var who = charFace(r.character, "md", p ? p.color : "var(--muted)") + '<span class="nn">' + (p ? esc(p.name) : '<a class="unc" href="#unclaimed">Unclaimed</a>') + (r.character ? '<span class="ch">' + esc(r.character) + "</span>" : "") + "</span>";
+      return '<div class="res-row' + (p ? "" : " unc-row") + '"><span class="r' + (r.rank <= 3 ? " p" + r.rank : "") + '">' + r.rank + '</span><span class="n">' + who + '</span><span class="hbar"><i style="width:' + (r.pts / info.max * 100).toFixed(1) + "%;background:" + esc(p ? p.color : "var(--muted)") + '"></i></span><span class="t">' + r.pts + '<span class="muted">/' + info.max + "</span></span></div>";
     }).join("");
     var actions = "", raceGrid = "";
     if (info.hasRaces) {
@@ -441,9 +454,9 @@ function viewCups(st, m, demo) {
       raceGrid = '<div class="tbl-wrap race-grid"><table class="mini"><thead><tr><th class="l">Racer</th>' + [1, 2, 3, 4].map(function (n) { return '<th title="' + esc((c.maps || [])[n - 1] || "") + '">R' + n + "</th>"; }).join("") + "<th>Total</th></tr></thead><tbody>" +
         info.res.filter(function (r) { return r.p; }).map(function (r) {
           var p = st.players.find(function (x) { return x.id === r.p; });
-          return '<tr><td class="l"><span class="who">' + avatar(p ? p.name : "?", p ? p.color : "", "sm") + esc(p ? p.name : "?") + "</span></td>" + [1, 2, 3, 4].map(function (n) {
+          return '<tr><td class="l"><span class="who">' + charFace(r.character, "sm", p ? p.color : "") + esc(p ? p.name : "?") + "</span></td>" + [1, 2, 3, 4].map(function (n) {
             var x = rs.find(function (y) { return y.playerId === r.p && y.race === n; });
-            return '<td class="num">' + (x ? '<span class="rp' + (x.position <= 3 ? " r" + x.position : "") + '">' + x.position + ord(x.position) + '</span> <span class="muted">' + x.points + "</span>" : '<span class="muted">–</span>') + "</td>";
+            return '<td class="num">' + (x ? '<span class="rcell">' + (x.character ? charFace(x.character, "xs") : "") + '<span class="rp' + (x.position <= 3 ? " r" + x.position : "") + '">' + x.position + ord(x.position) + '</span> <span class="muted">' + x.points + "</span></span>" : '<span class="muted">–</span>') + "</td>";
           }).join("") + '<td class="num"><b>' + r.pts + "</b></td></tr>";
         }).join("") + "</tbody></table></div>";
     }
@@ -484,7 +497,7 @@ function viewUnclaimed(st, m, demo) {
       else act = '<button class="btn btn-sm btn-primary" data-act="claim-open" data-key="' + esc(key) + '" data-char="' + esc(u.r.character) + '">That was me</button>';
       var row = '<tr><td class="l"><span class="ucup">' + cupIcon(u.cup.cup, 34) + '<span><b>#' + u.num + " " + esc(u.cup.cup) + '</b><br><span class="muted small">Week ' + u.cup.week + " · " + fmtDate(u.cup.date) + '</span></span></span></td><td class="l">' + (u.r.character ? charChip(u.r.character) : '<span class="muted">Unknown</span>') + '</td><td class="num">' + u.r.pts + '<span class="muted">/' + u.max + '</span></td><td class="num">' + u.r.rank + ord(u.r.rank) + '<span class="muted"> of ' + u.field + '</span></td><td class="l">' + act + "</td></tr>";
       if (ui.claimFor === key) {
-        row += '<tr class="claim-form"><td colspan="5"><div class="keyrow"><label class="f" for="cl-char">You raced as<select id="cl-char" data-cl="character">' + charOptions(ui.claimForm.character) + '</select></label>' +
+        row += '<tr class="claim-form"><td colspan="5"><div class="keyrow">' + charFace(ui.claimForm.character, "lg") + '<label class="f" for="cl-char">You raced as<select id="cl-char" data-cl="character">' + charOptions(ui.claimForm.character) + '</select></label>' +
           '<label class="f" for="cl-note" style="flex:1 1 220px">Note for the admin (optional)<input id="cl-note" maxlength="200" data-cl="note" value="' + esc(ui.claimForm.note) + '" placeholder="e.g. I was the green Yoshi"></label>' +
           '<button class="btn btn-primary btn-sm" data-act="claim-send" data-key="' + esc(key) + '"' + (ui.busy ? " disabled" : "") + ">Send request</button><button class=\"btn btn-sm\" data-act=\"claim-cancel\">Cancel</button></div>" +
           (mine ? "" : '<p class="small muted" style="margin:6px 0 0">You don\'t have a league player yet. One is created for you when an admin approves this.</p>') + "</td></tr>";
@@ -568,7 +581,8 @@ function liveCupHTML(c) {
       var key = c.id + "|" + n + "|" + (forOther ? forId : "me");
       var prevInCup = forId ? rs.filter(function (r) { return r.playerId === forId && r.character; }).sort(function (a, b) { return b.race - a.race; })[0] : null;
       var f = ui.entry[key] || { pos: existing ? existing.position : "", ch: existing ? existing.character : (prevInCup ? prevInCup.character : lastCharFor(forId) || (!forOther && me.profile && me.profile.favoriteCharacter) || "") };
-      card += '<label class="f" for="en-p-' + n + "-" + esc(c.id) + '">Finish<select id="en-p-' + n + "-" + esc(c.id) + '" data-en="pos" data-key="' + esc(key) + '">' + posOptions(f.pos) + "</select></label>" +
+      card += '<div class="rpick">' + charFace(f.ch, "lg", forOther ? (playerById(forId) || {}).color : (me.profile && me.profile.color)) + "</div>" +
+        '<label class="f" for="en-p-' + n + "-" + esc(c.id) + '">Finish<select id="en-p-' + n + "-" + esc(c.id) + '" data-en="pos" data-key="' + esc(key) + '">' + posOptions(f.pos) + "</select></label>" +
         '<label class="f" for="en-c-' + n + "-" + esc(c.id) + '">Character<select id="en-c-' + n + "-" + esc(c.id) + '" data-en="ch" data-key="' + esc(key) + '">' + charOptions(f.ch) + "</select></label>" +
         '<div class="keyrow"><button class="btn btn-primary btn-sm" data-act="race-save" data-key="' + esc(key) + '"' + (ui.busy ? " disabled" : "") + ">" + (existing ? "Update" : "Save") + "</button>" +
         (existing ? '<span class="saved">' + existing.position + ord(existing.position) + " · " + existing.points + ' pts</span><button class="btn-link small" data-act="race-clear" data-key="' + esc(key) + '">Clear</button>' : "") + "</div>";
@@ -592,7 +606,7 @@ function liveCupHTML(c) {
           var x = row.races.find(function (r) { return r.race === n; });
           if (!x) return '<td class="num muted">–</td>';
           var bad = clash[n + "|" + x.position] > 1;
-          return '<td class="num' + (bad ? " clash" : "") + '" title="' + esc(x.character || "") + '"><span class="rp' + (x.position <= 3 ? " r" + x.position : "") + '">' + x.position + ord(x.position) + "</span></td>";
+          return '<td class="num' + (bad ? " clash" : "") + '" title="' + esc(x.character || "") + '"><span class="rcell">' + (x.character ? charFace(x.character, "xs") : "") + '<span class="rp' + (x.position <= 3 ? " r" + x.position : "") + '">' + x.position + ord(x.position) + "</span></span></td>";
         }).join("") + '<td class="num"><b>' + row.total + "</b></td></tr>";
       }).join("") + "</tbody></table></div>";
     if (clashes.length) out += '<div class="error">' + clashes.map(function (k) { var a = k.split("|"); return "Race " + a[0] + ": " + clash[k] + " racers entered " + a[1] + ord(Number(a[1])); }).join(" · ") + ". Someone needs to fix theirs.</div>";
@@ -938,7 +952,7 @@ function viewAdd() {
     out += '<div style="overflow-x:auto"><table class="rows-tbl"><thead><tr><th class="l">Name on screen</th><th class="l">Character</th><th>Points</th><th class="l">League player</th><th></th></tr></thead><tbody>' +
       d.rows.map(function (r, i) {
         return '<tr class="' + (r.assign === "ignore" ? "ign" : "") + '"><td class="l"><input id="r-raw-' + i + '" data-r="raw" data-i="' + i + '" value="' + esc(r.raw) + '" aria-label="Name on screen" placeholder="(not shown)"></td>' +
-          '<td class="l"><select id="r-ch-' + i + '" data-r="character" data-i="' + i + '" aria-label="Character">' + charOptions(r.character) + "</select></td>" +
+          '<td class="l"><span class="who">' + charFace(r.character, "sm") + '<select id="r-ch-' + i + '" data-r="character" data-i="' + i + '" aria-label="Character">' + charOptions(r.character) + "</select></span></td>" +
           '<td><input class="ptsin" id="r-pts-' + i + '" type="number" min="0" step="1" inputmode="numeric" data-r="pts" data-i="' + i + '" value="' + esc(r.pts) + '" aria-label="Points"></td>' +
           '<td class="l"><div style="display:grid;gap:4px;min-width:190px"><select id="r-as-' + i + '" data-r="assign" data-i="' + i + '" aria-label="League player">' + opts(r.assign) + "</select>" +
           (r.assign === "new" ? '<input id="r-new-' + i + '" data-r="newName" data-i="' + i + '" value="' + esc(r.newName) + '" placeholder="New player name" aria-label="New player name">' : "") + "</div></td>" +
@@ -1528,6 +1542,7 @@ document.addEventListener("change", function (e) {
     if (file) prepImage(file).then(function (b64) { ff.photoB64 = b64; ff.photoUrl = "data:image/jpeg;base64," + b64; ff.rows = null; ff.error = ""; render(); readFinishPhoto(); })
       .catch(function () { ff.error = "This browser can't open that photo format. On iPhone, set Settings › Camera › Formats to Most Compatible, or upload a screenshot of it."; render(); });
   }
+  else if (t.dataset.cl === "character") { ui.claimForm.character = t.value; render(); }
   else if (t.dataset.unc != null && ui.finish) { ui.finish.addUnc[t.dataset.unc] = t.checked; }
   else if (t.dataset.b === "tpl" && ui.build) {
     var tp = templateById(t.value); ui.build.templateId = t.value;
@@ -1538,10 +1553,11 @@ document.addEventListener("change", function (e) {
   else if (t.dataset.en) {
     var ek = t.dataset.key, pe = document.querySelector('select[data-en="pos"][data-key="' + ek + '"]'), ce = document.querySelector('select[data-en="ch"][data-key="' + ek + '"]');
     ui.entry[ek] = { pos: pe ? pe.value : "", ch: ce ? ce.value : "" };
+    if (t.dataset.en === "ch") render();
   }
   else if (t.dataset.efor) { ui.entryFor[t.dataset.efor] = t.value; render(); }
   else if (t.dataset.r === "assign" && draft) { var row = draft.rows[Number(t.dataset.i)]; row.assign = t.value; if (t.value === "new" && !row.newName) row.newName = row.raw; render(); var n = document.getElementById("r-new-" + t.dataset.i); if (n) n.focus(); }
-  else if (t.dataset.r && draft) { var rw = draft.rows[Number(t.dataset.i)]; if (rw) rw[t.dataset.r] = t.value; }
+  else if (t.dataset.r && draft) { var rw = draft.rows[Number(t.dataset.i)]; if (rw) { rw[t.dataset.r] = t.value; if (t.dataset.r === "character") render(); } }
   else if (t.dataset.pl && playersDraft) { var pr = playersDraft[Number(t.dataset.i)]; if (pr) { pr[t.dataset.pl] = t.value; playersDraft.dirty = true; render(); } }
   else if (t.dataset.role) {
     q(sb.rpc("set_role", { p_user: t.dataset.role, p_role: t.value })).then(function () { flash("Role updated"); return loadMine(); })

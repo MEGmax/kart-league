@@ -26,6 +26,12 @@ Admins can reopen a finished cup to correct it. Cups raced without per-race entr
 
 Per cup and racer: finishing position, character, points, and a race-by-race grid. Per racer overall: points percentage, total points, average points per cup, average race finish, average cup finish, wins, podiums, character usage %, last 3 characters, strongest and weakest tracks, and full cup history.
 
+## Character art
+
+Character images appear next to racers in cups, the leaderboard, the podium, player cards and Race night. Characters without an image (currently Daisy, Toadette, Rosalina, Funky Kong, Dry Bowser and Mii) show a colored initial badge instead. To add one, see the top of `tools/characters.py`.
+
+The artwork belongs to Nintendo; it's used here as a fan site and should be removed if Nintendo asks.
+
 ## Unclaimed points
 
 Highlighted rows on a results photo that aren't matched to anyone are saved as **unclaimed**. They appear on the Unclaimed page, where a signed-in person presses **That was me** (and can correct the character). An admin approves the request on the Admin page and the points move to that person's player, creating one if needed.
@@ -68,6 +74,8 @@ Free Supabase projects pause after 7 days without activity. The `Keep database a
 | `supabase/schema.sql` | Tables, permissions and save functions; paste into the Supabase SQL editor |
 | `.github/workflows/keepalive.yml` | Pings the database every 3 days so the free project doesn't pause |
 | `data/league.json` | Fallback data shown only while Supabase isn't configured |
+| `assets/characters/` | Character portraits (`name-face.webp`) and full art (`name.webp`) used around the site |
+| `tools/characters.py` | Rebuilds `assets/characters/` from the full-size images in `data/character pngs/` (kept out of git) |
 | `CNAME` | Custom domain (added once a domain is set up) |
 
 ## Custom domain

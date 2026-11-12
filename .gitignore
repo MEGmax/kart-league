@@ -1,3 +1,5 @@
 claude-artifact/
 .DS_Store
 firebase-config.js
+data/character pngs/
+.venv/
