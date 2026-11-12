@@ -9,9 +9,9 @@
   --hot:#FF3B48; --cool:#2EC4FF;
   --gold:#FFD23F; --silver:#C9D2E8; --bronze:#E58F4E;
   --good:#3DDC84; --bad:#FF5A64; --bad-soft:rgba(255,90,100,.14);
-  --f-display:"Bungee","Arial Black",Impact,sans-serif;
-  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-data:"Chivo Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --f-display:"Rubik Mono One","Arial Black",Impact,sans-serif;
+  --f-body:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-data:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
 }
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
