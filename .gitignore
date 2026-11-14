@@ -3,3 +3,8 @@ claude-artifact/
 firebase-config.js
 data/character pngs/
 .venv/
+node_modules/
+dist/
+.env
+email-previews/
+supabase/.temp/

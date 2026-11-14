@@ -8,7 +8,7 @@ import os, re, sys, json
 from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "data", "character pngs")
-OUT = os.path.join(ROOT, "assets", "characters")
+OUT = os.path.join(ROOT, "public", "assets", "characters")
 NAMES = {  # file -> roster name used by the site
   "848px-Babypeachsimple.png": "Baby Peach", "1280px-MPDS_Diddy_Kong_Artwork.png": "Diddy Kong", "MPDSYoshi.png": "Yoshi",
   "800px-DDR_Mario_Alternate_Artwork.webp": "Mario", "731px-Baby_Luigi_MSS_artwork.webp": "Baby Luigi",
