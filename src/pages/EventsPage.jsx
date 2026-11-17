@@ -15,6 +15,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { splitEvents } from "../lib/events";
 import { colors } from "../theme";
+import { PageTitle } from "../components/PageBits";
 import EventCard from "../components/EventCard";
 import EventDialog from "../components/EventDialog";
 
@@ -45,13 +46,11 @@ export default function EventsPage() {
 
   return (
     <Container maxWidth="md">
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 1, flexWrap: "wrap" }}>
-        <div>
-          <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Cup nights</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>Times are shown in your time zone.</Typography>
-        </div>
-        {isAdmin && <Button variant="contained" onClick={() => setCreating(true)}>+ Schedule a cup night</Button>}
-      </Stack>
+      <PageTitle
+        title="Cup nights"
+        sub="Times are shown in your time zone."
+        action={isAdmin && <Button variant="contained" onClick={() => setCreating(true)}>+ Schedule a cup night</Button>}
+      />
 
       {id && !linked && <Alert severity="info" sx={{ mb: 2 }}>That cup night isn't on the calendar anymore. Here's what's coming up.</Alert>}
       {linkedIsPast && (

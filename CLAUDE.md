@@ -22,7 +22,8 @@ by RLS in `supabase/schema.sql`. The client is `@supabase/supabase-js@2.118.0` v
 - `src/lib/readPhoto.js` — Claude (`claude-opus-5-5`, `@anthropic-ai/sdk` loaded lazily, server-side refusal fallback) reads a results photo in the browser with the visitor's own key (`localStorage` `kl.anthropicKey`, set on the Account page). Used by the Add page and Race night's Finish panel; rows are matched to racers by character, then name (`matchPhotoRows`).
 - `src/lib/accountData.js` — `useMyData()` (your claims/submissions) and `useAdminData()`; both refetch when `LeagueDataContext`'s `version` bumps after a realtime reload.
 - `src/lib/events.js` — cup night helpers (upcoming/past split, "Cup TBD", local time formatting). `LeagueDataContext` exposes `events` (with `going` attendee lists).
-- `src/theme.js` — the MUI dark theme; palette and fonts (Rubik Mono One / Space Grotesk / JetBrains Mono) carried over from the old `styles.css`.
+- `src/theme.js` — the MUI dark theme: NKL brand palette (logo navy `#1E2571` / red `#DC251D` on a deep navy background; gold stays the primary/action color so red never reads as a destructive button), `brandStripe` (the logo's navy|white|red split, used as trim), and fonts (Rubik Mono One / Space Grotesk / JetBrains Mono).
+- Branding: the source logo is `data/nkllogo1.png`; `public/brand/nkl-logo.png`, `public/favicon.png` and `public/apple-touch-icon.png` are resized from it. Components use `LOGO_SRC` from `src/lib/constants.js` (header, standings hero, footer, sign-in). `PageTitle`/`SectionTitle` in `src/components/PageBits.jsx` (and the exported `titleBar` sx) give headings the red/navy accent bar.
 
 ## Database
 

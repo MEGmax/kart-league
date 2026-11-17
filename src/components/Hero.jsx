@@ -1,7 +1,18 @@
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { colors, fontDisplay } from "../theme";
+import { LOGO_SRC } from "../lib/constants";
+import { colors, brandStripe, fontDisplay } from "../theme";
+
+function Stat({ value, label }) {
+  return (
+    <Box sx={{ px: 1.5, py: 0.75, borderRadius: 2, bgcolor: "rgba(7,10,31,.45)", border: "1px solid rgba(255,255,255,.12)" }}>
+      <Typography component="span" sx={{ fontWeight: 800 }}>{value}</Typography>{" "}
+      <Typography component="span" sx={{ color: colors.muted }}>{label}</Typography>
+    </Box>
+  );
+}
 
 export default function Hero({ league, metrics }) {
   const W = Math.max(1, Number(league.seasonWeeks) || 5);
@@ -11,42 +22,72 @@ export default function Hero({ league, metrics }) {
   const done = metrics.curWeek >= W && (metrics.byWeek[W] || 0) >= per;
 
   return (
-    <Box sx={{ position: "relative", overflow: "hidden", background: "linear-gradient(180deg,#070917 0%,#141A3D 62%,#1E1546 100%)" }}>
+    <Box sx={{ position: "relative", overflow: "hidden", mt: -3, bgcolor: colors.bg }}>
+      {/* The logo's split: a navy field with a red wedge on the right, fading into the page. */}
+      <Box aria-hidden sx={{ position: "absolute", inset: 0, background: `linear-gradient(180deg, ${colors.navy} 0%, #141A55 45%, ${colors.bg} 100%)` }} />
       <Box
         aria-hidden
         sx={{
-          position: "absolute", inset: 0, opacity: 0.75,
-          background:
-            "radial-gradient(1.5px 1.5px at 12% 22%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 28% 12%,#fff 50%,transparent 51%)," +
-            "radial-gradient(1.5px 1.5px at 44% 30%,#cfd8ff 50%,transparent 51%),radial-gradient(1px 1px at 63% 16%,#fff 50%,transparent 51%)," +
-            "radial-gradient(2px 2px at 78% 26%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 90% 10%,#fff 50%,transparent 51%)," +
-            "radial-gradient(60% 50% at 85% 0%,rgba(46,196,255,.25),transparent 70%),radial-gradient(50% 60% at 0% 100%,rgba(255,59,72,.22),transparent 70%)",
+          position: "absolute", top: 0, bottom: 0, right: { xs: "-24%", md: "-14%" }, width: { xs: "34%", md: "36%" },
+          transform: "skewX(-14deg)", transformOrigin: "top",
+          background: `linear-gradient(180deg, ${colors.red} 0%, #B51C15 45%, rgba(120,16,12,0) 100%)`,
+          boxShadow: "-10px 0 0 rgba(255,255,255,.9)",
         }}
       />
-      <Container maxWidth="lg" sx={{ position: "relative", pt: 4, pb: 1 }}>
-        <Typography variant="caption" sx={{ letterSpacing: "0.16em", textTransform: "uppercase", color: colors.muted, fontWeight: 700 }}>
-          {league.season} · Regular season
-        </Typography>
-        <Typography
-          variant="h1"
-          sx={{
-            fontSize: "clamp(2.1rem, 7.5vw, 4.4rem)", lineHeight: 0.95, mt: 1,
-            textShadow: `0 3px 0 ${colors.hot}, 0 6px 0 rgba(0,0,0,.45)`, transform: "skewX(-7deg)", transformOrigin: "left bottom",
-          }}
-        >
-          {league.name}
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "baseline", gap: 1.5, flexWrap: "wrap", mt: 2 }}>
-          <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.9rem", color: colors.accent, letterSpacing: "0.06em" }}>Week</Typography>
-          <Typography sx={{ fontFamily: fontDisplay, fontSize: "2.4rem", lineHeight: 1, color: colors.accent, transform: "skewX(-7deg)" }}>
-            {curWeek}
-            <Box component="small" sx={{ fontSize: "0.5em", color: colors.muted }}>/{W}</Box>
-          </Typography>
-          <Typography sx={{ color: colors.muted }}>
-            {metrics.total} cup{metrics.total === 1 ? "" : "s"} raced · {done ? "regular season complete" : `${left} to go`}
-          </Typography>
+      <Box
+        aria-hidden
+        sx={{
+          position: "absolute", inset: 0,
+          background: "repeating-linear-gradient(-62deg, rgba(255,255,255,.035) 0 2px, transparent 2px 26px)",
+          maskImage: "linear-gradient(180deg, #000 0%, transparent 85%)",
+        }}
+      />
+
+      <Container maxWidth="lg" sx={{ position: "relative", pt: { xs: 4, md: 5 }, pb: { xs: 2.5, md: 3 } }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,1fr) auto" }, columnGap: 6, alignItems: "center" }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {league.season && (
+                <Box sx={{ px: 1.25, py: 0.25, bgcolor: "#fff", color: colors.navy, fontWeight: 800, fontSize: "0.72rem", letterSpacing: "0.12em", textTransform: "uppercase", borderRadius: "4px", transform: "skewX(-10deg)" }}>
+                  <Box component="span" sx={{ display: "inline-block", transform: "skewX(10deg)" }}>{league.season}</Box>
+                </Box>
+              )}
+              <Typography variant="caption" sx={{ letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,.8)", fontWeight: 700 }}>
+                Regular season
+              </Typography>
+            </Stack>
+            <Typography
+              variant="h1"
+              sx={{
+                fontSize: "clamp(2.1rem, 6vw, 3.4rem)", lineHeight: 0.98, mt: 1.5,
+                textShadow: `0 3px 0 ${colors.red}, 0 7px 0 rgba(0,0,0,.35)`, transform: "skewX(-7deg)", transformOrigin: "left bottom",
+              }}
+            >
+              {league.name}
+            </Typography>
+
+            <Stack direction="row" spacing={1} useFlexGap alignItems="center" sx={{ flexWrap: "wrap", mt: 2.5 }}>
+              <Box sx={{ display: "flex", alignItems: "baseline", gap: 1, mr: 1 }}>
+                <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.85rem", color: colors.accent, letterSpacing: "0.06em" }}>Week</Typography>
+                <Typography sx={{ fontFamily: fontDisplay, fontSize: "2.4rem", lineHeight: 1, color: colors.accent, transform: "skewX(-7deg)" }}>
+                  {curWeek}
+                  <Box component="small" sx={{ fontSize: "0.5em", color: colors.muted }}>/{W}</Box>
+                </Typography>
+              </Box>
+              <Stat value={metrics.total} label={`cup${metrics.total === 1 ? "" : "s"} raced`} />
+              {done ? <Stat value="Regular season" label="complete" /> : <Stat value={left} label="to go" />}
+            </Stack>
+          </Box>
+
+          <Box
+            component="img"
+            src={LOGO_SRC}
+            alt=""
+            sx={{ display: { xs: "none", md: "block" }, height: 220, width: "auto", filter: "drop-shadow(0 0 1.5px rgba(255,255,255,.9)) drop-shadow(0 18px 30px rgba(0,0,0,.5))", transform: "rotate(-4deg)" }}
+          />
         </Box>
-        <Box aria-hidden sx={{ display: "grid", gridTemplateColumns: `repeat(${W}, minmax(0,1fr))`, gap: 1, pt: 2, pb: 2.25 }}>
+
+        <Box aria-hidden sx={{ display: "grid", gridTemplateColumns: `repeat(${W}, minmax(0,1fr))`, gap: 1, pt: 3 }}>
           {Array.from({ length: W }, (_, i) => i + 1).map((w) => {
             const n = metrics.byWeek[w] || 0;
             const segCount = Math.max(per, n);
@@ -56,13 +97,13 @@ export default function Hero({ league, metrics }) {
                 <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.66rem", letterSpacing: "0.06em", color: isCur ? colors.accent : colors.muted }}>
                   Wk {w}
                 </Typography>
-                <Box sx={{ display: "grid", gridTemplateColumns: `repeat(${segCount}, minmax(0,1fr))`, gap: 0.4, height: 14 }}>
+                <Box sx={{ display: "grid", gridTemplateColumns: `repeat(${segCount}, minmax(0,1fr))`, gap: 0.4, height: 12 }}>
                   {Array.from({ length: segCount }, (_, i) => (
                     <Box
                       key={i}
                       sx={{
                         borderRadius: "3px", transform: "skewX(-14deg)",
-                        background: i < n ? (isCur ? colors.accent : "rgba(255,255,255,.55)") : "rgba(255,255,255,.08)",
+                        background: i < n ? (isCur ? colors.accent : "rgba(255,255,255,.7)") : "rgba(255,255,255,.1)",
                       }}
                     />
                   ))}
@@ -72,7 +113,7 @@ export default function Hero({ league, metrics }) {
           })}
         </Box>
       </Container>
-      <Box aria-hidden sx={{ height: 14, background: `repeating-linear-gradient(90deg,${colors.hot} 0 28px,#fff 28px 56px)` }} />
+      <Box aria-hidden sx={{ position: "relative", height: 5, background: brandStripe }} />
     </Box>
   );
 }

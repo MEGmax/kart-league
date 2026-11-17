@@ -15,11 +15,14 @@ import { useAuth } from "../context/AuthContext";
 import { compute } from "../lib/standings";
 import { DEMO } from "../lib/demo";
 import { ord, pctTxt, hashHue } from "../lib/constants";
-import { colors } from "../theme";
+import { colors, fontDisplay } from "../theme";
 import Hero from "../components/Hero";
 import CharacterFace from "../components/CharacterFace";
 import CharacterChip from "../components/CharacterChip";
 import NextCupNight from "../components/NextCupNight";
+import { PageTitle, SectionTitle } from "../components/PageBits";
+
+const MEDAL = { 1: colors.gold, 2: colors.silver, 3: colors.bronze };
 
 function plural(n, word) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -48,8 +51,8 @@ function BarRow({ name, value, color, label }) {
 
 function StatTile({ label, value, sub }) {
   return (
-    <Paper sx={{ p: 2, flex: 1, minWidth: 160 }}>
-      <Typography variant="caption" sx={{ color: colors.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</Typography>
+    <Paper sx={{ p: 2, pl: 2.25, flex: 1, minWidth: 160, borderLeft: `3px solid ${colors.hot}` }}>
+      <Typography variant="overline" sx={{ color: colors.muted, lineHeight: 1.4, display: "block" }}>{label}</Typography>
       <Typography variant="h6" sx={{ fontFamily: "inherit", fontWeight: 800, mt: 0.5 }}>{value}</Typography>
       <Typography variant="body2" sx={{ color: colors.muted }}>{sub}</Typography>
     </Paper>
@@ -75,16 +78,36 @@ function Podium({ ranked, onSelect }) {
           <Box
             sx={{
               mt: 1, height: heights[s.rank] || 60, borderRadius: "10px 10px 0 0",
-              background: s.rank === 1 ? "linear-gradient(180deg,rgba(255,210,63,.35),#151A33)" : s.rank === 2 ? "linear-gradient(180deg,rgba(201,210,232,.25),#151A33)" : "linear-gradient(180deg,rgba(229,143,78,.28),#151A33)",
-              border: `1px solid ${colors.line}`, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+              background: `linear-gradient(180deg, ${MEDAL[s.rank] || colors.line}55, ${colors.panel} 85%)`,
+              border: `1px solid ${colors.line}`, borderTop: `3px solid ${MEDAL[s.rank] || colors.line}`,
+              display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
             }}
           >
-            <Typography sx={{ fontWeight: 800 }}>{s.rank}<sup>{ord(s.rank)}</sup></Typography>
+            <Typography sx={{ fontFamily: fontDisplay, fontSize: "1.3rem", color: MEDAL[s.rank] || colors.ink, transform: "skewX(-7deg)" }}>
+              {s.rank}<sup style={{ fontSize: "0.5em" }}>{ord(s.rank)}</sup>
+            </Typography>
             <Typography variant="body2" sx={{ color: colors.muted }}>{pctTxt(s.pct)}</Typography>
           </Box>
         </Box>
       ))}
     </Stack>
+  );
+}
+
+// Rank in a skewed tag: medal colors for the podium, plain for everyone else.
+function RankBadge({ rank }) {
+  const medal = MEDAL[rank];
+  return (
+    <Box
+      sx={{
+        width: { xs: 30, sm: 38 }, height: { xs: 30, sm: 38 }, display: "grid", placeItems: "center",
+        borderRadius: "8px", transform: "skewX(-8deg)",
+        bgcolor: medal || (rank ? colors.panel2 : "transparent"), color: medal ? "#14100A" : rank ? colors.ink : colors.muted,
+        border: medal ? "none" : `1px solid ${rank ? colors.line : "transparent"}`,
+      }}
+    >
+      <Box component="span" sx={{ transform: "skewX(8deg)", fontWeight: 800, fontSize: { xs: "0.85rem", sm: "1rem" } }}>{rank || "–"}</Box>
+    </Box>
   );
 }
 
@@ -101,9 +124,7 @@ function BoardRow({ s, rank, selected, onSelect }) {
         "&:hover": { bgcolor: colors.panel2 },
       }}
     >
-      <Typography sx={{ fontWeight: 800, color: rank && rank <= 3 ? colors.accent : colors.ink }}>
-        {rank ? <>{rank}<sup style={{ fontSize: "0.6em" }}>{ord(rank)}</sup></> : "–"}
-      </Typography>
+      <RankBadge rank={rank} />
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
         <CharacterFace name={s.main && s.main.name} ring={p.color} size={36} />
         <Box sx={{ minWidth: 0 }}>
@@ -129,9 +150,8 @@ function CharacterChart({ chars }) {
   if (!top.length) return null;
   const most = top[0].picks;
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h6" sx={{ fontFamily: "inherit" }}>Most picked characters</Typography>
-      <Typography variant="body2" sx={{ color: colors.muted, mb: 1.5 }}>Every league result with a character, unclaimed ones included</Typography>
+    <Box>
+      <SectionTitle title="Most picked characters" count="Every league result with a character, unclaimed ones included" />
       <Paper sx={{ p: 2 }}>
         <Stack spacing={1.25}>
           {top.map((c) => (
@@ -237,10 +257,7 @@ export default function StandingsPage() {
           </Stack>
         )}
 
-        <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Standings</Typography>
-        <Typography variant="body2" sx={{ color: colors.muted, mb: 1.5 }}>
-          Ranked by points percentage · top {L.playoffSpots} make the playoffs
-        </Typography>
+        <PageTitle title="Standings" sub={`Ranked by points percentage · top ${L.playoffSpots} make the playoffs`} />
         {!m.ranked.length ? (
           <Paper sx={{ p: 3 }}>
             <Typography sx={{ fontWeight: 700 }}>No qualified players yet.</Typography>
@@ -253,7 +270,9 @@ export default function StandingsPage() {
                 <Box key={s.player.id}>
                   <BoardRow s={s} rank={s.rank} selected={sel === s.player.id} onSelect={(id) => setSel(sel === id ? null : id)} />
                   {i === L.playoffSpots - 1 && m.ranked.length > L.playoffSpots && (
-                    <Divider sx={{ borderColor: colors.accent, borderStyle: "dashed" }}><Typography variant="caption" sx={{ px: 1, color: colors.accent }}>Playoff line</Typography></Divider>
+                    <Divider sx={{ "&::before, &::after": { borderTop: `2px dashed ${colors.hot}` } }}>
+                      <Typography variant="overline" sx={{ px: 1, color: colors.hot, lineHeight: 1 }}>Playoff line</Typography>
+                    </Divider>
                   )}
                 </Box>
               ))}
@@ -263,8 +282,7 @@ export default function StandingsPage() {
 
         {m.unranked.length > 0 && (
           <>
-            <Typography variant="h6" sx={{ fontFamily: "inherit", mt: 4 }}>Not yet qualified</Typography>
-            <Typography variant="body2" sx={{ color: colors.muted, mb: 1.5 }}>Need {m.need} cups to be ranked</Typography>
+            <SectionTitle title="Not yet qualified" count={`Need ${m.need} cups to be ranked`} />
             <Paper sx={{ p: 1 }}>
               <Stack divider={<Divider />}>
                 {m.unranked.map((s) => (

@@ -30,6 +30,7 @@ import { matchPhotoRows } from "../lib/night";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { colors, fontData } from "../theme";
+import { PageTitle } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
@@ -492,10 +493,10 @@ export default function RaceNightPage() {
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Race night</Typography>
-        {isAdmin && live.length > 0 && <Button component={RouterLink} to="/build" size="small" variant="outlined">+ Build another cup</Button>}
-      </Stack>
+      <PageTitle
+        title="Race night"
+        action={isAdmin && live.length > 0 && <Button component={RouterLink} to="/build" size="small" variant="outlined">+ Build another cup</Button>}
+      />
 
       {!live.length ? (
         <Paper sx={{ p: 4, display: "grid", justifyItems: "center", gap: 1.5, textAlign: "center" }}>

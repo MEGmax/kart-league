@@ -24,6 +24,7 @@ import { DEMO } from "../lib/demo";
 import { fmtDate } from "../lib/constants";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { colors, fontData } from "../theme";
+import { PageTitle } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
@@ -237,15 +238,11 @@ export default function CupsPage() {
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 1, flexWrap: "wrap" }}>
-        <div>
-          <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Cup log</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>
-            {m.total} cup{m.total === 1 ? "" : "s"} finished · newest week first
-          </Typography>
-        </div>
-        {user && <Button component={RouterLink} to="/add" variant="contained" size="small">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
-      </Stack>
+      <PageTitle
+        title="Cup log"
+        sub={`${m.total} cup${m.total === 1 ? "" : "s"} finished · newest week first`}
+        action={user && <Button component={RouterLink} to="/add" variant="contained" size="small">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
+      />
 
       {demo && (
         <Alert severity="info" sx={{ mb: 2 }}>

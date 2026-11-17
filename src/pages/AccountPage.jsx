@@ -23,10 +23,11 @@ import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { CHARACTERS, fmtDate } from "../lib/constants";
+import { CHARACTERS, fmtDate, LOGO_SRC } from "../lib/constants";
 import { getApiKey, setApiKey, MODEL } from "../lib/readPhoto";
 import { groupBatches, useMyData } from "../lib/accountData";
 import { PLAYER_COLORS, colors } from "../theme";
+import { titleBar } from "../components/PageBits";
 
 function roleLabel(r) {
   return r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Member";
@@ -81,7 +82,13 @@ function AuthForm() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 3 }}>
-      <Typography variant="h5" sx={{ fontFamily: "inherit", mb: 2 }}>{up ? "Create an account" : "Sign in"}</Typography>
+      <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
+        <Box component="img" src={LOGO_SRC} alt="" sx={{ height: 52, width: "auto" }} />
+        <div>
+          <Typography variant="h5" sx={{ fontFamily: "inherit" }}>{up ? "Create an account" : "Sign in"}</Typography>
+          <Typography variant="body2" sx={{ color: colors.muted }}>{up ? "Join the league to enter results and sign up for cup nights." : "Welcome back to the league."}</Typography>
+        </div>
+      </Stack>
       <Paper sx={{ p: 3 }}>
         {up && (
           <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
@@ -405,7 +412,7 @@ function SignedInView() {
   return (
     <Container maxWidth="sm" sx={{ py: 3 }}>
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Your account</Typography>
+        <Typography variant="h5" sx={{ fontFamily: "inherit", ...titleBar }}>Your account</Typography>
         <Chip label={roleLabel(profile.role)} size="small" color="primary" />
       </Stack>
       {savedFlash && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSavedFlash("")}>{savedFlash}</Alert>}

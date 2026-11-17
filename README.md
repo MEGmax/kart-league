@@ -176,6 +176,7 @@ Free Supabase projects pause after 7 days without activity. The `Keep database a
 | `.github/workflows/deploy.yml` | Builds the app and deploys `dist/` to GitHub Pages on every push to `main` |
 | `.github/workflows/keepalive.yml` | Pings the database every 3 days so the free Supabase project doesn't pause |
 | `data/league.json` | Legacy fallback data from the old static site; no longer read by the app |
+| `public/brand/`, `public/favicon.png`, `public/apple-touch-icon.png` | The NKL logo and icons, resized from `data/nkllogo1.png` |
 | `public/assets/characters/` | Character portraits (`name-face.webp`) and full art (`name.webp`) used around the site |
 | `tools/characters.py` | Rebuilds `public/assets/characters/` from the full-size images in `data/character pngs/` (kept out of git) |
 | `CNAME` | Custom domain (added once a domain is set up) |

@@ -8,6 +8,15 @@ import Avatar from "@mui/material/Avatar";
 import { initials } from "../lib/constants";
 import { colors } from "../theme";
 
+// A small skewed red/navy bar in front of page and section titles (the logo's split).
+export const titleBar = {
+  "&::before": {
+    content: '""', display: "inline-block", width: "0.32em", height: "0.85em", mr: "0.5em",
+    borderRadius: "2px", transform: "skewX(-14deg)", verticalAlign: "-0.06em",
+    background: `linear-gradient(180deg, ${colors.hot} 0 55%, ${colors.navyHi} 55% 100%)`,
+  },
+};
+
 export function Loading({ error, maxWidth = "lg" }) {
   return (
     <Container maxWidth={maxWidth} sx={{ py: 8, textAlign: "center" }}>
@@ -20,7 +29,7 @@ export function PageTitle({ title, sub, action }) {
   return (
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 1, flexWrap: "wrap" }}>
       <div>
-        <Typography variant="h5" sx={{ fontFamily: "inherit" }}>{title}</Typography>
+        <Typography variant="h5" sx={{ fontFamily: "inherit", ...titleBar }}>{title}</Typography>
         {sub && <Typography variant="body2" sx={{ color: colors.muted }}>{sub}</Typography>}
       </div>
       {action}
@@ -30,8 +39,8 @@ export function PageTitle({ title, sub, action }) {
 
 export function SectionTitle({ title, count, sx }) {
   return (
-    <Stack direction="row" spacing={1} alignItems="baseline" sx={{ mt: 4, mb: 1.5, ...sx }}>
-      <Typography variant="h6" sx={{ fontFamily: "inherit", fontWeight: 800 }}>{title}</Typography>
+    <Stack direction="row" alignItems="baseline" sx={{ mt: 4, mb: 1.5, columnGap: 1, flexWrap: "wrap", ...sx }}>
+      <Typography variant="h6" sx={{ fontFamily: "inherit", fontWeight: 800, ...titleBar }}>{title}</Typography>
       {count != null && <Typography variant="body2" sx={{ color: colors.muted }}>{count}</Typography>}
     </Stack>
   );

@@ -2,6 +2,9 @@ import { PLAYER_COLORS } from "../theme";
 
 export const COLORS = PLAYER_COLORS;
 
+// The NKL logo (public/brand, made from data/nkllogo1.png).
+export const LOGO_SRC = `${import.meta.env.BASE_URL}brand/nkl-logo.png`;
+
 export const RACE_POINTS = [15, 12, 10, 8, 7, 6, 5, 4, 3, 2, 1, 0];
 
 export const CUP_NAMES = [
