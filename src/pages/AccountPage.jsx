@@ -14,9 +14,18 @@ import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import GoogleIcon from "@mui/icons-material/Google";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLeagueData } from "../context/LeagueDataContext";
+import { useFlash } from "../context/FlashContext";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { CHARACTERS } from "../lib/constants";
+import { CHARACTERS, fmtDate } from "../lib/constants";
+import { getApiKey, setApiKey, MODEL } from "../lib/readPhoto";
+import { groupBatches, useMyData } from "../lib/accountData";
 import { PLAYER_COLORS, colors } from "../theme";
 
 function roleLabel(r) {
@@ -207,8 +216,162 @@ function EmailPreferences({ profile }) {
   );
 }
 
+// The Anthropic key lives only in this browser and is sent only to Anthropic, to read results photos.
+function ClaudeKey() {
+  const [has, setHas] = useState(!!getApiKey());
+  const [val, setVal] = useState("");
+  const [editing, setEditing] = useState(false);
+  function save() {
+    const k = val.trim();
+    if (!k) return;
+    setApiKey(k); setHas(true); setVal(""); setEditing(false);
+  }
+  return (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="overline" sx={{ color: colors.muted }}>Read results photos with Claude</Typography>
+      <Typography variant="body2" sx={{ mt: 1 }}>
+        With an Anthropic API key, Claude reads each results-screen photo you add when recording cups and fills in everyone's points, matching rows to racers by their character. The key stays in this browser and is sent only to Anthropic ({MODEL}). Each photo costs a few cents on your key.
+      </Typography>
+      {has && !editing ? (
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}>
+          <Chip size="small" color="success" variant="outlined" label="Key saved on this device" />
+          <Button size="small" onClick={() => setEditing(true)}>Replace</Button>
+          <Button size="small" color="error" onClick={() => { setApiKey(""); setHas(false); }}>Remove</Button>
+        </Stack>
+      ) : (
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }}>
+          <TextField size="small" type="password" label="Anthropic API key" placeholder="sk-ant-…" value={val} onChange={(e) => setVal(e.target.value)} sx={{ flex: 1 }} autoComplete="off" />
+          <Button variant="contained" size="small" onClick={save} disabled={!val.trim()}>Save key</Button>
+          {editing && <Button size="small" onClick={() => setEditing(false)}>Cancel</Button>}
+        </Stack>
+      )}
+    </Paper>
+  );
+}
+
+const STATUS_CHIP = { pending: ["Waiting for review", "warning"], approved: ["Approved", "success"], rejected: ["Not accepted", "error"] };
+
+function MyActivity() {
+  const { subs, claims } = useMyData();
+  const { state, reload } = useLeagueData();
+  const flash = useFlash();
+  const [error, setError] = useState("");
+  if (!subs.length && !claims.length) return null;
+  const batches = groupBatches(subs).reverse();
+
+  async function withdraw(table, ids, msg) {
+    setError("");
+    try {
+      await q(sb.from(table).delete().in("id", ids));
+      flash(msg);
+      reload();
+    } catch (e) {
+      setError(dbErr(e));
+    }
+  }
+
+  return (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="overline" sx={{ color: colors.muted }}>Your submissions and requests</Typography>
+      <Stack spacing={1.5} sx={{ mt: 1 }}>
+        {batches.map((b) => {
+          const pending = b.filter((x) => x.status === "pending");
+          const st = b.every((x) => x.status === b[0].status) ? b[0].status : "pending";
+          const [label, color] = STATUS_CHIP[st] || STATUS_CHIP.pending;
+          return (
+            <Box key={b[0].batch}>
+              <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>{b.map((x) => x.cup).join(", ")}</Typography>
+                <Typography variant="body2" sx={{ color: colors.muted }}>raced {fmtDate(b[0].date)}</Typography>
+                <Chip size="small" variant="outlined" color={color} label={label} />
+                {pending.length > 0 && <Button size="small" onClick={() => withdraw("submissions", pending.map((x) => x.id), "Submission withdrawn")}>Withdraw</Button>}
+              </Stack>
+              {b.filter((x) => x.reviewNote).map((x) => <Typography key={x.id} variant="caption" sx={{ color: colors.muted, display: "block" }}>{x.cup}: “{x.reviewNote}”</Typography>)}
+            </Box>
+          );
+        })}
+        {claims.map((c) => {
+          const cup = state && state.cups.find((x) => x.id === c.cupId);
+          const [label, color] = STATUS_CHIP[c.status] || STATUS_CHIP.pending;
+          return (
+            <Box key={c.id}>
+              <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>Points request · {cup ? cup.cup : "a deleted cup"}</Typography>
+                <Chip size="small" variant="outlined" color={color} label={label} />
+                {c.status === "pending" && <Button size="small" onClick={() => withdraw("claims", [c.id], "Request withdrawn")}>Withdraw</Button>}
+              </Stack>
+              {c.reviewNote && <Typography variant="caption" sx={{ color: colors.muted }}>“{c.reviewNote}”</Typography>}
+            </Box>
+          );
+        })}
+      </Stack>
+      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+    </Paper>
+  );
+}
+
+function DangerZone() {
+  const { isOwner, hasOwner, refreshProfile, signOut } = useAuth();
+  const flash = useFlash();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function claim() {
+    setBusy(true); setError("");
+    try {
+      await q(sb.rpc("claim_ownership"));
+      await refreshProfile();
+      flash("You're the league owner now");
+    } catch (e) {
+      setError(dbErr(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function del() {
+    setBusy(true); setError("");
+    try {
+      await q(sb.rpc("delete_my_account"));
+      await signOut();
+      flash("Your account was deleted");
+    } catch (e) {
+      setError(dbErr(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      {!hasOwner && !isOwner && (
+        <Alert severity="info" sx={{ mb: 1.5 }} action={<Button color="inherit" size="small" disabled={busy} onClick={claim}>Claim it</Button>}>
+          This league has no owner yet. The first person to claim it becomes the owner (and an admin).
+        </Alert>
+      )}
+      {isOwner ? (
+        <Typography variant="caption" sx={{ color: colors.muted }}>You own this league, so your account can't be deleted.</Typography>
+      ) : (
+        <Button size="small" color="error" onClick={() => setConfirming(true)}>Delete my account</Button>
+      )}
+      {error && <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert>}
+      <Dialog open={confirming} onClose={busy ? undefined : () => setConfirming(false)}>
+        <DialogTitle sx={{ fontFamily: "inherit", fontWeight: 800 }}>Delete your account?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Your sign-in, profile, pending submissions and requests are deleted. Your race results stay in the standings under your player name, unlinked from any account. This can't be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirming(false)} disabled={busy}>Keep it</Button>
+          <Button color="error" variant="contained" onClick={del} disabled={busy}>{busy ? "Deleting…" : "Delete account"}</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
 function SignedInView() {
-  const { user, profile, isOwner, signOut, updatePassword } = useAuth();
+  const { user, profile, isAdmin, signOut, updatePassword } = useAuth();
   const [changingPw, setChangingPw] = useState(false);
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -249,6 +412,9 @@ function SignedInView() {
       <Stack spacing={2}>
         <ProfileEditor profile={profile} onSaved={() => setSavedFlash("Profile saved")} />
         <EmailPreferences key={String(profile.emailCupNights)} profile={profile} />
+        <MyActivity />
+        <ClaudeKey />
+        <Button component={RouterLink} to="/add" variant="outlined">{isAdmin ? "Record a cup night" : "Submit a cup night's results"}</Button>
         <Paper sx={{ p: 3 }}>
           <Typography variant="overline" sx={{ color: colors.muted }}>Sign-in and security</Typography>
           <Typography variant="body2" sx={{ mt: 1 }}>
@@ -265,7 +431,7 @@ function SignedInView() {
             </Stack>
           )}
           {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-          {!isOwner && <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 2 }}>Account deletion and league ownership claims are coming soon.</Typography>}
+          <DangerZone />
         </Paper>
       </Stack>
     </Container>

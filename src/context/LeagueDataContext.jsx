@@ -17,6 +17,8 @@ export function LeagueDataProvider({ children }) {
   const [state, setState] = useState(null);
   const [events, setEvents] = useState(null);
   const [loadError, setLoadError] = useState("");
+  // Goes up after every reload, so pages holding private data (claims, submissions) know to refetch.
+  const [version, setVersion] = useState(0);
   const reloadTimer = useRef(null);
 
   async function loadPublic() {
@@ -34,6 +36,7 @@ export function LeagueDataProvider({ children }) {
     setState(normalize({ league: league ? league.settings : {}, players, cups: cups.map(mapCup), races, templates }));
     setEvents(mapEvents(eventRows, attendees));
     setLoadError("");
+    setVersion((v) => v + 1);
   }
 
   function reloadSoon() {
@@ -53,7 +56,7 @@ export function LeagueDataProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const value = useMemo(() => ({ state, events, loadError, reload: reloadSoon }), [state, events, loadError]);
+  const value = useMemo(() => ({ state, events, loadError, version, reload: reloadSoon }), [state, events, loadError, version]);
 
   return <LeagueDataContext.Provider value={value}>{children}</LeagueDataContext.Provider>;
 }

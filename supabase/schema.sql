@@ -185,6 +185,13 @@ create table if not exists public.email_outbox (
 );
 create index if not exists email_outbox_due on public.email_outbox (next_attempt_at) where status in ('pending', 'sending');
 
+-- ---- added in v5: recording a whole cup night at once ----
+-- A member's night arrives as one submission per cup, sharing a batch id so an admin reviews them together.
+-- rows: [{rid, raw, character, pts, assign, newName, races: [pos1..pos4] | null}]
+alter table public.submissions add column if not exists maps text[] not null default '{}';
+alter table public.submissions add column if not exists batch text;
+create index if not exists submissions_batch on public.submissions (batch);
+
 -- ============ helpers ============
 
 create or replace function public.is_admin() returns boolean
@@ -419,10 +426,11 @@ end $$;
 create or replace function public.submit_cup(p_sub jsonb, p_photo text default null) returns void
 language plpgsql security invoker set search_path = public as $$
 begin
-  insert into submissions (id, cup, date, week, max, rows, notes, has_photo, status, submitted_by, submitter_name, submitted_at)
+  insert into submissions (id, cup, date, week, max, rows, notes, has_photo, status, submitted_by, submitter_name, submitted_at, maps, batch)
   values (p_sub->>'id', p_sub->>'cup', (p_sub->>'date')::date, coalesce((p_sub->>'week')::int, 1), (p_sub->>'max')::int, p_sub->'rows', coalesce(p_sub->>'notes', ''),
           p_photo is not null, 'pending', auth.uid(),
-          coalesce((select display_name from profiles where id = auth.uid()), ''), (extract(epoch from now()) * 1000)::bigint);
+          coalesce((select display_name from profiles where id = auth.uid()), ''), (extract(epoch from now()) * 1000)::bigint,
+          array(select jsonb_array_elements_text(coalesce(p_sub->'maps', '[]'::jsonb))), nullif(p_sub->>'batch', ''));
   if p_photo is not null then
     insert into submission_photos (id, data, submitted_by) values (p_sub->>'id', p_photo, auth.uid());
   end if;
@@ -617,6 +625,9 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object('rid', 'p_' || t.player_id, 'p', t.player_id, 'pts', t.pts,
            'character', coalesce(c.character, ''), 'raw', '') order by t.pts desc), '[]'::jsonb)
     into res from tot t left join ch c using (player_id);
+  -- A reopened cup keeps the unclaimed results it already had.
+  select res || coalesce(jsonb_agg(r), '[]'::jsonb) into res
+    from cups cu, jsonb_array_elements(cu.results) r where cu.id = p_cup and r->>'p' is null;
   select res || coalesce(jsonb_agg(jsonb_build_object('rid', 'u' || substr(md5(random()::text || ord::text), 1, 10), 'p', null,
            'pts', (u->>'pts')::int, 'character', coalesce(u->>'character', ''), 'raw', '')), '[]'::jsonb)
     into res from jsonb_array_elements(p_unclaimed) with ordinality as t(u, ord);
@@ -625,6 +636,85 @@ begin
   if p_photo is not null then
     insert into photos (cup_id, data) values (p_cup, p_photo) on conflict (cup_id) do update set data = excluded.data;
   end if;
+end $$;
+
+-- Record finished cups in one go: a whole cup night, an approved member submission, or an edit to one cup.
+-- p_cups: [{id, cup, date, week, max, notes, maps: [4 tracks] or [], has_photo, added_at,
+--           results: [{rid, p, pts, character, raw}],
+--           races?: [{player_id, race, position, character}],  -- present = replace this cup's race-by-race rows
+--           submission?: id}]                                    -- the pending submission this cup approves
+-- p_players: [{id, name, color}] new players to create first. Photos are saved separately (photos table).
+create or replace function public.save_cup_night(p_cups jsonb, p_players jsonb default '[]'::jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  c jsonb; cid text; nm text; mx int; m text[]; n int := 0; old_status text; bad record;
+  now_ms bigint := (extract(epoch from now()) * 1000)::bigint;
+begin
+  if not is_admin() then raise exception 'Only admins can save cups.'; end if;
+  if jsonb_typeof(p_cups) is distinct from 'array' or jsonb_array_length(p_cups) = 0 then raise exception 'Add at least one cup.'; end if;
+  insert into players (id, name, color, aliases)
+    select x->>'id', left(trim(x->>'name'), 40), coalesce(nullif(x->>'color', ''), '#0090FF'), '{}'
+    from jsonb_array_elements(coalesce(p_players, '[]'::jsonb)) x
+  on conflict (id) do nothing;
+
+  for c in select * from jsonb_array_elements(p_cups) loop
+    n := n + 1;
+    cid := c->>'id';
+    nm := left(trim(coalesce(c->>'cup', '')), 40);
+    mx := coalesce((c->>'max')::int, 60);
+    m := array(select jsonb_array_elements_text(coalesce(c->'maps', '[]'::jsonb)));
+    if coalesce(cid, '') = '' then raise exception 'Cup % is missing its id.', n; end if;
+    if nm = '' then raise exception 'Cup % needs a name.', n; end if;
+    if cardinality(m) not in (0, 4) or exists (select 1 from unnest(m) x where coalesce(trim(x), '') = '') then
+      raise exception '% needs all 4 tracks, or none.', nm;
+    end if;
+    if jsonb_typeof(c->'results') is distinct from 'array' or jsonb_array_length(c->'results') = 0 then
+      raise exception 'Nobody has a result in %.', nm;
+    end if;
+    if jsonb_array_length(c->'results') > 24 then raise exception '% has more than 24 results.', nm; end if;
+    if exists (select 1 from jsonb_array_elements(c->'results') r
+               where coalesce(r->>'pts', '') !~ '^\d{1,4}$' or (r->>'pts')::int > mx) then
+      raise exception 'Points in % must be whole numbers from 0 to %.', nm, mx;
+    end if;
+    if exists (select r->>'p' from jsonb_array_elements(c->'results') r where r->>'p' is not null group by 1 having count(*) > 1) then
+      raise exception 'The same player appears twice in %.', nm;
+    end if;
+    if exists (select 1 from jsonb_array_elements(c->'results') r
+               where r->>'p' is not null and not exists (select 1 from players p where p.id = r->>'p')) then
+      raise exception 'A result in % belongs to a player who no longer exists.', nm;
+    end if;
+
+    select status into old_status from cups where id = cid for update;
+    if old_status = 'racing' then raise exception '% is still being raced. Finish it on Race night first.', nm; end if;
+
+    insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, status, maps)
+    values (cid, nm, (c->>'date')::date, coalesce((c->>'week')::int, 1), mx, c->'results', left(coalesce(c->>'notes', ''), 500),
+            coalesce((c->>'has_photo')::boolean, false), coalesce((c->>'added_at')::bigint, now_ms + n), auth.uid(), 'complete', m)
+    on conflict (id) do update set cup = excluded.cup, date = excluded.date, week = excluded.week, max = excluded.max,
+      results = excluded.results, notes = excluded.notes, has_photo = cups.has_photo or excluded.has_photo,
+      maps = case when cardinality(cups.maps) > 0 then cups.maps else excluded.maps end;
+
+    if c ? 'races' then
+      delete from race_results where cup_id = cid;
+      insert into race_results (cup_id, race, player_id, position, points, character, entered_by, entered_at)
+        select cid, (x->>'race')::int, x->>'player_id', (x->>'position')::int, race_points((x->>'position')::int),
+               left(coalesce(x->>'character', ''), 40), auth.uid(), now_ms
+        from jsonb_array_elements(coalesce(c->'races', '[]'::jsonb)) x;
+      select race, position into bad from race_results where cup_id = cid group by race, position having count(*) > 1 limit 1;
+      if found then raise exception 'In %, race %: two racers finished in place %.', nm, bad.race, bad.position; end if;
+      if exists (select 1 from (select player_id, sum(points) s from race_results where cup_id = cid group by player_id) t
+                 where not exists (select 1 from jsonb_array_elements(c->'results') r where r->>'p' = t.player_id and (r->>'pts')::int = t.s)) then
+        raise exception 'The race-by-race points in % don''t match the totals.', nm;
+      end if;
+    end if;
+
+    if coalesce(c->>'submission', '') <> '' then
+      update submissions set status = 'approved', reviewed_by = auth.uid(), reviewed_at = now_ms, cup_id = cid
+        where id = c->>'submission' and status = 'pending';
+      if not found then raise exception 'The submission for % was already reviewed or withdrawn.', nm; end if;
+      delete from submission_photos where id = c->>'submission';
+    end if;
+  end loop;
 end $$;
 
 -- Reopen a finished, race-by-race cup so entries can be corrected. Finishing it again rebuilds its totals.
@@ -842,11 +932,11 @@ end $$;
 revoke execute on function public.claim_ownership, public.set_role, public.save_cup, public.reject_submission,
   public.submit_cup, public.save_settings, public.delete_my_account, public.save_players, public.approve_claim,
   public.reject_claim, public.create_cup, public.my_player_id, public.enter_race, public.clear_race, public.finish_cup,
-  public.reopen_cup from public, anon;
+  public.reopen_cup, public.save_cup_night from public, anon;
 grant execute on function public.claim_ownership, public.set_role, public.save_cup, public.reject_submission,
   public.submit_cup, public.save_settings, public.delete_my_account, public.save_players, public.approve_claim,
   public.reject_claim, public.create_cup, public.my_player_id, public.enter_race, public.clear_race, public.finish_cup,
-  public.reopen_cup to authenticated;
+  public.reopen_cup, public.save_cup_night to authenticated;
 grant execute on function public.is_admin, public.league_has_owner, public.result_unclaimed, public.race_points to anon, authenticated;
 
 revoke execute on function public.create_event, public.update_event, public.cancel_event, public.join_event, public.leave_event from public, anon;

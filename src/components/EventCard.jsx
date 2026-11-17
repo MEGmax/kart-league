@@ -12,7 +12,7 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { cupLabel, formatEventWhen, isGoing, isHappening, isOpen } from "../lib/events";
+import { cupLabel, formatEventWhen, isGoing, isHappening, isOpen, isOver } from "../lib/events";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
@@ -112,7 +112,7 @@ function AdminActions({ event }) {
 
 // One cup night. `prominent` is the homepage "Next Cup Night" version.
 export default function EventCard({ event, prominent = false, highlight = false }) {
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const when = formatEventWhen(event.startsAt);
   const cancelled = event.status === "cancelled";
@@ -182,6 +182,11 @@ export default function EventCard({ event, prominent = false, highlight = false 
         <Stack direction="row" spacing={1} alignItems="center">
           {prominent && <Button size="small" onClick={() => navigate("/events")}>All cup nights</Button>}
           {isAdmin && open && <AdminActions event={event} />}
+          {user && !cancelled && (live || isOver(event)) && (
+            <Button size="small" variant={live ? "outlined" : "contained"} onClick={() => navigate(`/add?event=${event.id}`)}>
+              {isAdmin ? "Record results" : "Submit results"}
+            </Button>
+          )}
         </Stack>
       </Stack>
     </Paper>

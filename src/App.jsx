@@ -2,7 +2,12 @@ import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout";
 import StandingsPage from "./pages/StandingsPage";
 import AccountPage from "./pages/AccountPage";
-import ComingSoonPage from "./pages/ComingSoonPage";
+import AddPage from "./pages/AddPage";
+import BuildPage from "./pages/BuildPage";
+import UnclaimedPage from "./pages/UnclaimedPage";
+import PlayoffsPage from "./pages/PlayoffsPage";
+import RulesPage from "./pages/RulesPage";
+import AdminPage from "./pages/AdminPage";
 import CupsPage from "./pages/CupsPage";
 import RaceNightPage from "./pages/RaceNightPage";
 import EventsPage from "./pages/EventsPage";
@@ -26,12 +31,12 @@ export default function App() {
                 <Route path="events" element={<EventsPage />} />
                 <Route path="events/:id" element={<EventsPage />} />
                 <Route path="unsubscribe/:token" element={<UnsubscribePage />} />
-                <Route path="unclaimed" element={<ComingSoonPage title="Unclaimed points" />} />
-                <Route path="playoffs" element={<ComingSoonPage title="Playoffs" />} />
-                <Route path="rules" element={<ComingSoonPage title="Rules" />} />
-                <Route path="add" element={<ComingSoonPage title="Add a cup" />} />
-                <Route path="build" element={<ComingSoonPage title="Build a cup" />} />
-                <Route path="admin" element={<ComingSoonPage title="Admin" />} />
+                <Route path="unclaimed" element={<UnclaimedPage />} />
+                <Route path="playoffs" element={<PlayoffsPage />} />
+                <Route path="rules" element={<RulesPage />} />
+                <Route path="add" element={<AddPage />} />
+                <Route path="build" element={<BuildPage />} />
+                <Route path="admin" element={<AdminPage />} />
                 <Route path="account" element={<AccountPage />} />
                 <Route path="*" element={<Navigate to="/standings" replace />} />
               </Route>

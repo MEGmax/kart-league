@@ -23,7 +23,7 @@ in the repo's **Settings › Pages**, the source must be set to **GitHub Actions
 - Rank = points earned ÷ points possible in the cups you played.
 - You must play at least 50% of cups held so far to be ranked.
 - Tiebreakers: cup wins, head-to-head points, total points, then a one-race runoff.
-- Top 4 make the playoffs (playoff page is "coming soon").
+- Top 4 make the playoffs: a seeded single-elimination bracket (projected on the Playoffs page until the season ends; top seeds get byes if the field isn't a power of two).
 - Every result records the character used; the site shows each player's most-picked character and a league-wide character chart.
 
 All of these numbers are editable by admins on the Admin page.
@@ -34,7 +34,23 @@ All of these numbers are editable by admins on the Admin page.
 2. **After each race**: every racer opens **Race night** and enters their finishing position (1st–12th) and character. Points come from the 15-12-10-8-7-6-5-4-3-2-1-0 table. Admins can enter or fix results for anyone. Two people claiming the same place gets flagged.
 3. **After the cup**: an admin presses **Finish cup**, adds the results-screen photo, and the site compares the photo's totals with what everyone entered (Claude reads the photo if an Anthropic key is saved on the account page). Fix anything that's off, then **Finalize**. Only finalized cups count. Highlighted photo rows nobody entered can be saved as unclaimed points.
 
-Admins can reopen a finished cup to correct it. Cups raced without per-race entries can still be added from a results photo (Cups › "Add a finished cup from a photo").
+Admins can reopen a finished race-by-race cup on Race night, or fix any finished cup with **Edit results** on the Cups page.
+
+## Recording a whole night afterwards
+
+When you raced specific cups and everyone kept the same character all night, record the night in one go with
+**+ Add results** (`#/add`), or **Record results** on a past cup night (which brings in its cups and everyone who was in):
+
+1. **Cups raced, in order**: game cups and your templates come with their 4 tracks; a custom cup takes any 4 tracks (or none).
+2. **Racers and their characters**: each racer once, as a league player, a new player, or unclaimed (a guest), with the one character they used all night.
+3. **Results**: per cup, either the cup totals from the results screen or each race's finishing place (track stats fill in). A blank racer sat that cup out.
+   Add each cup's results photo; with an Anthropic key saved on the account page, Claude reads it and fills in the points, matching
+   highlighted rows to racers **by character** (then by name). Totals that disagree with the photo are flagged in red; highlighted rows
+   that match nobody can be added as unclaimed.
+
+Admins save straight to the standings (`save_cup_night`, one transaction for every cup). Members submit the night instead: one
+submission per cup sharing a batch id, reviewed together from the Admin page in the same editor. An unsaved night is kept in the
+browser as a draft (without photos).
 
 ## Cup nights
 
@@ -121,7 +137,7 @@ Sign-in and data use [Supabase](https://supabase.com) (free plan): email and pas
 | Role | Can |
 |---|---|
 | Visitor (signed out) | View standings, cups, rules |
-| Member (anyone who signs up) | Edit their profile; say they're in for cup nights; opt in to cup night emails; request unclaimed points; submit a cup with a photo for review; withdraw their pending requests and submissions |
+| Member (anyone who signs up) | Edit their profile; say they're in for cup nights; opt in to cup night emails; request unclaimed points; submit a night's cups with photos for review; withdraw their pending requests and submissions; delete their account |
 | Admin | Schedule, edit and cancel cup nights; add, edit and delete cups; approve or decline point requests and submissions; add players ahead of sign-up and link them to accounts; change league settings; promote or demote members |
 | Owner | Everything an admin can do; can't be demoted. Claimed once from the account page |
 
@@ -148,6 +164,8 @@ Free Supabase projects pause after 7 days without activity. The `Keep database a
 | Path | What it is |
 |---|---|
 | `src/` | The React app (components, pages, context providers, standings math) |
+| `src/lib/night.js`, `src/components/night/` | Recording a cup night: validation, photo matching by character, save payloads; the Add page's editors |
+| `src/lib/readPhoto.js` | Reads a results photo with Claude (`@anthropic-ai/sdk`, the visitor's own key, kept in their browser) |
 | `index.html`, `vite.config.js` | Vite entry point and build config (`base: "/kart-league/"` for GitHub Pages) |
 | `src/lib/supabaseClient.js` | Supabase project URL and publishable key (not secret) |
 | `supabase/schema.sql` | Tables, permissions and save functions; paste into the Supabase SQL editor |

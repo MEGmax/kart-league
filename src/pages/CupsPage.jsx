@@ -203,7 +203,8 @@ function CupCard({ cup, info, st, demo, isAdmin }) {
               </>
             ) : (
               <>
-                {info.hasRaces && <Button size="small" variant="outlined" disabled={busy} onClick={reopen}>Reopen to fix results</Button>}
+                <Button size="small" variant="outlined" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Edit results</Button>
+                {info.hasRaces && <Button size="small" disabled={busy} onClick={reopen}>Reopen on Race night</Button>}
                 <Button size="small" color="error" onClick={() => setConfirmDel(true)}>Delete</Button>
               </>
             )}
@@ -218,7 +219,7 @@ function CupCard({ cup, info, st, demo, isAdmin }) {
 
 export default function CupsPage() {
   const { state, loadError } = useLeagueData();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const demo = state && state.cups.length === 0;
   const st = demo ? DEMO : state;
   const m = useMemo(() => (st ? compute(st) : null), [st]);
@@ -236,10 +237,15 @@ export default function CupsPage() {
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
-      <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Cup log</Typography>
-      <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
-        {m.total} cup{m.total === 1 ? "" : "s"} finished · newest week first
-      </Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 1, flexWrap: "wrap" }}>
+        <div>
+          <Typography variant="h5" sx={{ fontFamily: "inherit" }}>Cup log</Typography>
+          <Typography variant="body2" sx={{ color: colors.muted }}>
+            {m.total} cup{m.total === 1 ? "" : "s"} finished · newest week first
+          </Typography>
+        </div>
+        {user && <Button component={RouterLink} to="/add" variant="contained" size="small">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
+      </Stack>
 
       {demo && (
         <Alert severity="info" sx={{ mb: 2 }}>

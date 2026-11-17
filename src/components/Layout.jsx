@@ -11,7 +11,8 @@ import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
-import { liveCups } from "../lib/standings";
+import { useMemo } from "react";
+import { compute, liveCups } from "../lib/standings";
 import { colors } from "../theme";
 
 const TABS = [
@@ -31,8 +32,10 @@ export default function Layout() {
   const { state } = useLeagueData();
 
   const live = state ? liveCups(state).length : 0;
+  const unclaimed = useMemo(() => (state && state.cups.length ? compute(state).unclaimed.length : 0), [state]);
   const section = location.pathname.startsWith("/events/") ? "/events" : location.pathname;
-  const current = TABS.some((t) => t.value === section) ? section : false;
+  const tabs = isAdmin ? TABS.concat({ value: "/admin", label: "Admin" }) : TABS;
+  const current = tabs.some((t) => t.value === section) ? section : false;
   const league = state ? state.league : { name: "Kart Night League", season: "" };
 
   return (
@@ -48,12 +51,14 @@ export default function Layout() {
               allowScrollButtonsMobile
               sx={{ flex: 1, minHeight: 44, "& .MuiTabs-indicator": { display: "none" } }}
             >
-              {TABS.map((t) => (
+              {tabs.map((t) => (
                 <Tab
                   key={t.value}
                   value={t.value}
                   label={
-                    t.value === "/race" && live ? (
+                    t.value === "/unclaimed" && unclaimed ? (
+                      <Badge color="warning" badgeContent={unclaimed} max={99} sx={{ "& .MuiBadge-badge": { right: -10 } }}>{t.label}</Badge>
+                    ) : t.value === "/race" && live ? (
                       <Badge color="error" variant="dot">{t.label}</Badge>
                     ) : t.label
                   }
@@ -65,8 +70,10 @@ export default function Layout() {
                 />
               ))}
             </Tabs>
-            {isAdmin && (
-              <Button size="small" variant="contained" onClick={() => navigate("/build")} sx={{ display: { xs: "none", sm: "inline-flex" } }}>+ New cup</Button>
+            {user && (
+              <Button size="small" variant="contained" onClick={() => navigate("/add")} sx={{ display: { xs: "none", sm: "inline-flex" }, whiteSpace: "nowrap" }}>
+                {isAdmin ? "+ Add results" : "+ Submit results"}
+              </Button>
             )}
             {user ? (
               <Chip
