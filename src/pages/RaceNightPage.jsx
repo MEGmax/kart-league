@@ -36,6 +36,7 @@ import { PageTitle } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
+import TrackVote from "../components/TrackVote";
 
 // One row per racer who has entered anything for this cup, best total first.
 function liveRows(races, cupId) {
@@ -531,6 +532,8 @@ export default function RaceNightPage() {
           {live.map((c) => <LiveCup key={c.id} cup={c} state={state} />)}
         </Stack>
       )}
+
+      {next && <TrackVote event={next} />}
     </Container>
   );
 }

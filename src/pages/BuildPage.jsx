@@ -16,6 +16,9 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { useFlash } from "../context/FlashContext";
 import { BUILTIN_CUPS, TRACKS } from "../lib/constants";
+import { formatEventWhen, nextEvent } from "../lib/events";
+import { useTrackVotes } from "../lib/trackVotes";
+import Chip from "@mui/material/Chip";
 import { suggestWeek, today, uid } from "../lib/night";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { colors } from "../theme";
@@ -33,7 +36,7 @@ function pickRandom(pool) {
 }
 
 export default function BuildPage() {
-  const { state, loadError, reload } = useLeagueData();
+  const { state, events, loadError, reload } = useLeagueData();
   const { user, ready, isAdmin } = useAuth();
   const navigate = useNavigate();
   const flash = useFlash();
@@ -43,6 +46,8 @@ export default function BuildPage() {
   const [error, setError] = useState("");
   const [tplName, setTplName] = useState("");
   const [tplBusy, setTplBusy] = useState(false);
+  const night = events ? nextEvent(events) : null;
+  const { rows: votes } = useTrackVotes(night && night.id);
 
   if (!state || !ready) return <Loading error={loadError} />;
   if (!user || !isAdmin) {
@@ -66,6 +71,14 @@ export default function BuildPage() {
   }
   const weeks = Array.from({ length: Math.max(state.league.seasonWeeks, build.week) }, (_, i) => i + 1);
   const dup = build.maps.filter((m, i) => m && build.maps.indexOf(m) !== i);
+  // The vote's leaders that haven't been raced yet on this cup's date: the next cup by popular demand.
+  const racedToday = new Set(state.cups.filter((c) => c.date === build.date).flatMap((c) => c.maps || []));
+  const voted = (votes || []).filter((v) => !racedToday.has(v.track));
+  function applyVote() {
+    const maps = voted.slice(0, 4).map((v) => v.track);
+    while (maps.length < 4) maps.push("");
+    set({ maps, templateId: "", name: build.name });
+  }
 
   function lock() {
     if (!build.name.trim()) { setError("Give the cup a name."); return; }
@@ -140,6 +153,28 @@ export default function BuildPage() {
           </TextField>
           <TextField size="small" type="date" label="Date" value={build.date} onChange={(e) => set({ date: e.target.value })} InputLabelProps={{ shrink: true }} />
         </Box>
+
+        {night && votes && (
+          <Box sx={{ p: 1.5, borderRadius: 1.5, border: `1px solid ${colors.line}`, bgcolor: colors.bg2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mb: voted.length ? 1 : 0 }}>
+              <Typography variant="overline" sx={{ color: colors.accent, mr: 1, lineHeight: 1.6 }}>Track vote</Typography>
+              <Typography variant="body2" sx={{ color: colors.muted, flex: 1 }}>
+                {voted.length
+                  ? `${formatEventWhen(night.startsAt).date}: the most-voted tracks not raced yet on this cup's date.`
+                  : votes.length ? "Every voted track has been raced on this date." : `Nobody has voted on tracks for ${formatEventWhen(night.startsAt).date} yet.`}
+              </Typography>
+              {voted.length > 0 && <Button size="small" variant="contained" onClick={applyVote}>{voted.length >= 4 ? "Use the top 4" : `Use these ${voted.length}`}</Button>}
+            </Stack>
+            {voted.length > 0 && (
+              <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+                {voted.slice(0, 8).map((v, i) => (
+                  <Chip key={v.track} size="small" variant={i < 4 ? "filled" : "outlined"} label={`${v.track} · ${v.votes}`}
+                    sx={i < 4 ? { bgcolor: "rgba(255,210,63,.15)", color: colors.ink } : undefined} />
+                ))}
+              </Stack>
+            )}
+          </Box>
+        )}
 
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
           <Typography variant="overline" sx={{ color: colors.muted, mr: 1 }}>Random</Typography>

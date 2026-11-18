@@ -156,6 +156,17 @@ create table if not exists public.event_commitments (
   primary key (event_id, user_id)
 );
 
+-- ---- added in v7: track voting before a cup night ----
+-- Racers who are in for a cup night suggest and vote on tracks (up to 8 each); admins build the cups
+-- from the most-voted. Suggesting a track is just the first vote for it. Leaving the night drops your votes.
+create table if not exists public.event_track_votes (
+  event_id uuid not null references public.events on delete cascade,
+  user_id uuid not null references auth.users on delete cascade,
+  track text not null check (char_length(track) between 1 and 60),
+  created_at timestamptz not null default now(),
+  primary key (event_id, user_id, track)
+);
+
 -- "Email me about cup nights". Off until the person turns it on.
 alter table public.profiles add column if not exists email_cup_nights boolean not null default false;
 
@@ -294,6 +305,7 @@ alter table public.cup_templates enable row level security;
 alter table public.race_results enable row level security;
 alter table public.events enable row level security;
 alter table public.event_commitments enable row level security;
+alter table public.event_track_votes enable row level security;
 alter table public.email_tokens enable row level security;
 alter table public.email_outbox enable row level security;
 
@@ -371,6 +383,11 @@ drop policy if exists "public read" on public.event_commitments;
 drop policy if exists "members read" on public.event_commitments;
 create policy "members read" on public.event_commitments for select to authenticated using (true);
 revoke insert, update, delete on public.event_commitments from anon, authenticated;
+
+-- Track votes: members read; votes go through vote_track / unvote_track.
+drop policy if exists "members read" on public.event_track_votes;
+create policy "members read" on public.event_track_votes for select to authenticated using (true);
+revoke insert, update, delete on public.event_track_votes from anon, authenticated;
 
 -- Email tokens and the outbox have no policies: only the functions below and the service role reach them.
 revoke all on public.email_tokens, public.email_outbox from anon, authenticated;
@@ -824,7 +841,50 @@ language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null then raise exception 'Sign in first.'; end if;
   delete from event_commitments where event_id = p_id and user_id = auth.uid();
+  delete from event_track_votes where event_id = p_id and user_id = auth.uid();
 end $$;
+
+-- Vote for a track for a cup night (suggesting a new one is the same call). Only people who are in can
+-- vote, while the night is open (until 3 hours after the start), up to 8 tracks each. Safe to repeat.
+create or replace function public.vote_track(p_event uuid, p_track text) returns void
+language plpgsql security definer set search_path = public as $$
+declare e events; t text := btrim(coalesce(p_track, ''));
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  if t = '' or char_length(t) > 60 then raise exception 'Pick a track.'; end if;
+  select * into e from events where id = p_event;
+  if not found then raise exception 'That cup night doesn''t exist.'; end if;
+  if e.status = 'cancelled' then raise exception 'This cup night was cancelled.'; end if;
+  if e.starts_at < now() - interval '3 hours' then raise exception 'This cup night is over.'; end if;
+  if not exists (select 1 from event_commitments where event_id = p_event and user_id = auth.uid()) then
+    raise exception 'Say you''re in for this cup night to vote on tracks.';
+  end if;
+  if exists (select 1 from event_track_votes where event_id = p_event and user_id = auth.uid() and track = t) then return; end if;
+  if (select count(*) from event_track_votes where event_id = p_event and user_id = auth.uid()) >= 8 then
+    raise exception 'You''ve used all 8 votes. Take one back to vote for another track.';
+  end if;
+  insert into event_track_votes (event_id, user_id, track) values (p_event, auth.uid(), t);
+end $$;
+
+create or replace function public.unvote_track(p_event uuid, p_track text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first.'; end if;
+  delete from event_track_votes where event_id = p_event and user_id = auth.uid() and track = btrim(coalesce(p_track, ''));
+end $$;
+
+-- The vote so far for a cup night, most votes first (ties: suggested first). Signed-in members only.
+create or replace function public.track_vote_tally(p_event uuid)
+returns table (track text, votes int, voters jsonb, mine boolean, first_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select v.track, count(*)::int,
+         jsonb_agg(jsonb_build_object('name', coalesce(p.display_name, 'Racer'), 'color', p.color) order by v.created_at),
+         coalesce(bool_or(v.user_id = auth.uid()), false), min(v.created_at)
+  from event_track_votes v left join profiles p on p.id = v.user_id
+  where v.event_id = p_event and auth.uid() is not null
+  group by v.track
+  order by count(*) desc, min(v.created_at);
+$$;
 
 -- Who's in, with display names (profiles are otherwise private to their owner and admins).
 -- Who's in for each cup night. Account ids only go to signed-in members (to show "you're in").
@@ -953,6 +1013,8 @@ grant execute on function public.is_admin, public.league_has_owner, public.resul
 
 revoke execute on function public.create_event, public.update_event, public.cancel_event, public.join_event, public.leave_event from public, anon;
 grant execute on function public.create_event, public.update_event, public.cancel_event, public.join_event, public.leave_event to authenticated;
+revoke execute on function public.vote_track, public.unvote_track, public.track_vote_tally from public, anon;
+grant execute on function public.vote_track, public.unvote_track, public.track_vote_tally to authenticated;
 grant execute on function public.event_attendees, public.unsubscribe_email, public.league_timezone, public.event_cups to anon, authenticated;
 -- Background-job functions: the service role (Edge Functions) and pg_cron only.
 revoke execute on function public.queue_event_emails, public.queue_event_reminders, public.claim_emails, public.complete_email
@@ -979,7 +1041,7 @@ create policy "cup photos: admins write" on storage.objects for all to authentic
 -- Signed-in members keep full read access to these tables (RLS still applies).
 revoke insert, update, delete, truncate on all tables in schema public from anon;
 revoke select on public.players, public.cups, public.race_results, public.cup_templates, public.events,
-  public.event_commitments, public.photos from anon;
+  public.event_commitments, public.event_track_votes, public.photos from anon;
 grant select (id, name, color, aliases, registered_at) on public.players to anon;
 grant select (id, cup, date, week, max, results, notes, has_photo, added_at, status, maps, template_id, photo_path) on public.cups to anon;
 grant select (cup_id, race, player_id, position, points, character, entered_at) on public.race_results to anon;
@@ -991,7 +1053,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['league', 'players', 'cups', 'submissions', 'profiles', 'claims', 'race_results', 'cup_templates',
-                           'events', 'event_commitments'] loop
+                           'events', 'event_commitments', 'event_track_votes'] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
     exception when duplicate_object then null;
