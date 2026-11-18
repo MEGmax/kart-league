@@ -134,6 +134,7 @@ describe("grouping a night's photos into cups", () => {
       end("c3", "21:15", [["Koopa Troopa", 29], ["Baby Peach", 33], ["Yoshi", 23]]),
     ]);
     expect(g.cups.map((c) => [c.files, c.complete])).toEqual([[["c1.jpg", "c1-again.jpg"], false], [["c2.jpg"], false], [["c3.jpg"], false]]);
+    expect(g.issues).toEqual([]);
     expect(g.cups[1].racers.map((r) => [r.character, r.places, r.total])).toEqual([
       ["Koopa Troopa", [null, null, null, null], 55], ["Baby Peach", [null, null, null, null], 30], ["Yoshi", [null, null, null, null], 33],
     ]);

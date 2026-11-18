@@ -64,7 +64,8 @@ If someone photographed every race screen of a night, let Gemini read the lot in
    [Google AI Studio](https://aistudio.google.com/apikey)).
 2. `npm run backlog -- data/cups_W2_results` (the week comes from a `W2`-style folder name, or pass `--week 2`). Photos are ordered
    by when they were taken; images without camera info (screenshots) are never sent. iPhone HEIC photos are converted on a Mac
-   (with the built-in `sips`), and each cup's photo is turned upright. Each photo's reading is saved in `gemini-reads.json` and
+   (with the built-in `sips`), and each cup's photo is turned upright: Gemini guesses how far, and `--rotate 90` (or
+   `--rotate F08D6624=90` for one photo) overrides it when the guess is wrong. Each photo's reading is saved in `gemini-reads.json` and
    reused, so re-running costs nothing; `--refresh` reads everything again. A free Gemini key allows only a few photos a minute
    (and a daily quota); the script waits and retries when Google asks it to.
 3. It groups the photos into cups from the humans' running totals (totals going down, or an end-of-cup screen, start a new cup),

@@ -147,11 +147,13 @@ export function groupBacklog(reads) {
       const sum = r.places.reduce((a, p) => a + RACE_POINTS[p - 1], 0);
       if (sum !== r.total) issues.push(`Cup ${i + 1}: ${who(r.id)}'s race places add up to ${sum} but the last photo shows ${r.total} pts.`);
     });
-    if (!complete) {
+    // Only end-of-cup photos: totals only is all there is to know, not something to check.
+    const endOnly = c.snaps.every((s) => s.screen === "standings");
+    if (!complete && !endOnly) {
       const have = c.races.filter(Boolean).length;
       c.notes.push(c.lost ? "race-by-race places incomplete, so it uses each racer's total from the last photo" : `only ${have} of 4 races, so it uses each racer's total from the last photo`);
     }
-    c.notes.forEach((x) => issues.push(`Cup ${i + 1}: ${x}.`));
+    (endOnly ? c.notes.filter((x) => !x.startsWith("can't tell which race")) : c.notes).forEach((x) => issues.push(`Cup ${i + 1}: ${x}.`));
     const standings = c.snaps.filter((s) => s.screen === "standings");
     const final = standings.filter((s) => [...s.humans].every(([id, h]) => !last.humans.has(id) || last.humans.get(id).total === h.total)).pop();
     return {

@@ -6,11 +6,13 @@
 //   npm run backlog -- --refresh                     # read every photo again instead of reusing gemini-reads.json
 //   npm run backlog -- --include-screenshots         # also send images with no camera info (screenshots)
 //   npm run backlog -- --who Luigi=Gerrard           # who played a character (repeatable); others are guessed on import
+//   npm run backlog -- --rotate 90                   # turn every cup photo 90° clockwise (or --rotate F08D6624=90 for one)
 //
 // Needs GEMINI_API_KEY in .env (or the environment); GEMINI_MODEL overrides the model. Photos are ordered
 // by when they were taken (EXIF). Images without camera info are screenshots, not photos of the TV, and
 // are never sent to Gemini unless you ask. iPhone HEIC photos are converted to JPEG with macOS's `sips`,
-// and each cup's photo is turned upright (Gemini says how far) before it goes in the import. Writes, in the folder:
+// and each cup's photo is turned upright before it goes in the import: by --rotate if given, else by
+// Gemini's guess (which can be wrong for photos taken sideways). Writes, in the folder:
 //   gemini-reads.json    what Gemini saw in each photo, reused next run so no photo is read (or billed) twice
 //   backlog.md           the cups found, each human's race places and totals, and anything to double-check
 //   backlog-import.json  the same plus each cup's photo, for the Add page's import (git-ignored)
@@ -27,7 +29,17 @@ import { readExif } from "./lib/exif.js";
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
-const valued = new Set(["--week", "--concurrency", "--who"]);
+const valued = new Set(["--week", "--concurrency", "--who", "--rotate"]);
+// --rotate 90 (every photo) or --rotate F08D6624=90 (photos whose name starts with that), repeatable.
+const rotations = [];
+args.forEach((a, i) => {
+  if (a !== "--rotate") return;
+  String(args[i + 1] || "").split(",").forEach((part) => {
+    const [a1, a2] = part.split("=").map((x) => (x || "").trim());
+    const deg = Number(a2 === undefined ? a1 : a2);
+    if ([0, 90, 180, 270].includes(deg)) rotations.push({ prefix: a2 === undefined ? "" : a1, deg });
+  });
+});
 // --who Luigi=Gerrard (repeatable, or comma-separated): who played each character tonight.
 const who = {};
 args.forEach((a, i) => {
@@ -156,7 +168,8 @@ function sitePhoto(file) {
   const p = byFile[file];
   if (!p || !p.jpeg) return null;
   let src = p.jpeg;
-  const turn = (cache.reads[file] && cache.reads[file].rotate) || 0;
+  const forced = rotations.filter((r) => file.startsWith(r.prefix)).sort((a, b) => b.prefix.length - a.prefix.length)[0];
+  const turn = forced ? forced.deg : (cache.reads[file] && cache.reads[file].rotate) || 0;
   if (turn) {
     const out = path.join(TMP, `upright-${turn}-${path.basename(p.jpeg)}`);
     if (sips("-r", String(turn), src, "--out", out)) src = out;
