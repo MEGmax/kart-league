@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -13,7 +13,14 @@ import CircularProgress from "@mui/material/CircularProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import LinearProgress from "@mui/material/LinearProgress";
 import GoogleIcon from "@mui/icons-material/Google";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
+import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -23,11 +30,14 @@ import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { CHARACTERS, fmtDate, LOGO_SRC } from "../lib/constants";
+import { CHARACTERS, charSrc, fmtDate, LOGO_SRC, ord, pctTxt } from "../lib/constants";
+import { compute, playerSlug } from "../lib/standings";
 import { getApiKey, setApiKey, MODEL } from "../lib/readPhoto";
 import { groupBatches, useMyData } from "../lib/accountData";
-import { PLAYER_COLORS, colors } from "../theme";
-import { titleBar } from "../components/PageBits";
+import { PLAYER_COLORS, brandStripe, colors, fontData, fontDisplay } from "../theme";
+import { plural } from "../components/PageBits";
+import CharacterFace from "../components/CharacterFace";
+import CupIcon from "../components/CupIcon";
 
 function roleLabel(r) {
   return r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Member";
@@ -128,7 +138,7 @@ function AuthForm() {
   );
 }
 
-function ProfileEditor({ profile, onSaved }) {
+function ProfileEditor({ profile, open, onClose, onSaved }) {
   const [draft, setDraft] = useState({
     displayName: profile.displayName || "", color: profile.color || PLAYER_COLORS[0],
     favoriteCharacter: profile.favoriteCharacter || "", favoriteVehicle: profile.favoriteVehicle || "",
@@ -156,34 +166,171 @@ function ProfileEditor({ profile, onSaved }) {
   }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="overline" sx={{ color: colors.muted }}>Profile</Typography>
-      <Stack spacing={2} sx={{ mt: 1 }}>
-        <TextField label="Display name" value={draft.displayName} onChange={(e) => setDraft({ ...draft, displayName: e.target.value })} inputProps={{ maxLength: 40 }} />
-        <TextField select label="Favorite character" value={draft.favoriteCharacter} onChange={(e) => setDraft({ ...draft, favoriteCharacter: e.target.value })}>
-          <MenuItem value="">—</MenuItem>
-          {CHARACTERS.map((c) => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-        </TextField>
-        <TextField label="Favorite kart or bike" placeholder="e.g. Flame Runner" value={draft.favoriteVehicle} onChange={(e) => setDraft({ ...draft, favoriteVehicle: e.target.value })} inputProps={{ maxLength: 40 }} />
-        <Box>
-          <Typography variant="caption" sx={{ color: colors.muted, display: "block", mb: 1 }}>Color</Typography>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-            {PLAYER_COLORS.map((c) => (
-              <Box
-                key={c}
-                onClick={() => setDraft({ ...draft, color: c })}
-                sx={{
-                  width: 30, height: 30, borderRadius: "50%", bgcolor: c, cursor: "pointer",
-                  border: draft.color === c ? `3px solid ${colors.ink}` : "3px solid transparent",
-                }}
-              />
+    <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ fontFamily: "inherit", fontWeight: 800 }}>Edit profile</DialogTitle>
+      <DialogContent>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5, mt: 0.5 }}>
+          <CharacterFace name={draft.favoriteCharacter} ring={draft.color} size={56} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 800 }} noWrap>{draft.displayName.trim() || "Your name"}</Typography>
+            <Typography variant="body2" sx={{ color: colors.muted }} noWrap>{[draft.favoriteCharacter, draft.favoriteVehicle.trim()].filter(Boolean).join(" · ") || "Pick a character"}</Typography>
+          </Box>
+        </Stack>
+        <Stack spacing={2}>
+          <TextField label="Display name" value={draft.displayName} onChange={(e) => setDraft({ ...draft, displayName: e.target.value })} inputProps={{ maxLength: 40 }} />
+          <TextField select label="Favorite character" value={draft.favoriteCharacter} onChange={(e) => setDraft({ ...draft, favoriteCharacter: e.target.value })}>
+            <MenuItem value="">—</MenuItem>
+            {CHARACTERS.map((c) => (
+              <MenuItem key={c} value={c}>
+                <Stack direction="row" spacing={1} alignItems="center"><CharacterFace name={c} size={24} /><span>{c}</span></Stack>
+              </MenuItem>
             ))}
-          </Stack>
-        </Box>
-        {error && <Alert severity="error">{error}</Alert>}
-        <Box><Button variant="contained" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save profile"}</Button></Box>
+          </TextField>
+          <TextField label="Favorite kart or bike" placeholder="e.g. Flame Runner" value={draft.favoriteVehicle} onChange={(e) => setDraft({ ...draft, favoriteVehicle: e.target.value })} inputProps={{ maxLength: 40 }} />
+          <Box>
+            <Typography variant="caption" sx={{ color: colors.muted, display: "block", mb: 1 }}>Color</Typography>
+            <Box role="radiogroup" aria-label="Color" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+              {PLAYER_COLORS.map((c) => (
+                <Box
+                  key={c} component="button" type="button" role="radio" aria-checked={draft.color === c} aria-label={c}
+                  onClick={() => setDraft({ ...draft, color: c })}
+                  sx={{
+                    width: 32, height: 32, borderRadius: "50%", bgcolor: c, cursor: "pointer", p: 0,
+                    border: draft.color === c ? `3px solid ${colors.ink}` : "3px solid transparent",
+                    boxShadow: draft.color === c ? `0 0 0 2px ${c}` : "none",
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={busy}>Cancel</Button>
+        <Button variant="contained" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save profile"}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// A settings card with a small icon heading.
+function Panel({ icon, title, children, sx }) {
+  return (
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, ...sx }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25, color: colors.muted }}>
+        {icon}
+        <Typography variant="overline" sx={{ lineHeight: 1.4 }}>{title}</Typography>
       </Stack>
+      {children}
     </Paper>
+  );
+}
+
+function Stat({ label, value, sub }) {
+  return (
+    <Box sx={{ minWidth: 0 }}>
+      <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.25rem", sm: "1.55rem" }, lineHeight: 1.1, transform: "skewX(-7deg)" }} noWrap>{value}</Typography>
+      <Typography variant="caption" sx={{ color: colors.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>{label}</Typography>
+      {sub && <Typography variant="caption" sx={{ color: colors.muted, display: "block" }}>{sub}</Typography>}
+    </Box>
+  );
+}
+
+// The player card: character art, name, colors, and (once linked to a player) the season in numbers.
+function ProfileHero({ profile, player, stats, need, slug, onEdit }) {
+  const color = profile.color || PLAYER_COLORS[0];
+  const character = profile.favoriteCharacter || (stats && stats.main && stats.main.name) || "";
+  const art = charSrc(character, true);
+
+  return (
+    <Paper sx={{ position: "relative", overflow: "hidden", p: 0, border: `1px solid ${colors.line}` }}>
+      <Box aria-hidden sx={{ position: "absolute", inset: 0, background: `linear-gradient(120deg, ${color}66 0%, ${colors.navy} 45%, ${colors.panel} 100%)` }} />
+      <Box aria-hidden sx={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(-62deg, rgba(255,255,255,.04) 0 2px, transparent 2px 24px)" }} />
+      <Box aria-hidden sx={{ position: "absolute", top: 0, bottom: 0, right: { xs: "-30%", sm: "-8%" }, width: { xs: "55%", sm: "38%" }, transform: "skewX(-14deg)", background: `linear-gradient(180deg, ${color} 0%, ${color}22 100%)`, opacity: 0.55 }} />
+      {art && (
+        <Box component="img" src={art} alt="" aria-hidden
+          sx={{ position: "absolute", right: { xs: -12, sm: 24 }, bottom: 0, height: { xs: 150, sm: 220 }, width: "auto", opacity: { xs: 0.35, sm: 1 }, filter: "drop-shadow(0 12px 24px rgba(0,0,0,.5))" }} />
+      )}
+
+      <Box sx={{ position: "relative", p: { xs: 2.5, sm: 3.5 }, pr: { sm: 30 } }}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <CharacterFace name={character} ring={color} size={72} />
+          <Box sx={{ minWidth: 0 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <Chip label={roleLabel(profile.role)} size="small" color="primary" sx={{ height: 22, fontWeight: 800 }} />
+              {player && player.registeredAt && <Typography variant="caption" sx={{ color: "rgba(255,255,255,.75)" }}>Joined {fmtDate(String(player.registeredAt).slice(0, 10))}</Typography>}
+            </Stack>
+            <Typography component="h1" sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.4rem", sm: "2rem" }, lineHeight: 1.05, textShadow: `0 3px 0 ${colors.red}`, transform: "skewX(-7deg)", transformOrigin: "left bottom", overflowWrap: "anywhere" }}>
+              {profile.displayName || "Racer"}
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 2 }}>
+          {character && <Chip size="small" label={character} sx={{ bgcolor: "rgba(7,10,31,.5)" }} />}
+          {profile.favoriteVehicle && <Chip size="small" label={profile.favoriteVehicle} sx={{ bgcolor: "rgba(7,10,31,.5)" }} />}
+          {player
+            ? <Chip size="small" label={`Racing as ${player.name}`} sx={{ bgcolor: "rgba(7,10,31,.5)" }} avatar={<Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: player.color || color, ml: 0.75 }} />} />
+            : <Chip size="small" variant="outlined" label="Not linked to a player yet" sx={{ borderStyle: "dashed" }} />}
+        </Stack>
+
+        {stats && stats.cp > 0 ? (
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(4, minmax(0,1fr))" }, gap: 2, mt: 3, p: 2, borderRadius: 2, bgcolor: "rgba(7,10,31,.55)", border: "1px solid rgba(255,255,255,.08)" }}>
+            <Stat label="Rank" value={stats.rank ? `${stats.rank}${ord(stats.rank)}` : "—"} sub={stats.rank ? null : `${plural(Math.max(0, need - stats.cp), "cup")} to qualify`} />
+            <Stat label="Points" value={pctTxt(stats.pct)} />
+            <Stat label="Cups" value={stats.cp} />
+            <Stat label="Cup wins" value={stats.wins} />
+          </Box>
+        ) : (
+          <Typography variant="body2" sx={{ color: "rgba(255,255,255,.8)", mt: 2.5, maxWidth: "46ch" }}>
+            {player
+              ? "Race your first cup and your season shows up here."
+              : "Your results link up once an admin connects you to your player, or claim them on the Unclaimed page."}
+          </Typography>
+        )}
+
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 2.5 }}>
+          <Button variant="contained" startIcon={<EditOutlinedIcon />} onClick={onEdit}>Edit profile</Button>
+          {stats && stats.cp > 0 && slug && <Button variant="outlined" component={RouterLink} to={`/standings/${encodeURIComponent(slug)}`} sx={{ bgcolor: "rgba(7,10,31,.4)" }}>Full season</Button>}
+          {!player && <Button variant="outlined" component={RouterLink} to="/unclaimed" sx={{ bgcolor: "rgba(7,10,31,.4)" }}>Unclaimed results</Button>}
+        </Stack>
+      </Box>
+      <Box aria-hidden sx={{ position: "relative", height: 4, background: brandStripe }} />
+    </Paper>
+  );
+}
+
+// The last few cups, newest first, as a form guide.
+function RecentForm({ stats }) {
+  if (!stats || !stats.log.length) return null;
+  const recent = stats.log.slice(-5).reverse();
+  return (
+    <Panel icon={<TimelineOutlinedIcon fontSize="small" />} title="Recent form">
+      <Stack divider={<Divider />}>
+        {recent.map((l) => {
+          const medal = { 1: colors.gold, 2: colors.silver, 3: colors.bronze }[l.rank];
+          return (
+            <Stack key={l.cup.id} direction="row" spacing={1.5} alignItems="center" sx={{ py: 1 }}>
+              <Box sx={{ width: 40, textAlign: "center", fontFamily: fontDisplay, fontSize: "0.95rem", color: medal || colors.muted, transform: "skewX(-7deg)" }}>
+                {l.rank}<Box component="sup" sx={{ fontSize: "0.55em" }}>{ord(l.rank)}</Box>
+              </Box>
+              <CupIcon cup={l.cup.cup} size={26} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{l.cup.cup}</Typography>
+                <Typography variant="caption" sx={{ color: colors.muted }} noWrap>
+                  {[fmtDate(l.cup.date), plural(l.field, "racer"), l.character].filter(Boolean).join(" · ")}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "right" }}>
+                <Typography variant="body2" sx={{ fontFamily: fontData, fontWeight: 700 }}>{l.pts}<Box component="span" sx={{ color: colors.muted }}>/{l.max}</Box></Typography>
+                <LinearProgress variant="determinate" value={(100 * l.pts) / l.max} sx={{ width: 64, height: 4, borderRadius: 2, mt: 0.5, bgcolor: colors.line, "& .MuiLinearProgress-bar": { bgcolor: medal || colors.cool } }} />
+              </Box>
+            </Stack>
+          );
+        })}
+      </Stack>
+    </Panel>
   );
 }
 
@@ -208,10 +355,9 @@ function EmailPreferences({ profile }) {
   }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="overline" sx={{ color: colors.muted }}>Emails</Typography>
+    <Panel icon={<MailOutlineIcon fontSize="small" />} title="Emails">
       <FormControlLabel
-        sx={{ display: "flex", mt: 0.5 }}
+        sx={{ display: "flex" }}
         control={<Switch checked={on} disabled={busy} onChange={(e) => toggle(e.target.checked)} />}
         label="Email me about cup nights"
       />
@@ -219,7 +365,7 @@ function EmailPreferences({ profile }) {
         An invite with a calendar file when a cup night is scheduled, updates if it changes or is cancelled, and a reminder on the day if you're in. Sent to <b>{user.email}</b>. Every email has an unsubscribe link.
       </Typography>
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-    </Paper>
+    </Panel>
   );
 }
 
@@ -234,9 +380,8 @@ function GeminiKey() {
     setApiKey(k); setHas(true); setVal(""); setEditing(false);
   }
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="overline" sx={{ color: colors.muted }}>Read results photos with Gemini</Typography>
-      <Typography variant="body2" sx={{ mt: 1 }}>
+    <Panel icon={<AutoAwesomeOutlinedIcon fontSize="small" />} title="Read results photos with Gemini">
+      <Typography variant="body2">
         With a Gemini API key, Gemini reads each results-screen photo you add when recording cups and fills in everyone's points, matching rows to racers by their character.
         The key stays in this browser and is sent only to Google ({MODEL}). Get one free at{" "}
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: colors.cool }}>Google AI Studio</a>; usage beyond the free tier is billed to the key.
@@ -254,7 +399,7 @@ function GeminiKey() {
           {editing && <Button size="small" onClick={() => setEditing(false)}>Cancel</Button>}
         </Stack>
       )}
-    </Paper>
+    </Panel>
   );
 }
 
@@ -280,9 +425,8 @@ function MyActivity() {
   }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="overline" sx={{ color: colors.muted }}>Your submissions and requests</Typography>
-      <Stack spacing={1.5} sx={{ mt: 1 }}>
+    <Panel icon={<InboxOutlinedIcon fontSize="small" />} title="Your submissions and requests">
+      <Stack spacing={1.5}>
         {batches.map((b) => {
           const pending = b.filter((x) => x.status === "pending");
           const st = b.every((x) => x.status === b[0].status) ? b[0].status : "pending";
@@ -315,7 +459,7 @@ function MyActivity() {
         })}
       </Stack>
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-    </Paper>
+    </Panel>
   );
 }
 
@@ -351,7 +495,7 @@ function DangerZone() {
   }
 
   return (
-    <Box sx={{ mt: 2 }}>
+    <Box>
       {!hasOwner && !isOwner && (
         <Alert severity="info" sx={{ mb: 1.5 }} action={<Button color="inherit" size="small" disabled={busy} onClick={claim}>Claim it</Button>}>
           This league has no owner yet. The first person to claim it becomes the owner (and an admin).
@@ -381,6 +525,9 @@ function DangerZone() {
 
 function SignedInView() {
   const { user, profile, isAdmin, signOut, updatePassword } = useAuth();
+  const { state } = useLeagueData();
+  const m = useMemo(() => (state && state.cups.length ? compute(state) : null), [state]);
+  const [editing, setEditing] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -395,6 +542,10 @@ function SignedInView() {
       </Container>
     );
   }
+
+  const player = state ? state.players.find((p) => (p.userId || p.user_id) === user.id) : null;
+  const stats = player && m ? m.byId.get(player.id) : null;
+  const slug = player && state ? playerSlug(state.players, player) : null;
 
   const isPw = (user.identities || []).some((d) => d.provider === "email") || (user.app_metadata && user.app_metadata.provider === "email");
 
@@ -412,37 +563,47 @@ function SignedInView() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ py: 3 }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
-        <Typography variant="h5" sx={{ fontFamily: "inherit", ...titleBar }}>Your account</Typography>
-        <Chip label={roleLabel(profile.role)} size="small" color="primary" />
-      </Stack>
+    <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2 } }}>
       {savedFlash && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSavedFlash("")}>{savedFlash}</Alert>}
-      <Stack spacing={2}>
-        <ProfileEditor profile={profile} onSaved={() => setSavedFlash("Profile saved")} />
-        <EmailPreferences key={String(profile.emailCupNights)} profile={profile} />
-        <MyActivity />
-        <GeminiKey />
-        <Button component={RouterLink} to="/add" variant="outlined">{isAdmin ? "Record a cup night" : "Submit a cup night's results"}</Button>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="overline" sx={{ color: colors.muted }}>Sign-in and security</Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            Signed in as <b>{user.email}</b> {isPw ? "with a password" : "with Google"}.
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-            {isPw && <Button size="small" onClick={() => setChangingPw((v) => !v)}>Change password</Button>}
-            <Button size="small" onClick={signOut}>Sign out</Button>
-          </Stack>
-          {isPw && changingPw && (
-            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-              <TextField size="small" type="password" label="New password" value={pw} onChange={(e) => setPw(e.target.value)} inputProps={{ minLength: 6 }} />
-              <Button variant="contained" size="small" disabled={busy} onClick={savePassword}>Save</Button>
+      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.need : 0} slug={slug} onEdit={() => setEditing(true)} />
+      {editing && <ProfileEditor open profile={profile} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setSavedFlash("Profile saved"); }} />}
+
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, gap: 2, mt: 2, alignItems: "start" }}>
+        <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <RecentForm stats={stats} />
+          <MyActivity />
+          <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", justifyContent: "space-between" }}>
+            <Box>
+              <Typography sx={{ fontWeight: 800 }}>Raced a cup night?</Typography>
+              <Typography variant="body2" sx={{ color: colors.muted }}>{isAdmin ? "Record the results and the standings update." : "Submit the results and an admin checks them."}</Typography>
+            </Box>
+            <Button component={RouterLink} to="/add" variant="contained">{isAdmin ? "Record a cup night" : "Submit results"}</Button>
+          </Paper>
+        </Stack>
+
+        <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <EmailPreferences key={String(profile.emailCupNights)} profile={profile} />
+          <GeminiKey />
+          <Panel icon={<LockOutlinedIcon fontSize="small" />} title="Sign-in and security">
+            <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+              Signed in as <b>{user.email}</b> {isPw ? "with a password" : "with Google"}.
+            </Typography>
+            <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+              {isPw && <Button size="small" onClick={() => setChangingPw((v) => !v)}>Change password</Button>}
+              <Button size="small" onClick={signOut}>Sign out</Button>
             </Stack>
-          )}
-          {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-          <DangerZone />
-        </Paper>
-      </Stack>
+            {isPw && changingPw && (
+              <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                <TextField size="small" type="password" label="New password" value={pw} onChange={(e) => setPw(e.target.value)} inputProps={{ minLength: 6 }} />
+                <Button variant="contained" size="small" disabled={busy} onClick={savePassword}>Save</Button>
+              </Stack>
+            )}
+            {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+            <Divider sx={{ my: 2 }} />
+            <DangerZone />
+          </Panel>
+        </Stack>
+      </Box>
     </Container>
   );
 }
