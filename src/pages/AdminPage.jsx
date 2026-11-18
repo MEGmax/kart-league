@@ -1,5 +1,5 @@
 // Admin: point requests, submitted cup nights, players and invites, league settings, member roles.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
@@ -25,6 +25,7 @@ import { fmtDate, fmtDay, nextColor, ord } from "../lib/constants";
 import { groupBatches, useAdminData } from "../lib/accountData";
 import { uid } from "../lib/night";
 import { sb, q, dbErr } from "../lib/supabaseClient";
+import { legacyPhotoIds, moveLegacyPhoto } from "../lib/cupPhotos";
 import { colors, fontData } from "../theme";
 import CupIcon from "../components/CupIcon";
 import CharacterChip from "../components/CharacterChip";
@@ -330,6 +331,50 @@ function RoleSelect({ u }) {
   );
 }
 
+// Photos uploaded before they moved to Storage sit in the photos table with their EXIF (some with GPS).
+// Moving re-encodes each one in this browser (dropping the EXIF), uploads it, and deletes the old copy.
+function PhotoMover({ cups }) {
+  const flash = useFlash();
+  const { reload } = useLeagueData();
+  const [ids, setIds] = useState(null);
+  const [done, setDone] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { legacyPhotoIds().then(setIds).catch(() => setIds([])); }, []);
+  if (!ids || !ids.length) return null;
+
+  async function move() {
+    setBusy(true); setError(""); setDone(0);
+    const left = [];
+    for (const id of ids) {
+      try { await moveLegacyPhoto(id); setDone((n) => n + 1); } catch (e) { left.push(id); setError(e && e.message ? e.message : dbErr(e)); }
+    }
+    setIds(left);
+    setBusy(false);
+    reload();
+    if (!left.length) flash("Every results photo is in Storage now, without location data.");
+  }
+
+  const name = (id) => (cups.find((c) => c.id === id) || {}).cup || id;
+  return (
+    <>
+      <SectionTitle title="Results photos" count={`${ids.length} to move`} />
+      <Paper sx={{ p: 2.5, display: "grid", gap: 1.5 }}>
+        <Typography variant="body2">
+          {ids.length} photo{ids.length === 1 ? " is" : "s are"} still stored the old way, with the phone's metadata, including GPS location for
+          some. Moving them strips that, makes thumbnails, and puts them in Storage, where only signed-in members can see them.
+          Run the latest <code>supabase/schema.sql</code> first.
+        </Typography>
+        <Typography variant="caption" sx={{ color: colors.muted }}>{ids.map(name).join(", ")}</Typography>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Button variant="contained" size="small" disabled={busy} onClick={move}>{busy ? `Moving… ${done}/${ids.length}` : `Move ${ids.length} photo${ids.length === 1 ? "" : "s"}`}</Button>
+        </Stack>
+      </Paper>
+    </>
+  );
+}
+
 export default function AdminPage() {
   const { state, loadError } = useLeagueData();
   const { user, ready, isAdmin } = useAuth();
@@ -367,6 +412,8 @@ export default function AdminPage() {
       {batches.length ? (
         <Stack spacing={1.5}>{batches.map((b) => <BatchCard key={b[0].batch} subs={b} state={state} />)}</Stack>
       ) : <Typography variant="body2" sx={{ color: colors.muted }}>Nothing waiting. Results that members submit appear here.</Typography>}
+
+      <PhotoMover cups={state.cups} />
 
       <SectionTitle title="Players and accounts" count={plural(state.players.length, "player")} />
       <PlayersEditor key={admin.invites.map((i) => i.playerId + i.email).join() + state.players.length} state={state} m={m} admin={admin} />

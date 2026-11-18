@@ -58,6 +58,19 @@ export const DEFAULT_LEAGUE = {
 
 export const VIEWS = ["standings", "race", "cups", "unclaimed", "playoffs", "rules", "add", "build", "account", "admin"];
 
+// One color per character, the same everywhere (bars, charts), picked so common picks never share one.
+export const CHARACTER_COLORS = {
+  Mario: "#E5484D", Luigi: "#2F9E44", Peach: "#FF8FC2", Daisy: "#F59F00", Yoshi: "#8BD346", Birdo: "#D6409F",
+  Toad: "#3E63DD", Toadette: "#C084FC", "Koopa Troopa": "#12A594", "Diddy Kong": "#C2512E", "Donkey Kong": "#8D5524",
+  Bowser: "#F76B15", "Bowser Jr.": "#FFB224", Wario: "#FFE629", Waluigi: "#8E4EC6", "King Boo": "#E4E6F2",
+  Rosalina: "#5EB1EF", "Funky Kong": "#00A2C7", "Dry Bones": "#A3A3A3", "Dry Bowser": "#6B6B6B",
+  "Baby Mario": "#FF7B7B", "Baby Luigi": "#6CD17A", "Baby Peach": "#F6A6FF", "Baby Daisy": "#FFCD6B", Mii: "#9AA3C7",
+};
+
+export function charColor(name) {
+  return CHARACTER_COLORS[name] || `hsl(${hashHue(name)} 80% 60%)`;
+}
+
 export function hashHue(s) {
   let h = 0;
   s = String(s || "");

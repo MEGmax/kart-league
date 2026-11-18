@@ -24,7 +24,7 @@ import path from "node:path";
 import { GEMINI_MODEL, ReadError, readResultsImage } from "../src/lib/gemini.js";
 import { BACKLOG_VERSION, groupBacklog } from "../src/lib/backlog.js";
 import { ord } from "../src/lib/constants.js";
-import { readExif } from "./lib/exif.js";
+import { hasGps, readExif } from "./lib/exif.js";
 
 const args = process.argv.slice(2);
 const flag = (name) => args.includes(name);
@@ -109,6 +109,11 @@ for (const file of readdirSync(dir).sort()) {
   photos.push({ file, full, buf, mime, jpeg, sha1: createHash("sha1").update(original).digest("hex"), takenAt: exif.takenAt || statSync(full).mtime.toISOString().slice(0, 19) });
 }
 photos.sort((a, b) => a.takenAt.localeCompare(b.takenAt) || a.file.localeCompare(b.file));
+const located = photos.filter((p) => hasGps(readFileSync(p.full)));
+if (located.length) {
+  console.warn(`Warning: ${located.length} photo${located.length === 1 ? " says" : "s say"} where ${located.length === 1 ? "it was" : "they were"} taken (GPS). ` +
+    `Run npm run strip-gps -- ${rel} before committing them.`);
+}
 
 // 2. Read each one with Gemini (or reuse what it saw last time).
 const todo = photos.filter((p) => flag("--refresh") || !(cache.reads[p.file] && cache.reads[p.file].sha1 === p.sha1));

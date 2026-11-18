@@ -2,7 +2,7 @@
  "version": 1,
  "reads": {
   "60162291-BF02-4055-A3EF-2CE04262E59A_1_105_c.jpeg": {
-   "sha1": "49f87f6eebb931733fe8f4a903c9a963b6cb0ac5",
+   "sha1": "42ca98a4998b64ac616d45e81ec9707289da49cc",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:25.711Z",
    "screen": "race",
@@ -119,7 +119,7 @@
    ]
   },
   "E349CFE3-0699-460C-9CB4-369698CB3927_1_105_c.jpeg": {
-   "sha1": "4808d70ab196b3134ee5d05052008f8e874207b1",
+   "sha1": "116d806d5e1802fb384e15566a6bfd5e77310eaf",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:33.872Z",
    "screen": "race",
@@ -236,7 +236,7 @@
    ]
   },
   "B562A654-9397-4681-B2AA-640A98F38B36_1_105_c.jpeg": {
-   "sha1": "7f2cb35ed702a102115b2ed2b5e159de0c685044",
+   "sha1": "df6f6bc5fe9a6276270caa72011719d1f8d4d6c7",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:36.898Z",
    "screen": "race",
@@ -353,7 +353,7 @@
    ]
   },
   "C39FE045-B5EF-4982-B00E-8E6C03EA3DCA_1_105_c.jpeg": {
-   "sha1": "c806a43062347f0a5b8faf12d0edb7696d3923da",
+   "sha1": "675f93da7fec2a74103cd028985cc730fd53fd50",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:41.066Z",
    "screen": "other",
@@ -361,7 +361,7 @@
    "rows": []
   },
   "6FF203D0-96C0-4590-A792-FE0EE363B425_1_105_c.jpeg": {
-   "sha1": "ccb8dbf899c5979515998b9b3eaf057015da4239",
+   "sha1": "d1f7d55662af9506a7a56e392cbfe6adbf08539a",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:43.394Z",
    "screen": "race",
@@ -478,7 +478,7 @@
    ]
   },
   "19158603-B20D-44ED-8053-481366C0CDED_1_105_c.jpeg": {
-   "sha1": "f3a280f1a4d49e143f31b1803e841623775b83e6",
+   "sha1": "3e206731597cefc1dfadbb00ae84e22e926d18de",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:53.555Z",
    "screen": "race",
@@ -595,7 +595,7 @@
    ]
   },
   "5CE65451-2869-4E6B-B25B-8F9DB638C560_1_105_c.jpeg": {
-   "sha1": "ee19522d1743b4ebb5909efc87acfe696188223d",
+   "sha1": "d30eaa4d3d595ecfa60307d9528ddeafd25eab35",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:16:58.715Z",
    "screen": "race",
@@ -712,7 +712,7 @@
    ]
   },
   "C6146B73-75AA-4009-955E-91AB8C118D66_1_105_c.jpeg": {
-   "sha1": "cdcaabdd9a1ab46e35481b88d4a544dc916ce22a",
+   "sha1": "dccece0ce370db08dc0604ee0bab62fe5aa6c23e",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:17:16.991Z",
    "screen": "race",
@@ -829,7 +829,7 @@
    ]
   },
   "479B1CB8-8128-458C-A760-1A849CBE7F0B_1_105_c.jpeg": {
-   "sha1": "74cf5d23a56086479d14053ab88ea57495d32d30",
+   "sha1": "30ad6a29a0a2ac5c863f3565ddf1b212835c90da",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:17:28.970Z",
    "screen": "race",
@@ -946,7 +946,7 @@
    ]
   },
   "D507D50F-123C-41B7-8E1D-B7CE04FC11E0_1_105_c.jpeg": {
-   "sha1": "d4b408849ac6996cb61a478e42c9adee888d9e90",
+   "sha1": "7427d6309e331fde723f3eff68babdda6255de2d",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:17:32.062Z",
    "screen": "race",
@@ -1063,7 +1063,7 @@
    ]
   },
   "57B8568E-28BC-4A2D-AFFF-89343B8B39CC_1_105_c.jpeg": {
-   "sha1": "3b7d0f2e8381f6f99a7c1b2d0c61f1978a512a72",
+   "sha1": "d441121f1e06bc369b158e9163c22742841ad4c6",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:17:42.469Z",
    "screen": "race",
@@ -1180,7 +1180,7 @@
    ]
   },
   "C7579598-7568-45FF-A0D5-E816C9EE5DDC_1_105_c.jpeg": {
-   "sha1": "12a6a46bd36a23175fc9891160cbada2f8d533a5",
+   "sha1": "62b70e1f054977c9ddc5569e2c1e9e5d11085973",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:17:50.097Z",
    "screen": "race",
@@ -1297,7 +1297,7 @@
    ]
   },
   "0EC0D06F-E10E-4607-99D1-5CED57E16E8D_1_105_c.jpeg": {
-   "sha1": "7e043b84ef4cc07cab99421a98b303ebd43752ec",
+   "sha1": "cef37f9e4bbe285485e3eb2d4dca6e0a474c453d",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:17:56.004Z",
    "screen": "race",
@@ -1414,7 +1414,7 @@
    ]
   },
   "FAE78EF0-A8A5-44E1-8011-20992BD8A24D_1_105_c.jpeg": {
-   "sha1": "3229d7e03eb930a7e44022eb232fa0be08a92409",
+   "sha1": "28989db8751860dcb47e9d40f4c4a95161a0f82d",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:04.787Z",
    "screen": "standings",
@@ -1531,7 +1531,7 @@
    ]
   },
   "B9D42D84-A5A3-445C-A80E-42AD91F9F96C_1_105_c.jpeg": {
-   "sha1": "7642d11123d242ce98df38c709333c6e729084ba",
+   "sha1": "62b76cf08c5778f30619509bedc683453ac47aea",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:05.859Z",
    "screen": "race",
@@ -1648,7 +1648,7 @@
    ]
   },
   "C61C0E15-3FD0-4E48-A9EE-615C0A02226F_1_105_c.jpeg": {
-   "sha1": "b8c5277ce2a2adeaefb28dffd662beaeb3f75107",
+   "sha1": "548e1f659a402b0ed19ccc81713e11d68a563212",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:07.313Z",
    "screen": "race",
@@ -1765,7 +1765,7 @@
    ]
   },
   "2E028FFE-782D-44CB-AB6B-AF86E9FFB29D_1_105_c.jpeg": {
-   "sha1": "387db28b847fec88fb0ca9be486ebf2921418c5f",
+   "sha1": "cdb4ab9c3dc1dfdb90e09b7bbd274a3de13eb931",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:08.993Z",
    "screen": "other",
@@ -1773,7 +1773,7 @@
    "rows": []
   },
   "4F714CAD-67A4-41F1-B24A-A42AB8B62AB7_1_105_c.jpeg": {
-   "sha1": "9666b636a01aeafba2786299177562d201d59575",
+   "sha1": "db3a8af4bc3983532139a785cd56c3f67343ecca",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:19.047Z",
    "screen": "race",
@@ -1890,7 +1890,7 @@
    ]
   },
   "4098A1EF-4E5B-440A-91D9-53E346DBC516_1_105_c.jpeg": {
-   "sha1": "eb89dc4718cb846b62ab8c06499e38cb34bca2e2",
+   "sha1": "0a5561d840b08441aafc4b5d775a9d8d03b75878",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:25.280Z",
    "screen": "standings",
@@ -2007,7 +2007,7 @@
    ]
   },
   "D511EF20-359E-4E3F-82F0-531E3CB77F15_1_105_c.jpeg": {
-   "sha1": "2b73c539ad1af423c39a4211e186dfa7f2894fac",
+   "sha1": "d7b91dfcbcd1ea832f589b260eab59b5f31fdb40",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:27.133Z",
    "screen": "race",
@@ -2124,7 +2124,7 @@
    ]
   },
   "49B13CE0-053C-42A5-9117-5832C620FE25_1_105_c.jpeg": {
-   "sha1": "d0bcba28d5506eea1bf24be1d020a3911aa0c705",
+   "sha1": "e2f1c806a924b1b27c3c158dd7312cbd286a01eb",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:31.695Z",
    "screen": "standings",
@@ -2249,7 +2249,7 @@
    "rows": []
   },
   "FCA26F0D-B1B1-4FFF-A516-00C021465271_1_105_c.jpeg": {
-   "sha1": "9bb0af15e855242b6c38186f73357851462ebd32",
+   "sha1": "6f6ad04e2c81c78c82e24bb18c8eedf3b5b45cc6",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:18:35.674Z",
    "screen": "standings",
@@ -2366,7 +2366,7 @@
    ]
   },
   "02D6AB70-C8C2-4D53-AC5D-C104838D81C2_1_105_c.jpeg": {
-   "sha1": "1829b6ff9f8a2ee6756901637ea438e98666cbae",
+   "sha1": "c5f57fb4a0f8712c7437f70431f8730359421b21",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T00:23:27.248Z",
    "screen": "standings",
@@ -2483,7 +2483,7 @@
    ]
   },
   "D859EEA9-4FCD-414D-8023-5E455CBC5FCC_1_105_c.jpeg": {
-   "sha1": "7a9e3a233b6d5f26ebd4c0dd5e672f277e73a4f2",
+   "sha1": "c7ea705dc75f7a850af663f22b2a59c1d07dd08f",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T06:22:41.925Z",
    "screen": "race",
@@ -2600,7 +2600,7 @@
    ]
   },
   "20D98724-9994-4824-8017-61BF4C4160AB_1_105_c.jpeg": {
-   "sha1": "e29c0fb3f0746d76197f32a636f4b15786756e88",
+   "sha1": "6df78291bd810d03e0b8da425a8728acb7703909",
    "model": "gemini-4-hydrogen",
    "readAt": "2026-11-18T06:22:54.068Z",
    "screen": "race",

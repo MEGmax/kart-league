@@ -32,7 +32,7 @@ export function TrackSelect({ label, value, onChange, disabled }) {
   );
 }
 
-function CupRow({ cup, index, count, setNight, singleCup }) {
+function CupRow({ cup, index, count, setNight, singleCup, templates }) {
   const [editing, setEditing] = useState(!cup.locked && cup.maps.length > 0 && cup.maps.some((m) => !m));
   const results = Object.keys(cup.cells).length;
 
@@ -57,6 +57,15 @@ function CupRow({ cup, index, count, setNight, singleCup }) {
         <CupIcon cup={cup.name} size={38} />
         <TextField size="small" label={`Cup ${index + 1}`} value={cup.name} inputProps={{ maxLength: 40 }} sx={{ flex: 1, minWidth: 0 }}
           onChange={(e) => patch({ name: e.target.value })} />
+        {!cup.locked && (
+          <TextField select size="small" label="Use a game cup" value="" sx={{ width: { xs: 120, sm: 190 } }}
+            onChange={(e) => { const t = BUILTIN_CUPS.concat(templates).find((x) => x.id === e.target.value); if (t) { patch({ name: t.name, maps: t.maps.slice() }); setEditing(false); } }}>
+            <ListSubheader>Game cups</ListSubheader>
+            {BUILTIN_CUPS.map((t) => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
+            {templates.length > 0 && <ListSubheader>Your templates</ListSubheader>}
+            {templates.map((t) => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
+          </TextField>
+        )}
         {!singleCup && (
           <Stack direction="row">
             <IconButton size="small" aria-label="Move up" disabled={index === 0} onClick={() => move(-1)}><ArrowUpwardIcon fontSize="small" /></IconButton>
@@ -119,7 +128,7 @@ export default function CupsPicker({ night, setNight, templates, singleCup }) {
       )}
       <Stack spacing={1.5}>
         {night.cups.map((c, i) => (
-          <CupRow key={c.key} cup={c} index={i} count={night.cups.length} setNight={setNight} singleCup={singleCup} />
+          <CupRow key={c.key} cup={c} index={i} count={night.cups.length} setNight={setNight} singleCup={singleCup} templates={templates} />
         ))}
       </Stack>
       {!singleCup && (

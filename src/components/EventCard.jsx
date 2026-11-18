@@ -11,6 +11,10 @@ import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
+import { buildIcs, EVENT_HOURS } from "../../supabase/functions/_shared/ics.js";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { cupLabel, formatEventWhen, isGoing, isHappening, isOpen, isOver } from "../lib/events";
 import { useAuth } from "../context/AuthContext";
@@ -19,6 +23,42 @@ import { useFlash } from "../context/FlashContext";
 import { colors, fontDisplay } from "../theme";
 import CupIcon from "./CupIcon";
 import EventDialog from "./EventDialog";
+
+const eventUrl = (id) => `${window.location.origin}${import.meta.env.BASE_URL}#/events/${id}`;
+const gStamp = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+// Add to calendar: a Google Calendar link, or an .ics file (Apple Calendar, Outlook). The file has the
+// same UID as the invite emails, so an update moves the same entry.
+function CalendarButton({ event, leagueName }) {
+  const [at, setAt] = useState(null);
+  const title = `${leagueName || "Cup night"}: ${cupLabel(event.cups)}`;
+  const start = new Date(event.startsAt);
+  const end = new Date(start.getTime() + EVENT_HOURS * 3600 * 1000);
+
+  function google() {
+    const qs = new URLSearchParams({ action: "TEMPLATE", text: title, dates: `${gStamp(start)}/${gStamp(end)}`, details: `${event.notes ? event.notes + "\n\n" : ""}${eventUrl(event.id)}` });
+    window.open(`https://calendar.google.com/calendar/render?${qs}`, "_blank", "noopener");
+    setAt(null);
+  }
+  function ics() {
+    const text = buildIcs({ id: event.id, starts_at: event.startsAt, cups: event.cups, notes: event.notes, sequence: event.sequence }, { method: "PUBLISH", url: eventUrl(event.id) });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/calendar;charset=utf-8" }));
+    a.download = `cup-night-${start.toISOString().slice(0, 10)}.ics`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    setAt(null);
+  }
+  return (
+    <>
+      <Button size="small" startIcon={<EventAvailableOutlinedIcon />} onClick={(e) => setAt(e.currentTarget)} aria-haspopup="menu">Add to calendar</Button>
+      <Menu anchorEl={at} open={!!at} onClose={() => setAt(null)}>
+        <MenuItem onClick={google}>Google Calendar</MenuItem>
+        <MenuItem onClick={ics}>Apple Calendar, Outlook (.ics)</MenuItem>
+      </Menu>
+    </>
+  );
+}
 
 function JoinButton({ event }) {
   const { user, ready } = useAuth();
@@ -113,6 +153,7 @@ function AdminActions({ event }) {
 // One cup night. `prominent` is the homepage "Next Cup Night" version.
 export default function EventCard({ event, prominent = false, highlight = false }) {
   const { user, isAdmin } = useAuth();
+  const { state } = useLeagueData();
   const navigate = useNavigate();
   const when = formatEventWhen(event.startsAt);
   const cancelled = event.status === "cancelled";
@@ -152,7 +193,12 @@ export default function EventCard({ event, prominent = false, highlight = false 
           ))}
         </Stack>
       ) : (
-        <Chip label={cupLabel(event.cups)} variant="outlined" sx={{ mb: 2, borderStyle: "dashed", color: colors.muted }} />
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2, flexWrap: "wrap" }} useFlexGap>
+          <Chip label={cupLabel(event.cups)} variant="outlined" sx={{ borderStyle: "dashed", color: colors.muted }} />
+          <Typography variant="body2" sx={{ color: colors.muted }}>
+            An admin picks the cups before the night{event.status === "scheduled" ? "; everyone who's in gets an update" : ""}.
+          </Typography>
+        </Stack>
       )}
 
       {event.notes && <Typography variant="body2" sx={{ mb: 2, whiteSpace: "pre-line" }}>{event.notes}</Typography>}
@@ -164,9 +210,9 @@ export default function EventCard({ event, prominent = false, highlight = false 
           </Typography>
           {n > 0 && (
             <Stack direction="row" spacing={0.75} sx={{ flexWrap: "wrap" }} useFlexGap>
-              {event.going.map((g) => (
+              {event.going.map((g, i) => (
                 <Chip
-                  key={g.userId}
+                  key={g.userId || `${g.name}-${i}`}
                   size="small"
                   label={g.name}
                   avatar={<Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: g.color || colors.muted, ml: 0.75 }} />}
@@ -179,7 +225,8 @@ export default function EventCard({ event, prominent = false, highlight = false 
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: "flex-start", sm: "center" }}>
         <JoinButton event={event} />
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap" }}>
+          {open && <CalendarButton event={event} leagueName={state && state.league.name} />}
           {prominent && <Button size="small" onClick={() => navigate("/events")}>All cup nights</Button>}
           {isAdmin && open && <AdminActions event={event} />}
           {user && !cancelled && (live || isOver(event)) && (

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
@@ -10,12 +10,6 @@ import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import LinearProgress from "@mui/material/LinearProgress";
 import Link from "@mui/material/Link";
-import Table from "@mui/material/Table";
-import TableHead from "@mui/material/TableHead";
-import TableBody from "@mui/material/TableBody";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { useFlash } from "../context/FlashContext";
@@ -28,77 +22,54 @@ import { PageTitle } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
+import CupPhoto from "../components/CupPhoto";
+import { deleteCupPhoto } from "../lib/cupPhotos";
 
-const photoCache = new Map(); // cupId -> data URL, or "" when the cup has none
-
-function CupPhoto({ cupId, cupName }) {
-  const [src, setSrc] = useState(photoCache.get(cupId));
-  useEffect(() => {
-    if (photoCache.has(cupId)) return;
-    let live = true;
-    q(sb.from("photos").select("data").eq("cup_id", cupId).maybeSingle())
-      .then((r) => (r && r.data ? "data:image/jpeg;base64," + r.data : ""))
-      .catch(() => "")
-      .then((url) => { photoCache.set(cupId, url); if (live) setSrc(url); });
-    return () => { live = false; };
-  }, [cupId]);
-  if (!src) return null;
-  return (
-    <Box component="a" href={src} target="_blank" rel="noopener" sx={{ display: "block", alignSelf: "start" }}>
-      <Box component="img" src={src} alt={`Results screen photo for ${cupName}`}
-        sx={{ width: "100%", maxWidth: { xs: "100%", md: 260 }, borderRadius: 2, border: `1px solid ${colors.line}`, display: "block" }} />
-    </Box>
-  );
-}
-
+// Race-by-race places. On a phone each race is just the place (details in the tooltip), so all four
+// races and the total fit without scrolling; wider screens add the character and points.
 function RaceGrid({ cup, info, races, playerById }) {
   const rs = races.filter((x) => x.cupId === cup.id);
+  const cols = { xs: "minmax(0,1fr) repeat(4, 34px) 38px", sm: "minmax(0,1fr) repeat(4, minmax(64px, 96px)) 48px" };
+  const head = { fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.06em", color: colors.muted, textAlign: "center" };
   return (
-    <TableContainer component={Paper} variant="outlined" sx={{ mt: 2, bgcolor: colors.bg2 }}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Racer</TableCell>
-            {[1, 2, 3, 4].map((n) => <TableCell key={n} align="center" title={cup.maps[n - 1] || ""}>R{n}</TableCell>)}
-            <TableCell align="right">Total</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {info.res.filter((r) => r.p).map((r) => {
-            const p = playerById(r.p);
-            return (
-              <TableRow key={r.rid}>
-                <TableCell>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <CharacterFace name={r.character} ring={p && p.color} size={24} />
-                    <span>{p ? p.name : "?"}</span>
-                  </Stack>
-                </TableCell>
-                {[1, 2, 3, 4].map((n) => {
-                  const x = rs.find((y) => y.playerId === r.p && y.race === n);
-                  return (
-                    <TableCell key={n} align="center" title={x && x.character ? x.character : ""}>
-                      {x ? (
-                        <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="center">
-                          {x.character && <CharacterFace name={x.character} size={20} />}
-                          <PlaceBadge n={x.position} />
-                          <Typography component="span" variant="caption" sx={{ color: colors.muted }}>{x.points}</Typography>
-                        </Stack>
-                      ) : <Typography component="span" sx={{ color: colors.muted }}>–</Typography>}
-                    </TableCell>
-                  );
-                })}
-                <TableCell align="right" sx={{ fontFamily: fontData, fontWeight: 700 }}>{r.pts}</TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Paper variant="outlined" role="table" aria-label={`${cup.cup}, race by race`} sx={{ mt: 2, bgcolor: colors.bg2, px: { xs: 1, sm: 1.5 }, py: 1 }}>
+      <Box role="row" sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 0.5, alignItems: "center", pb: 0.75, borderBottom: `1px solid ${colors.line}` }}>
+        <Box role="columnheader" sx={{ ...head, textAlign: "left" }}>RACER</Box>
+        {[1, 2, 3, 4].map((n) => <Box key={n} role="columnheader" title={cup.maps[n - 1] || ""} sx={head}>R{n}</Box>)}
+        <Box role="columnheader" sx={{ ...head, textAlign: "right" }}>TOTAL</Box>
+      </Box>
+      {info.res.filter((r) => r.p).map((r) => {
+        const p = playerById(r.p);
+        return (
+          <Box key={r.rid} role="row" sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 0.5, alignItems: "center", py: 0.75, borderBottom: `1px solid ${colors.line}`, "&:last-of-type": { borderBottom: 0 } }}>
+            <Stack role="rowheader" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+              <CharacterFace name={r.character} ring={p && p.color} size={22} />
+              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{p ? p.name : "?"}</Typography>
+            </Stack>
+            {[1, 2, 3, 4].map((n) => {
+              const x = rs.find((y) => y.playerId === r.p && y.race === n);
+              const tip = x ? [cup.maps[n - 1], `${x.points} pts`, x.character].filter(Boolean).join(" · ") : "";
+              return (
+                <Stack key={n} role="cell" direction="row" spacing={0.5} alignItems="center" justifyContent="center" title={tip} aria-label={x ? `Race ${n}: ${x.position}, ${tip}` : `Race ${n}: no result`}>
+                  {x ? (
+                    <>
+                      {x.character && <Box sx={{ display: { xs: "none", sm: "block" } }}><CharacterFace name={x.character} size={20} /></Box>}
+                      <PlaceBadge n={x.position} />
+                      <Typography component="span" variant="caption" sx={{ color: colors.muted, display: { xs: "none", sm: "inline" } }}>{x.points}</Typography>
+                    </>
+                  ) : <Typography component="span" sx={{ color: colors.muted }}>–</Typography>}
+                </Stack>
+              );
+            })}
+            <Typography role="cell" sx={{ fontFamily: fontData, fontWeight: 700, textAlign: "right" }}>{r.pts}</Typography>
+          </Box>
+        );
+      })}
+    </Paper>
   );
 }
 
-function CupCard({ cup, info, st, demo, isAdmin }) {
+function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
   const navigate = useNavigate();
   const flash = useFlash();
   const { reload } = useLeagueData();
@@ -111,6 +82,7 @@ function CupCard({ cup, info, st, demo, isAdmin }) {
     setBusy(true); setError("");
     try {
       await q(sb.from("cups").delete().eq("id", cup.id));
+      await deleteCupPhoto(cup.photoPath).catch(() => {});
       flash("Cup deleted");
       reload();
     } catch (e) {
@@ -133,7 +105,7 @@ function CupCard({ cup, info, st, demo, isAdmin }) {
   }
 
   return (
-    <Paper sx={{ p: 2.5, display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0,1fr)", md: cup.hasPhoto && !demo ? "minmax(0,1fr) 260px" : "minmax(0,1fr)" } }}>
+    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0,1fr)", md: cup.hasPhoto && !demo ? "minmax(0,1fr) 260px" : "minmax(0,1fr)" } }}>
       <Box sx={{ minWidth: 0 }}>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: "wrap" }} useFlexGap>
           <CupIcon cup={cup.cup} />
@@ -205,6 +177,9 @@ function CupCard({ cup, info, st, demo, isAdmin }) {
             ) : (
               <>
                 <Button size="small" variant="outlined" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Edit results</Button>
+                {!(cup.maps && cup.maps.length) && (
+                  <Button size="small" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Set cup &amp; tracks</Button>
+                )}
                 {info.hasRaces && <Button size="small" disabled={busy} onClick={reopen}>Reopen on Race night</Button>}
                 <Button size="small" color="error" onClick={() => setConfirmDel(true)}>Delete</Button>
               </>
@@ -213,7 +188,7 @@ function CupCard({ cup, info, st, demo, isAdmin }) {
         )}
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </Box>
-      {cup.hasPhoto && !demo && <CupPhoto cupId={cup.id} cupName={cup.cup} />}
+      {cup.hasPhoto && !demo && <CupPhoto cup={cup} signedIn={signedIn} />}
     </Paper>
   );
 }
@@ -276,7 +251,7 @@ export default function CupsPage() {
                     <Typography component="span" variant="body2" sx={{ color: colors.muted }}>{n} cup{n === 1 ? "" : "s"}</Typography>
                   </Typography>
                 )}
-                <CupCard cup={c} info={m.cupInfo.get(c.id)} st={st} demo={demo} isAdmin={isAdmin} />
+                <CupCard cup={c} info={m.cupInfo.get(c.id)} st={st} demo={demo} isAdmin={isAdmin} signedIn={!!user} />
               </Fragment>
             );
           })}

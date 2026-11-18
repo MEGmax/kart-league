@@ -66,3 +66,30 @@ export function fromLocalInput(value) {
   const d = new Date(value);
   return isNaN(d) ? null : d.toISOString();
 }
+
+// The calendar date of a moment in the league's time zone (or this browser's), as YYYY-MM-DD.
+export function localDate(iso, timeZone) {
+  const opts = { year: "numeric", month: "2-digit", day: "2-digit" };
+  try {
+    return new Intl.DateTimeFormat("en-CA", timeZone ? { ...opts, timeZone } : opts).format(new Date(iso));
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", opts).format(new Date(iso));
+  }
+}
+
+// Past cup nights as they actually happened: each finished cup belongs to the night on its date, and a
+// date with cups but no scheduled night still shows up. Newest first.
+//   cups: finished cups in race order ([{ id, date, ... }]); returns [{ date, event|null, cups }]
+export function pastNights(pastEvents, cups, timeZone) {
+  const byDate = new Map();
+  pastEvents.filter((e) => e.status !== "cancelled").forEach((e) => {
+    const date = localDate(e.startsAt, timeZone);
+    if (!byDate.has(date)) byDate.set(date, { date, event: e, cups: [] });
+  });
+  cups.forEach((c) => {
+    if (!c.date) return;
+    if (!byDate.has(c.date)) byDate.set(c.date, { date: c.date, event: null, cups: [] });
+    byDate.get(c.date).cups.push(c);
+  });
+  return Array.from(byDate.values()).sort((a, b) => b.date.localeCompare(a.date));
+}

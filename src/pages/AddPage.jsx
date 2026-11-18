@@ -26,6 +26,7 @@ import {
   nightFromSubmissions, positionClashes, uid, validateNight,
 } from "../lib/night";
 import { BacklogError, nightFromBacklog } from "../lib/backlog";
+import { saveCupPhoto } from "../lib/cupPhotos";
 import { colors } from "../theme";
 import { Loading, PageTitle } from "../components/PageBits";
 import LineupEditor from "../components/night/LineupEditor";
@@ -251,13 +252,13 @@ export default function AddPage() {
       }
       const payload = buildSave(night, state);
       await q(sb.rpc("save_cup_night", { p_cups: payload.cups, p_players: payload.players }));
-      // Photos go up one at a time after the results are safely saved.
+      // Photos go up one at a time after the results are safely saved, re-encoded without EXIF (GPS).
       const failed = [];
       for (let i = 0; i < night.cups.length; i++) {
         const c = night.cups[i];
         if (!c.photo || !c.photoChanged) continue;
         try {
-          await q(sb.from("photos").upsert({ cup_id: payload.cups[i].id, data: c.photo }));
+          await saveCupPhoto(payload.cups[i].id, c.photo);
         } catch {
           failed.push(c.name);
           await q(sb.from("cups").update({ has_photo: c.hasPhoto }).eq("id", payload.cups[i].id)).catch(() => {});

@@ -56,6 +56,18 @@ Admins save straight to the standings (`save_cup_night`, one transaction for eve
 submission per cup sharing a batch id, reviewed together from the Admin page in the same editor. An unsaved night is kept in the
 browser as a draft (without photos).
 
+### Results photos and privacy
+
+Results photos show the inside of someone's home, so only signed-in members can see them. They're kept in a private Supabase
+Storage bucket (`cup-photos`), with a small thumbnail that the Cups page loads only when a cup scrolls into view; tap it for the
+full photo. Every photo is re-encoded in the browser before it's uploaded, which removes its metadata (GPS location, camera).
+
+Photos saved before this change sit in the old `photos` table with their metadata. After running the latest `supabase/schema.sql`,
+an admin opens **Admin › Results photos** and presses **Move**: each one is cleaned, uploaded to Storage and the old copy deleted.
+
+This repo is public, so photos committed under `data/` must not carry a location: run `npm run strip-gps -- data/cups_W3_results`
+before committing (the backlog script warns when it finds one). It removes only the GPS block, keeping the image and capture time.
+
 ### A folder of photos (backlog)
 
 If someone photographed every race screen of a night, let Gemini read the lot instead of typing it in:
@@ -161,8 +173,8 @@ Sign-in and data use [Supabase](https://supabase.com) (free plan): email and pas
 
 | Role | Can |
 |---|---|
-| Visitor (signed out) | View standings, cups, rules |
-| Member (anyone who signs up) | Edit their profile; say they're in for cup nights; opt in to cup night emails; request unclaimed points; submit a night's cups with photos for review; withdraw their pending requests and submissions; delete their account |
+| Visitor (signed out) | View standings, cups, cup nights, rules. Not results photos, account ids or emails |
+| Member (anyone who signs up) | See results photos; edit their profile; say they're in for cup nights; opt in to cup night emails; request unclaimed points; submit a night's cups with photos for review; withdraw their pending requests and submissions; delete their account |
 | Admin | Schedule, edit and cancel cup nights; add, edit and delete cups; approve or decline point requests and submissions; add players ahead of sign-up and link them to accounts; change league settings; promote or demote members |
 | Owner | Everything an admin can do; can't be demoted. Claimed once from the account page |
 
@@ -191,6 +203,9 @@ Free Supabase projects pause after 7 days without activity. The `Keep database a
 | `src/` | The React app (components, pages, context providers, standings math) |
 | `src/lib/night.js`, `src/components/night/` | Recording a cup night: validation, photo matching by character, save payloads; the Add page's editors |
 | `src/lib/gemini.js`, `src/lib/readPhoto.js` | Reads a results photo with Gemini (plain `fetch`; on the site, the visitor's own key kept in their browser) |
+| `src/lib/cupPhotos.js`, `src/components/CupPhoto.jsx` | Results photos: cleaned and uploaded to Storage, shown to members as lazy thumbnails |
+| `src/components/RacerDrawer.jsx` | A racer's season (`#/standings/<name>`): cups, trend, tracks, head-to-head, characters |
+| `scripts/strip-gps.mjs` | `npm run strip-gps -- <folder>`: removes GPS from photos before they're committed |
 | `src/lib/backlog.js`, `scripts/read-backlog.mjs` | `npm run backlog`: reads a folder of a night's photos with Gemini and groups them into cups for the Add page's import |
 | `index.html`, `vite.config.js` | Vite entry point and build config (`base: "/kart-league/"` for GitHub Pages) |
 | `src/lib/supabaseClient.js` | Supabase project URL and publishable key (not secret) |

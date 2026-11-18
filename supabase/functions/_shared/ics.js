@@ -55,9 +55,11 @@ function mailto(addr) {
 }
 
 // event: { id, starts_at, cups, notes, sequence }
-// opts: { method: "REQUEST" | "CANCEL", url, organizer: { name, email }, attendee: { name, email }, now }
+// opts: { method: "REQUEST" | "CANCEL" | "PUBLISH", url, organizer: { name, email }, attendee: { name, email }, now }
+// PUBLISH is the site's "Add to calendar" file: an entry, not an invite, with the same UID as the
+// emails so a later update moves the same entry.
 export function buildIcs(event, opts) {
-  const method = opts.method === "CANCEL" ? "CANCEL" : "REQUEST";
+  const method = opts.method === "CANCEL" ? "CANCEL" : opts.method === "PUBLISH" ? "PUBLISH" : "REQUEST";
   const start = new Date(event.starts_at);
   const end = new Date(start.getTime() + EVENT_HOURS * 3600 * 1000);
   const summary = `Cup night: ${cupsLabel(event.cups)}`;

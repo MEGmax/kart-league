@@ -3,7 +3,7 @@
 Read with gemini-4-hydrogen. 5 cups from 23 results photos, raced 2026-11-15, week 2.
 Racers are told apart by character (and by highlight color only if two humans share a character).
 
-## Cup 1 · 8:26 pm · 5 photos incl. the end-of-cup screen · race by race
+## Unknown Cup · 8:26 pm · 5 photos incl. the end-of-cup screen · race by race
 
 | Character | Player | R1 | R2 | R3 | R4 | Total |
 |---|---|---|---|---|---|---|
@@ -14,7 +14,7 @@ Racers are told apart by character (and by highlight color only if two humans sh
 
 Photos, in order: `E349CFE3`, `60162291`, `6FF203D0`, `B562A654`, `FAE78EF0` (end of cup)
 
-## Cup 2 · 8:41 pm · 5 photos incl. the end-of-cup screen · race by race
+## Unknown Cup · 8:41 pm · 5 photos incl. the end-of-cup screen · race by race
 
 | Character | Player | R1 | R2 | R3 | R4 | Total |
 |---|---|---|---|---|---|---|
@@ -25,7 +25,7 @@ Photos, in order: `E349CFE3`, `60162291`, `6FF203D0`, `B562A654`, `FAE78EF0` (en
 
 Photos, in order: `19158603`, `D859EEA9`, `5CE65451`, `D507D50F`, `02D6AB70` (end of cup)
 
-## Cup 3 · 8:58 pm · 4 photos · race by race
+## Unknown Cup · 8:58 pm · 4 photos · race by race
 
 | Character | Player | R1 | R2 | R3 | R4 | Total |
 |---|---|---|---|---|---|---|
@@ -36,7 +36,7 @@ Photos, in order: `19158603`, `D859EEA9`, `5CE65451`, `D507D50F`, `02D6AB70` (en
 
 Photos, in order: `20D98724`, `C6146B73`, `479B1CB8`, `C7579598`
 
-## Cup 4 · 9:20 pm · 4 photos · race by race
+## Unknown Cup · 9:20 pm · 4 photos · race by race
 
 | Character | Player | R1 | R2 | R3 | R4 | Total |
 |---|---|---|---|---|---|---|
@@ -47,7 +47,7 @@ Photos, in order: `20D98724`, `C6146B73`, `479B1CB8`, `C7579598`
 
 Photos, in order: `57B8568E`, `0EC0D06F`, `B9D42D84`, `C61C0E15`
 
-## Cup 5 · 9:47 pm · 5 photos incl. the end-of-cup screen · race by race
+## Unknown Cup · 9:47 pm · 5 photos incl. the end-of-cup screen · race by race
 
 | Character | Player | R1 | R2 | R3 | R4 | Total |
 |---|---|---|---|---|---|---|
@@ -64,7 +64,6 @@ Photos, in order: `4F714CAD`, `4098A1EF`, `49B13CE0`, `D511EF20`, `FCA26F0D` (en
 
 ## Not used
 
-- `0E97F840-C185-4786-ACD9-B4C41AF8482C_1_105_c.jpeg`: no camera info, so probably a screenshot rather than a photo of the TV: not sent to Gemini
 - `C39FE045-B5EF-4982-B00E-8E6C03EA3DCA_1_105_c.jpeg`: not a results screen
 - `2E028FFE-782D-44CB-AB6B-AF86E9FFB29D_1_105_c.jpeg`: not a results screen
 - `D4F494A7-D4F9-480B-96FA-B75AB4C3E636_1_105_c.jpeg`: not a results screen

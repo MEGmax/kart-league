@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "email:preview": "node scripts/email-preview.mjs",
-    "backlog": "vite-node scripts/read-backlog.mjs --"
+    "backlog": "vite-node scripts/read-backlog.mjs --",
+    "strip-gps": "node scripts/strip-gps.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",

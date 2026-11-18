@@ -1,31 +1,38 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-import Grid from "@mui/material/Grid";
 import Stack from "@mui/material/Stack";
 import LinearProgress from "@mui/material/LinearProgress";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
-import { compute } from "../lib/standings";
+import { compute, playerFromSlug, playerSlug } from "../lib/standings";
 import { DEMO } from "../lib/demo";
-import { ord, pctTxt, hashHue } from "../lib/constants";
+import { charColor, ord, pctTxt } from "../lib/constants";
+import { nextEvent } from "../lib/events";
 import { colors, fontDisplay } from "../theme";
 import Hero from "../components/Hero";
 import CharacterFace from "../components/CharacterFace";
 import CharacterChip from "../components/CharacterChip";
 import NextCupNight from "../components/NextCupNight";
-import { PageTitle, SectionTitle } from "../components/PageBits";
+import RacerDrawer from "../components/RacerDrawer";
+import { Loading, PageTitle, SectionTitle, plural } from "../components/PageBits";
 
 const MEDAL = { 1: colors.gold, 2: colors.silver, 3: colors.bronze };
 
-function plural(n, word) {
-  return `${n} ${word}${n === 1 ? "" : "s"}`;
+// Rows and podium spots are links (to #/standings/<name>), so they work from the keyboard and can be shared.
+const linkReset = {
+  color: "inherit", textDecoration: "none", borderRadius: 2, outline: "none",
+  "&:focus-visible": { boxShadow: `0 0 0 2px ${colors.accent}` },
+};
+
+function names(list) {
+  return list.length <= 2 ? list.join(" & ") : `${list.slice(0, -1).join(", ")} & ${list[list.length - 1]}`;
 }
 
 // Chip + bar + label; on phones the bar drops onto its own line so nothing overflows.
@@ -39,11 +46,7 @@ function BarRow({ name, value, color, label }) {
       }}
     >
       <Box sx={{ gridArea: "chip", minWidth: 0 }}><CharacterChip name={name} /></Box>
-      <LinearProgress
-        variant="determinate"
-        value={value}
-        sx={{ gridArea: "bar", height: 8, borderRadius: 4, bgcolor: colors.panel2, "& .MuiLinearProgress-bar": { bgcolor: color } }}
-      />
+      <LinearProgress variant="determinate" value={value} sx={{ gridArea: "bar", height: 8, "& .MuiLinearProgress-bar": { bgcolor: color } }} />
       <Typography variant="body2" sx={{ gridArea: "text", color: colors.muted, whiteSpace: "nowrap", textAlign: "right" }}>{label}</Typography>
     </Box>
   );
@@ -59,34 +62,38 @@ function StatTile({ label, value, sub }) {
   );
 }
 
-function Podium({ ranked, onSelect }) {
+// 2nd, 1st, 3rd in one row at every width (smaller on phones).
+function Podium({ ranked, hrefOf }) {
   const top = ranked.slice(0, 3);
   if (top.length < 2) return null;
   const order = top.length === 3 ? [top[1], top[0], top[2]] : [top[1], top[0]];
-  const heights = { 1: 118, 2: 88, 3: 66 };
+  const heights = { 1: { xs: 88, sm: 118 }, 2: { xs: 66, sm: 88 }, 3: { xs: 50, sm: 66 } };
   return (
-    <Stack direction="row" spacing={2} useFlexGap justifyContent="center" alignItems="flex-end" sx={{ mb: 3, flexWrap: "wrap" }}>
+    <Stack direction="row" spacing={{ xs: 1, sm: 2 }} justifyContent="center" alignItems="flex-end" sx={{ mb: 3 }} aria-label="Top three">
       {order.map((s) => (
         <Box
-          key={s.player.id}
-          onClick={() => onSelect(s.player.id)}
-          sx={{ cursor: "pointer", textAlign: "center", width: 140 }}
+          key={s.player.id} component={RouterLink} to={hrefOf(s.player)}
+          aria-label={`${s.rank}${ord(s.rank)}: ${s.player.name}, ${pctTxt(s.pct)}. Open their season`}
+          sx={{ ...linkReset, textAlign: "center", width: { xs: "31%", sm: 140 }, maxWidth: 140, minWidth: 0 }}
         >
-          <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={56} />
-          <Typography sx={{ fontWeight: 700, mt: 0.5 }} noWrap>{s.player.name}</Typography>
-          {s.main && <Typography variant="caption" sx={{ color: colors.muted }}>{s.main.name}</Typography>}
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
+            <Box sx={{ display: { xs: "block", sm: "none" } }}><CharacterFace name={s.main && s.main.name} ring={s.player.color} size={44} /></Box>
+            <Box sx={{ display: { xs: "none", sm: "block" } }}><CharacterFace name={s.main && s.main.name} ring={s.player.color} size={56} /></Box>
+          </Box>
+          <Typography sx={{ fontWeight: 700, mt: 0.5, fontSize: { xs: "0.85rem", sm: "1rem" } }} noWrap>{s.player.name}</Typography>
+          {s.main && <Typography variant="caption" noWrap component="div" sx={{ color: colors.muted }}>{s.main.name}</Typography>}
           <Box
             sx={{
-              mt: 1, height: heights[s.rank] || 60, borderRadius: "10px 10px 0 0",
+              mt: 1, height: heights[s.rank] || { xs: 44, sm: 60 }, borderRadius: "10px 10px 0 0",
               background: `linear-gradient(180deg, ${MEDAL[s.rank] || colors.line}55, ${colors.panel} 85%)`,
               border: `1px solid ${colors.line}`, borderTop: `3px solid ${MEDAL[s.rank] || colors.line}`,
               display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
             }}
           >
-            <Typography sx={{ fontFamily: fontDisplay, fontSize: "1.3rem", color: MEDAL[s.rank] || colors.ink, transform: "skewX(-7deg)" }}>
+            <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.05rem", sm: "1.3rem" }, color: MEDAL[s.rank] || colors.ink, transform: "skewX(-7deg)" }}>
               {s.rank}<sup style={{ fontSize: "0.5em" }}>{ord(s.rank)}</sup>
             </Typography>
-            <Typography variant="body2" sx={{ color: colors.muted }}>{pctTxt(s.pct)}</Typography>
+            <Typography variant="body2" sx={{ color: colors.muted, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{pctTxt(s.pct)}</Typography>
           </Box>
         </Box>
       ))}
@@ -99,6 +106,7 @@ function RankBadge({ rank }) {
   const medal = MEDAL[rank];
   return (
     <Box
+      aria-hidden
       sx={{
         width: { xs: 30, sm: 38 }, height: { xs: 30, sm: 38 }, display: "grid", placeItems: "center",
         borderRadius: "8px", transform: "skewX(-8deg)",
@@ -111,17 +119,17 @@ function RankBadge({ rank }) {
   );
 }
 
-function BoardRow({ s, rank, selected, onSelect }) {
+function BoardRow({ s, rank, href }) {
   const p = s.player;
+  const facts = `${s.pts}/${s.max} pts · ${plural(s.cp, "cup")} · ${plural(s.wins, "cup win")}`;
   return (
     <Box
-      onClick={() => onSelect(p.id)}
+      component={RouterLink} to={href}
+      aria-label={`${rank ? `${rank}${ord(rank)}` : "Not yet ranked"}: ${p.name}, ${pctTxt(s.pct)}, ${facts}. Open their season`}
       sx={{
-        display: "grid", alignItems: "center", columnGap: 2, rowGap: 1,
+        ...linkReset, display: "grid", alignItems: "center", columnGap: 2, rowGap: 1,
         gridTemplateColumns: { xs: "32px minmax(0,1fr)", sm: "48px minmax(0,1fr) auto" },
-        p: 1.5, borderRadius: 2, cursor: "pointer", border: `1px solid ${selected ? colors.accent : "transparent"}`,
-        bgcolor: selected ? "rgba(255,210,63,.08)" : "transparent",
-        "&:hover": { bgcolor: colors.panel2 },
+        p: 1.5, "&:hover": { bgcolor: colors.panel2 },
       }}
     >
       <RankBadge rank={rank} />
@@ -129,17 +137,13 @@ function BoardRow({ s, rank, selected, onSelect }) {
         <CharacterFace name={s.main && s.main.name} ring={p.color} size={36} />
         <Box sx={{ minWidth: 0 }}>
           <Typography noWrap sx={{ fontWeight: 700 }}>{p.name}</Typography>
-          {s.main ? (
-            <Typography variant="caption" sx={{ color: colors.muted }}>{s.main.name} ×{s.main.n}</Typography>
-          ) : (
-            <Typography variant="caption" sx={{ color: colors.muted }}>No character yet</Typography>
-          )}
+          <Typography variant="caption" sx={{ color: colors.muted }}>{s.main ? s.main.name : "No character yet"}</Typography>
         </Box>
       </Stack>
-      <Stack sx={{ minWidth: { sm: 160 }, gridColumn: { xs: "2", sm: "auto" }, textAlign: { xs: "left", sm: "right" } }}>
+      <Stack sx={{ minWidth: { sm: 190 }, gridColumn: { xs: "2", sm: "auto" }, textAlign: { xs: "left", sm: "right" } }}>
         <Typography sx={{ fontWeight: 800 }}>{pctTxt(s.pct)}</Typography>
-        <LinearProgress variant="determinate" value={Math.min(100, s.pct * 100)} sx={{ height: 6, borderRadius: 3, my: 0.5 }} />
-        <Typography variant="caption" sx={{ color: colors.muted }}>{s.pts}/{s.max} pts · {plural(s.cp, "cup")} · {plural(s.wins, "win")}</Typography>
+        <LinearProgress variant="determinate" value={Math.min(100, s.pct * 100)} sx={{ height: 6, my: 0.5, "& .MuiLinearProgress-bar": { bgcolor: p.color } }} />
+        <Typography variant="caption" sx={{ color: colors.muted }}>{facts}</Typography>
       </Stack>
     </Box>
   );
@@ -151,7 +155,7 @@ function CharacterChart({ chars }) {
   const most = top[0].picks;
   return (
     <Box>
-      <SectionTitle title="Most picked characters" count="Every league result with a character, unclaimed ones included" />
+      <SectionTitle title="Most picked characters" count="By race: a cup entered from its totals counts as 4 races with that character" />
       <Paper sx={{ p: 2 }}>
         <Stack spacing={1.25}>
           {top.map((c) => (
@@ -159,88 +163,45 @@ function CharacterChart({ chars }) {
               key={c.name}
               name={c.name}
               value={(c.picks / most) * 100}
-              color={`hsl(${hashHue(c.name)} 80% 60%)`}
-              label={`${plural(c.picks, "pick")} · ${pctTxt(c.pts / c.max)} avg · ${plural(c.wins, "win")}`}
+              color={charColor(c.name)}
+              label={`${plural(c.picks, "race")} · ${pctTxt(c.pts / c.max)} avg · ${plural(c.cupWins, "cup win")}`}
             />
           ))}
         </Stack>
       </Paper>
+      <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 1 }}>
+        A cup win counts for the character used most in that cup.
+      </Typography>
     </Box>
   );
 }
 
-function DetailPanel({ s, onClose }) {
-  const p = s.player;
-  return (
-    <Paper sx={{ p: 2.5, mt: 3 }}>
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <CharacterFace name={s.main && s.main.name} ring={p.color} size={48} />
-        <Typography variant="h6" sx={{ fontFamily: "inherit", flex: 1 }}>{p.name}</Typography>
-        <Button size="small" onClick={onClose}>Close</Button>
-      </Stack>
-      <Grid container spacing={2} sx={{ mt: 2 }}>
-        {[
-          ["Pct", pctTxt(s.pct)],
-          ["Total points", s.pts],
-          ["Avg pts / cup", s.avgPtsCup != null ? s.avgPtsCup.toFixed(1) : "–"],
-          ["Avg race finish", s.avgRace != null ? s.avgRace.toFixed(2) : "–"],
-          ["Avg cup finish", s.avg != null ? s.avg.toFixed(2) : "–"],
-          ["Cups", s.cp],
-          ["Wins", s.wins],
-          ["Podiums", s.pods],
-        ].map(([k, v]) => (
-          <Grid key={k} item xs={6} sm={3}>
-            <Typography variant="caption" sx={{ color: colors.muted }}>{k}</Typography>
-            <Typography sx={{ fontWeight: 800 }}>{v}</Typography>
-          </Grid>
-        ))}
-      </Grid>
-      {s.charList.length > 0 && (
-        <>
-          <Divider sx={{ my: 2 }} />
-          <Typography variant="caption" sx={{ color: colors.muted, textTransform: "uppercase" }}>Character usage</Typography>
-          <Stack spacing={1} sx={{ mt: 1 }}>
-            {s.charList.map((c) => (
-              <BarRow
-                key={c.name}
-                name={c.name}
-                value={c.share * 100}
-                color={`hsl(${hashHue(c.name)} 80% 60%)`}
-                label={`${Math.round(c.share * 100)}% · ${c.n}`}
-              />
-            ))}
-          </Stack>
-        </>
-      )}
-    </Paper>
-  );
-}
-
 export default function StandingsPage() {
-  const { state, loadError } = useLeagueData();
+  const { state, events, loadError } = useLeagueData();
   const { isAdmin } = useAuth();
-  const [sel, setSel] = useState(null);
+  const { player: slug } = useParams();
+  const navigate = useNavigate();
 
   const demo = state && state.cups.length === 0;
   const st = demo ? DEMO : state;
   const m = useMemo(() => (st ? compute(st) : null), [st]);
 
-  if (!state) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 8, textAlign: "center" }}>
-        {loadError ? <Alert severity="error">{loadError}</Alert> : <CircularProgress />}
-      </Container>
-    );
-  }
+  if (!state) return <Loading error={loadError} />;
 
-  const mostWins = m.ranked.concat(m.unranked).slice().sort((a, b) => b.wins - a.wins)[0];
-  const topChar = m.chars[0];
   const L = st.league;
-  const selected = sel && m.byId.get(sel);
+  const hrefOf = (p) => `/standings/${encodeURIComponent(playerSlug(st.players, p))}`;
+  const chosen = slug ? playerFromSlug(st.players, slug) : null;
+  const selected = chosen && m.byId.get(chosen.id);
+
+  const everyone = m.ranked.concat(m.unranked);
+  const topWins = everyone.length ? Math.max(...everyone.map((s) => s.wins)) : 0;
+  const winLeaders = everyone.filter((s) => s.wins === topWins).map((s) => s.player.name);
+  const topPicks = m.chars.length ? m.chars[0].picks : 0;
+  const charLeaders = m.chars.filter((c) => c.picks === topPicks);
 
   return (
     <>
-      <Hero league={L} metrics={m} />
+      <Hero league={L} plan={m.plan} next={events ? nextEvent(events) : null} />
       <Container maxWidth="lg" sx={{ pt: 3 }}>
         <Box sx={{ mb: 4 }}><NextCupNight /></Box>
         {demo && (
@@ -248,12 +209,22 @@ export default function StandingsPage() {
             <b>Example standings.</b> These made-up results show how the site works. They disappear when the first real cup is added.
           </Alert>
         )}
-        <Podium ranked={m.ranked} onSelect={setSel} />
+        <Podium ranked={m.ranked} hrefOf={hrefOf} />
         {m.ranked.length > 0 && (
           <Stack direction="row" spacing={2} useFlexGap sx={{ mb: 4, flexWrap: "wrap" }}>
-            <StatTile label="Most cup wins" value={mostWins && mostWins.wins ? mostWins.player.name : "None yet"} sub={mostWins && mostWins.wins ? `${mostWins.wins} win${mostWins.wins === 1 ? "" : "s"}` : ""} />
-            <StatTile label="Most picked character" value={topChar ? topChar.name : "–"} sub={topChar ? `${topChar.picks} pick${topChar.picks === 1 ? "" : "s"} · ${pctTxt(topChar.pts / topChar.max)} avg` : ""} />
-            <StatTile label="Qualifying mark" value={`${m.need} cup${m.need === 1 ? "" : "s"}`} sub={`${L.minParticipation}% of cups played so far`} />
+            <StatTile
+              label="Most cup wins"
+              value={topWins ? names(winLeaders) : "None yet"}
+              sub={topWins ? `${plural(topWins, "cup win")}${winLeaders.length > 1 ? " each · tied" : ""}` : ""}
+            />
+            <StatTile
+              label="Most picked character"
+              value={charLeaders.length ? names(charLeaders.map((c) => c.name)) : "–"}
+              sub={charLeaders.length > 1
+                ? `${plural(topPicks, "race")} each · tied`
+                : charLeaders.length ? `${plural(topPicks, "race")} · ${pctTxt(charLeaders[0].pts / charLeaders[0].max)} avg` : ""}
+            />
+            <StatTile label="Qualifying mark" value={plural(m.need, "cup")} sub={`${L.minParticipation}% of cups played so far`} />
           </Stack>
         )}
 
@@ -264,11 +235,11 @@ export default function StandingsPage() {
             <Typography variant="body2" sx={{ color: colors.muted }}>Players appear here once they have played {m.need} cups.</Typography>
           </Paper>
         ) : (
-          <Paper sx={{ p: 1 }}>
+          <Paper sx={{ p: 1 }} component="nav" aria-label="Standings">
             <Stack divider={<Divider />}>
               {m.ranked.map((s, i) => (
                 <Box key={s.player.id}>
-                  <BoardRow s={s} rank={s.rank} selected={sel === s.player.id} onSelect={(id) => setSel(sel === id ? null : id)} />
+                  <BoardRow s={s} rank={s.rank} href={hrefOf(s.player)} />
                   {i === L.playoffSpots - 1 && m.ranked.length > L.playoffSpots && (
                     <Divider sx={{ "&::before, &::after": { borderTop: `2px dashed ${colors.hot}` } }}>
                       <Typography variant="overline" sx={{ px: 1, color: colors.hot, lineHeight: 1 }}>Playoff line</Typography>
@@ -282,25 +253,22 @@ export default function StandingsPage() {
 
         {m.unranked.length > 0 && (
           <>
-            <SectionTitle title="Not yet qualified" count={`Need ${m.need} cups to be ranked`} />
-            <Paper sx={{ p: 1 }}>
+            <SectionTitle title="Not yet qualified" count={`Need ${plural(m.need, "cup")} to be ranked`} />
+            <Paper sx={{ p: 1 }} component="nav" aria-label="Not yet qualified">
               <Stack divider={<Divider />}>
-                {m.unranked.map((s) => (
-                  <BoardRow key={s.player.id} s={s} rank={null} selected={sel === s.player.id} onSelect={(id) => setSel(sel === id ? null : id)} />
-                ))}
+                {m.unranked.map((s) => <BoardRow key={s.player.id} s={s} rank={null} href={hrefOf(s.player)} />)}
               </Stack>
             </Paper>
           </>
         )}
 
-        {selected && selected.cp ? (
-          <DetailPanel s={selected} onClose={() => setSel(null)} />
-        ) : m.ranked.length > 0 ? (
-          <Typography variant="body2" sx={{ color: colors.muted, mt: 2 }}>Select a racer to see their season and character picks.</Typography>
-        ) : null}
+        {m.ranked.length > 0 && (
+          <Typography variant="body2" sx={{ color: colors.muted, mt: 2 }}>Pick a racer for their season: every cup, tracks, head-to-heads and characters.</Typography>
+        )}
 
         {m.chars.length > 0 && <CharacterChart chars={m.chars} />}
       </Container>
+      <RacerDrawer s={selected && selected.cp ? selected : null} m={m} players={st.players} onClose={() => navigate("/standings")} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 // An in-memory Postgres (PGlite) loaded with supabase/schema.sql and just enough of Supabase around it:
-// auth.users, auth.uid(), the anon/authenticated/service_role roles and the realtime publication.
+// auth.users, auth.uid(), the anon/authenticated/service_role roles, Storage's buckets and objects
+// tables, and the realtime publication.
 // Used by the tests and by `npm run email:preview`. Nothing here touches the live database.
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -27,6 +28,19 @@ const SUPABASE_STUBS = `
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
   $$;
   grant execute on function auth.uid() to anon, authenticated, service_role;
+
+  create schema storage;
+  grant usage on schema storage to anon, authenticated, service_role;
+  create table storage.buckets (
+    id text primary key, name text not null, public boolean default false,
+    file_size_limit bigint, allowed_mime_types text[]
+  );
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets, name text,
+    owner uuid default auth.uid(), unique (bucket_id, name)
+  );
+  alter table storage.objects enable row level security;
+  grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
   create publication supabase_realtime;
 `;
 

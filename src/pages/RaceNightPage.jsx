@@ -27,6 +27,8 @@ import { sb, q, dbErr } from "../lib/supabaseClient";
 import { prepImage, PHOTO_FORMAT_ERROR } from "../lib/photos";
 import { getApiKey, readResultsPhoto, ReadError } from "../lib/readPhoto";
 import { matchPhotoRows } from "../lib/night";
+import { saveCupPhoto } from "../lib/cupPhotos";
+import { cupLabel, formatEventWhen, nextEvent } from "../lib/events";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { colors, fontData } from "../theme";
@@ -264,8 +266,11 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
   async function finalize() {
     setSaving(true); setError("");
     try {
-      await q(sb.rpc("finish_cup", { p_cup: cup.id, p_photo: photo, p_unclaimed: unclaimed }));
-      flash(`${cup.cup} is final. Standings updated.`);
+      await q(sb.rpc("finish_cup", { p_cup: cup.id, p_photo: null, p_unclaimed: unclaimed }));
+      // The photo goes up after the results are final, re-encoded without EXIF (GPS).
+      let photoFailed = false;
+      if (photo) await saveCupPhoto(cup.id, photo).catch(() => { photoFailed = true; });
+      flash(photoFailed ? `${cup.cup} is final, but its photo didn't upload. Add it with Edit results on the Cups page.` : `${cup.cup} is final. Standings updated.`);
       reload();
       navigate("/cups");
     } catch (e) {
@@ -478,7 +483,7 @@ function LiveCup({ cup, state }) {
 }
 
 export default function RaceNightPage() {
-  const { state, loadError } = useLeagueData();
+  const { state, events, loadError } = useLeagueData();
   const { isAdmin } = useAuth();
 
   if (!state) {
@@ -490,6 +495,7 @@ export default function RaceNightPage() {
   }
 
   const live = liveCups(state);
+  const next = events ? nextEvent(events) : null;
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
@@ -499,13 +505,26 @@ export default function RaceNightPage() {
       />
 
       {!live.length ? (
-        <Paper sx={{ p: 4, display: "grid", justifyItems: "center", gap: 1.5, textAlign: "center" }}>
+        <Paper sx={{ p: { xs: 3, sm: 4 }, display: "grid", justifyItems: "center", gap: 1.5, textAlign: "center" }}>
           <CupIcon cup="Other" size={60} />
           <Typography sx={{ fontWeight: 700 }}>No cup is being raced right now.</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>
-            {isAdmin ? "Build the next cup to open results entry." : "When an admin builds the next cup, enter your finishing position here after each race."}
+          <Typography variant="body2" sx={{ color: colors.muted, maxWidth: "52ch" }}>
+            On a cup night an admin starts each cup in the cup builder. It then shows up here, and everyone enters their
+            finishing place after each race.
           </Typography>
-          {isAdmin && <Button component={RouterLink} to="/build" variant="contained">Build a cup</Button>}
+          {next ? (
+            <Typography variant="body2">
+              Next cup night: <b>{formatEventWhen(next.startsAt).date}</b>, {formatEventWhen(next.startsAt).time} · {cupLabel(next.cups)}
+            </Typography>
+          ) : (
+            <Typography variant="body2" sx={{ color: colors.muted }}>No cup night is scheduled yet.</Typography>
+          )}
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", justifyContent: "center" }}>
+            {isAdmin && <Button component={RouterLink} to="/build" variant="contained">Build a cup</Button>}
+            {next
+              ? <Button component={RouterLink} to={`/events/${next.id}`} variant={isAdmin ? "outlined" : "contained"}>See the next cup night</Button>
+              : <Button component={RouterLink} to="/events" variant="outlined">Cup nights</Button>}
+          </Stack>
         </Paper>
       ) : (
         <Stack spacing={3}>

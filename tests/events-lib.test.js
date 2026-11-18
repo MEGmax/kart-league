@@ -45,3 +45,18 @@ describe("events helpers", () => {
     expect(fromLocalInput("")).toBeNull();
   });
 });
+
+describe("past nights", () => {
+  it("put each cup on its night by date in the league's time zone, and keep nights that were never scheduled", async () => {
+    const { pastNights, localDate } = await import("../src/lib/events.js");
+    // 8:30 pm in Toronto on Nov 15 is already Nov 16 in UTC.
+    const ev = mapEvents([{ id: "e15", starts_at: "2026-11-16T01:30:00Z", cups: ["Mushroom Cup"], status: "scheduled" }], []);
+    expect(localDate(ev[0].startsAt, "America/Toronto")).toBe("2026-11-15");
+    const cups = ["2026-11-08", "2026-11-08", "2026-11-15", "2026-11-15", "2026-11-15"].map((date, i) => ({ id: `c${i}`, date }));
+    const nights = pastNights(ev, cups, "America/Toronto");
+    expect(nights.map((n) => [n.date, n.event && n.event.id, n.cups.map((c) => c.id)])).toEqual([
+      ["2026-11-15", "e15", ["c2", "c3", "c4"]],
+      ["2026-11-08", null, ["c0", "c1"]],
+    ]);
+  });
+});

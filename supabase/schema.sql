@@ -297,17 +297,26 @@ alter table public.event_commitments enable row level security;
 alter table public.email_tokens enable row level security;
 alter table public.email_outbox enable row level security;
 
--- Public league data: anyone reads; admins write.
+-- Public league data: anyone reads; admins write. (What signed-out visitors may read is narrowed to
+-- the public columns in "what signed-out visitors can see", near the end.)
 do $$
 declare t text;
 begin
-  foreach t in array array['league', 'players', 'cups', 'photos', 'cup_templates'] loop
+  foreach t in array array['league', 'players', 'cups', 'cup_templates'] loop
     execute format('drop policy if exists "public read" on public.%I', t);
     execute format('drop policy if exists "admins write" on public.%I', t);
     execute format('create policy "public read" on public.%I for select to anon, authenticated using (true)', t);
     execute format('create policy "admins write" on public.%I for all to authenticated using (public.is_admin()) with check (public.is_admin())', t);
   end loop;
 end $$;
+
+-- Results photos still kept in the table (before they're moved to Storage): signed-in members only,
+-- since they show the inside of someone's home. Admins write.
+drop policy if exists "public read" on public.photos;
+drop policy if exists "admins write" on public.photos;
+drop policy if exists "members read" on public.photos;
+create policy "members read" on public.photos for select to authenticated using (true);
+create policy "admins write" on public.photos for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
 -- Profiles: read your own (admins read all); edit only your own profile fields.
 drop policy if exists "read own or admin" on public.profiles;
@@ -357,8 +366,10 @@ revoke insert, update, delete on public.race_results from anon, authenticated;
 drop policy if exists "public read" on public.events;
 create policy "public read" on public.events for select to anon, authenticated using (true);
 revoke insert, update, delete on public.events from anon, authenticated;
+-- Who's in: members only (signed-out visitors see names through event_attendees()).
 drop policy if exists "public read" on public.event_commitments;
-create policy "public read" on public.event_commitments for select to anon, authenticated using (true);
+drop policy if exists "members read" on public.event_commitments;
+create policy "members read" on public.event_commitments for select to authenticated using (true);
 revoke insert, update, delete on public.event_commitments from anon, authenticated;
 
 -- Email tokens and the outbox have no policies: only the functions below and the service role reach them.
@@ -816,9 +827,10 @@ begin
 end $$;
 
 -- Who's in, with display names (profiles are otherwise private to their owner and admins).
+-- Who's in for each cup night. Account ids only go to signed-in members (to show "you're in").
 create or replace function public.event_attendees() returns table (event_id uuid, user_id uuid, display_name text, color text, joined_at timestamptz)
 language sql stable security definer set search_path = public as $$
-  select c.event_id, c.user_id, p.display_name, p.color, c.created_at
+  select c.event_id, case when auth.uid() is null then null else c.user_id end, p.display_name, p.color, c.created_at
   from event_commitments c join profiles p on p.id = c.user_id
   order by c.created_at;
 $$;
@@ -946,6 +958,33 @@ grant execute on function public.event_attendees, public.unsubscribe_email, publ
 revoke execute on function public.queue_event_emails, public.queue_event_reminders, public.claim_emails, public.complete_email
   from public, anon, authenticated;
 grant execute on function public.queue_event_emails, public.queue_event_reminders, public.claim_emails, public.complete_email to service_role;
+
+-- ============ v6: results photos in Storage ============
+-- A cup's photo lives in the private "cup-photos" bucket as cups/<cup id>/<version>.jpg (at most 1600px)
+-- plus <version>-thumb.jpg (600px wide); cups.photo_path holds the full-size path. The site re-encodes
+-- every photo in the browser before uploading, which drops EXIF (GPS, camera). Members read; admins write.
+-- Photos still in public.photos are moved by an admin from Admin › Results photos.
+alter table public.cups add column if not exists photo_path text check (photo_path is null or char_length(photo_path) <= 200);
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('cup-photos', 'cup-photos', false, 2097152, array['image/jpeg'])
+  on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "cup photos: members read" on storage.objects;
+create policy "cup photos: members read" on storage.objects for select to authenticated using (bucket_id = 'cup-photos');
+drop policy if exists "cup photos: admins write" on storage.objects;
+create policy "cup photos: admins write" on storage.objects for all to authenticated
+  using (bucket_id = 'cup-photos' and public.is_admin()) with check (bucket_id = 'cup-photos' and public.is_admin());
+
+-- ============ what signed-out visitors can see ============
+-- Exactly what the public pages show: no account ids, no emails, no RSVPs, no photos, and never a write.
+-- Signed-in members keep full read access to these tables (RLS still applies).
+revoke insert, update, delete, truncate on all tables in schema public from anon;
+revoke select on public.players, public.cups, public.race_results, public.cup_templates, public.events,
+  public.event_commitments, public.photos from anon;
+grant select (id, name, color, aliases, registered_at) on public.players to anon;
+grant select (id, cup, date, week, max, results, notes, has_photo, added_at, status, maps, template_id, photo_path) on public.cups to anon;
+grant select (cup_id, race, player_id, position, points, character, entered_at) on public.race_results to anon;
+grant select (id, name, maps, created_at) on public.cup_templates to anon;
+grant select (id, starts_at, cups, notes, status, sequence, created_at, updated_at) on public.events to anon;
 
 -- ============ live updates ============
 do $$

@@ -4,7 +4,7 @@ import { normalizeRead, readResultsImage, ReadError } from "../src/lib/gemini.js
 import { cellPoints, validateNight } from "../src/lib/night.js";
 import { normalize } from "../src/lib/standings.js";
 import { RACE_POINTS } from "../src/lib/constants.js";
-import { readExif } from "../scripts/lib/exif.js";
+import { hasGps, readExif, stripGps } from "../scripts/lib/exif.js";
 
 const CPUS = ["Mario", "Luigi", "Peach", "Toad", "Wario", "Waluigi", "King Boo", "Dry Bones", "Bowser", "Donkey Kong", "Diddy Kong", "Baby Mario"];
 
@@ -270,6 +270,40 @@ describe("EXIF", () => {
     const len = Buffer.alloc(2); len.writeUInt16BE(app1.length + 2);
     return Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe1]), len, app1, Buffer.from([0xff, 0xda, 0, 2])]);
   }
+
+  // The same, plus a GPS block: latitude ref "N" inline, and latitude (3 rationals) stored out of line.
+  function jpegWithGps() {
+    const t = Buffer.alloc(260);
+    t.write("MM", 0, "latin1"); t.writeUInt16BE(42, 2); t.writeUInt32BE(8, 4);
+    t.writeUInt16BE(3, 8);
+    t.writeUInt16BE(0x010f, 10); t.writeUInt16BE(2, 12); t.writeUInt32BE(6, 14); t.writeUInt32BE(100, 18);
+    t.writeUInt16BE(0x8769, 22); t.writeUInt16BE(4, 24); t.writeUInt32BE(1, 26); t.writeUInt32BE(48, 30);
+    t.writeUInt16BE(0x8825, 34); t.writeUInt16BE(4, 36); t.writeUInt32BE(1, 38); t.writeUInt32BE(70, 42);
+    t.writeUInt16BE(1, 48); t.writeUInt16BE(0x9003, 50); t.writeUInt16BE(2, 52); t.writeUInt32BE(20, 54); t.writeUInt32BE(120, 58);
+    t.writeUInt16BE(2, 70);
+    t.writeUInt16BE(1, 72); t.writeUInt16BE(2, 74); t.writeUInt32BE(2, 76); t.write("N\0", 80, "latin1");
+    t.writeUInt16BE(2, 84); t.writeUInt16BE(5, 86); t.writeUInt32BE(3, 88); t.writeUInt32BE(200, 92);
+    t.write("Apple\0", 100, "latin1"); t.write("2026:11:15 20:26:24\0", 120, "latin1");
+    for (let k = 0; k < 6; k++) t.writeUInt32BE(43 + k, 200 + k * 4);
+    const app1 = Buffer.concat([Buffer.from("Exif\0\0", "latin1"), t]);
+    const len = Buffer.alloc(2); len.writeUInt16BE(app1.length + 2);
+    const xmpBody = Buffer.from("http://ns.adobe.com/xap/1.0/\0<x:xmpmeta>lat</x:xmpmeta>", "latin1");
+    const xlen = Buffer.alloc(2); xlen.writeUInt16BE(xmpBody.length + 2);
+    const image = Buffer.from([0xff, 0xda, 0, 4, 1, 2, 3, 4, 5, 0xff, 0xd9]);
+    return { file: Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe1]), len, app1, Buffer.from([0xff, 0xe1]), xlen, xmpBody, image]), image };
+  }
+
+  it("removes location without touching the image, and keeps when and what camera", () => {
+    const { file, image } = jpegWithGps();
+    expect(hasGps(file)).toBe(true);
+    const clean = stripGps(file);
+    expect(hasGps(clean)).toBe(false);
+    expect(readExif(clean)).toEqual({ make: "Apple", takenAt: "2026-11-15T20:26:24" });
+    expect(clean.subarray(clean.length - image.length).equals(image)).toBe(true);
+    expect(clean.includes(Buffer.from("xmpmeta"))).toBe(false);
+    expect([...clean].join(",")).not.toContain([0, 0, 0, 43, 0, 0, 0, 44].join(","));
+    expect(stripGps(Buffer.from("\x89PNG", "latin1")).toString("latin1")).toBe("\x89PNG");
+  });
 
   it("reads the camera and when the photo was taken, and nothing from other files", () => {
     expect(readExif(jpegWithExif("Apple", "2026:11:15 20:26:24"))).toEqual({ make: "Apple", takenAt: "2026-11-15T20:26:24" });

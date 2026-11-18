@@ -68,9 +68,11 @@ export default function PlayoffsPage() {
   const K = Math.max(2, Number(L.playoffSpots) || 4);
   const seeds = m.ranked.slice(0, K);
   const bubble = m.ranked.slice(K, K + 3);
-  const lastWeek = Number(L.seasonWeeks) || 5;
-  const seasonCups = lastWeek * (Number(L.cupsPerWeek) || 4);
-  const over = m.curWeek > lastWeek || ((m.byWeek[lastWeek] || 0) >= (Number(L.cupsPerWeek) || 4) && m.curWeek >= lastWeek);
+  const plan = m.plan;
+  const lastWeek = plan.seasonWeeks;
+  const over = plan.seasonDone;
+  // With this few qualified players, the top-K line doesn't cut anyone.
+  const everyoneIn = m.ranked.length > 0 && m.ranked.length <= K;
 
   // Bracket rounds. First round from the seeding order; later rounds show byes advancing, others TBD.
   const size = seeds.length >= 2 ? 2 ** Math.ceil(Math.log2(seeds.length)) : 0;
@@ -105,11 +107,17 @@ export default function PlayoffsPage() {
           <Typography sx={{ fontWeight: 800 }}>{over ? "Regular season complete: seeds are locked" : "Regular season in progress"}</Typography>
           {!over && <Chip size="small" label="Projected" variant="outlined" />}
         </Stack>
-        <LinearProgress variant="determinate" value={Math.min(100, (m.total / seasonCups) * 100)}
+        <LinearProgress variant="determinate" value={Math.min(100, (plan.played / plan.total) * 100)}
           sx={{ height: 8, borderRadius: 4, bgcolor: colors.panel2, "& .MuiLinearProgress-bar": { bgcolor: colors.accent } }} />
         <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
-          {m.total} of about {seasonCups} cups played · week {Math.min(m.curWeek, lastWeek)} of {lastWeek} · {m.ranked.length} qualified (played {m.need}+ cups)
+          {plan.played} of {plan.total} cups played · week {plan.current} of {lastWeek} · {m.ranked.length} qualified (played {m.need}+ cups)
         </Typography>
+        {everyoneIn && (
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {m.ranked.length === K ? `All ${K} qualified players` : `All ${m.ranked.length} qualified players`} make the playoffs as things stand:
+            the top-{K} line only cuts anyone once more than {K} players qualify. Seeding still comes from the standings.
+          </Typography>
+        )}
       </Paper>
 
       {seeds.length < 2 ? (
@@ -120,8 +128,12 @@ export default function PlayoffsPage() {
       ) : (
         <>
           <SectionTitle title={over ? "Bracket" : "If the season ended today"} sx={{ mt: 0 }} />
-          <Box sx={{ overflowX: "auto", pb: 1 }}>
-            <Box sx={{ display: "grid", gridAutoFlow: "column", gridAutoColumns: "minmax(240px, 1fr)", gap: 2, alignItems: "center", minWidth: rounds.length * 250 }}>
+          {/* Phones: rounds stack top to bottom. Wider screens: left to right. */}
+          <Box sx={{ overflowX: { md: "auto" }, pb: 1 }}>
+            <Box sx={{
+              display: "grid", gap: 2, alignItems: "center",
+              gridAutoFlow: { xs: "row", md: "column" }, gridAutoColumns: { md: "minmax(240px, 1fr)" }, minWidth: { md: rounds.length * 250 },
+            }}>
               {rounds.map((r, i) => (
                 <Box key={i} sx={{ display: "grid", gap: 2 }}>
                   <Typography variant="overline" sx={{ color: colors.muted }}>{roundName(size / 2 ** (i + 1))}</Typography>
@@ -135,6 +147,9 @@ export default function PlayoffsPage() {
               Seed{size - seeds.length === 1 ? "" : "s"} 1{size - seeds.length > 1 ? `–${size - seeds.length}` : ""} get{size - seeds.length === 1 ? "s" : ""} a bye into the next round.
             </Typography>
           )}
+          <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
+            Each matchup is one cup; the higher score advances. A tied cup goes to a single-race runoff on a track an admin picks.
+          </Typography>
         </>
       )}
 
