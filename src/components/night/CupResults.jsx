@@ -1,5 +1,6 @@
-// One cup's results for every racer: cup totals or each race's finishing position, plus its
-// results photo, which Gemini can read and match to racers by their character for the night.
+// One cup's results for every racer: cup totals or each race's finishing position, the character each
+// used in this cup (their usual one unless changed here), plus its results photo, which Gemini can read
+// and match to racers by that character.
 import { useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -16,8 +17,8 @@ import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
-import { RACE_POINTS, ord } from "../../lib/constants";
-import { cellOf, cellPoints, emptyCell, matchPhotoRows, newRacer, racerName } from "../../lib/night";
+import { CHARACTERS, RACE_POINTS, ord } from "../../lib/constants";
+import { cellCharacter, cellOf, cellPoints, emptyCell, matchPhotoRows, newRacer, racerName } from "../../lib/night";
 import { prepImage, PHOTO_FORMAT_ERROR } from "../../lib/photos";
 import { getApiKey, readResultsPhoto, ReadError } from "../../lib/readPhoto";
 import { colors, fontData } from "../../theme";
@@ -25,6 +26,11 @@ import CupIcon from "../CupIcon";
 import CharacterFace from "../CharacterFace";
 
 const CLASH_BG = "rgba(255,90,100,.18)";
+
+// The racers as they were in one cup: each with the character they used in it.
+function inCup(night, cup) {
+  return night.racers.map((r) => ({ ...r, character: cellCharacter(cellOf(cup, r.key), r) }));
+}
 
 export default function CupResults({ night, cup, index, setNight, players, clashes }) {
   const [read, setRead] = useState({ busy: false, error: "", info: "", byRacer: {}, extra: [] });
@@ -46,7 +52,8 @@ export default function CupResults({ night, cup, index, setNight, players, clash
     setCell(racerKey, { pos });
   }
   function clearCell(racerKey) {
-    setCell(racerKey, { ...emptyCell(), rid: cellOf(cup, racerKey).rid });
+    const cell = cellOf(cup, racerKey);
+    setCell(racerKey, { ...emptyCell(), rid: cell.rid, character: cell.character || "" });
   }
 
   async function onFile(e) {
@@ -72,7 +79,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
     ctl.current = c;
     setRead({ busy: true, error: "", info: "", byRacer: {}, extra: [] });
     try {
-      const lineup = night.racers.map((r) => r.character).filter(Boolean);
+      const lineup = inCup(night, cup).map((r) => r.character).filter(Boolean);
       const out = await readResultsPhoto(b64, { players, lineup, signal: c.signal });
       if (ctl.current !== c) return;
       applyRead(out.rows);
@@ -90,7 +97,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
     const n = latest.current;
     const c0 = n.cups.find((c) => c.key === cup.key);
     if (!c0) return;
-    const { matches, extra } = matchPhotoRows(n.racers, rows, players);
+    const { matches, extra } = matchPhotoRows(inCup(n, c0), rows, players);
     const fills = {}, byRacer = {};
     Object.keys(matches).forEach((rk) => {
       const row = matches[rk];
@@ -222,11 +229,19 @@ export default function CupResults({ night, cup, index, setNight, players, clash
               return (
                 <TableRow key={r.key}>
                   <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 130 }}>
-                      <CharacterFace name={r.character} ring={p && p.color} size={28} />
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 150 }}>
+                      <CharacterFace name={cellCharacter(cell, r)} ring={p && p.color} size={28} />
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{racerName(r, players)}</Typography>
-                        {r.character && <Typography variant="caption" sx={{ color: colors.muted }}>{r.character}</Typography>}
+                        <TextField
+                          select variant="standard" value={cell.character || ""} onChange={(e) => setCell(r.key, { character: e.target.value })}
+                          SelectProps={{ native: true }} InputProps={{ disableUnderline: true }}
+                          inputProps={{ "aria-label": `${racerName(r, players)}'s character in this cup`, title: "Character in this cup" }}
+                          sx={{ "& select": { fontSize: "0.75rem", py: 0, color: cell.character ? colors.accent : colors.muted } }}
+                        >
+                          <option value="">{r.character || "No character"}</option>
+                          {CHARACTERS.filter((ch) => ch !== r.character).map((ch) => <option key={ch} value={ch}>{ch} (this cup)</option>)}
+                        </TextField>
                       </Box>
                     </Stack>
                   </TableCell>

@@ -2,6 +2,9 @@ import { PLAYER_COLORS } from "../theme";
 
 export const COLORS = PLAYER_COLORS;
 
+// A cup whose tracks nobody recorded (random tracks, or a night entered later from its results screens).
+export const UNKNOWN_CUP = "Unknown Cup";
+
 // The NKL logo (public/brand, made from data/nkllogo1.png).
 export const LOGO_SRC = `${import.meta.env.BASE_URL}brand/nkl-logo.png`;
 

@@ -38,11 +38,15 @@ Admins can reopen a finished race-by-race cup on Race night, or fix any finished
 
 ## Recording a whole night afterwards
 
-When you raced specific cups and everyone kept the same character all night, record the night in one go with
+To record a night after the fact, do it in one go with
 **+ Add results** (`#/add`), or **Record results** on a past cup night (which brings in its cups and everyone who was in):
 
 1. **Cups raced, in order**: game cups and your templates come with their 4 tracks; a custom cup takes any 4 tracks (or none).
-2. **Racers and their characters**: each racer once, as a league player, a new player, or unclaimed (a guest), with the one character they used all night.
+   Raced random tracks nobody remembers? Add an **Unknown cup**: its points count, it just has no track stats.
+2. **Racers and their characters**: each racer once, as a league player, a new player, or unclaimed (a guest), with their usual
+   character. If someone switched for a cup, change their character for that cup in the results table; or, if they came in as
+   two racers (say Donkey Kong in cup 1, Mario after), pick the same player for both and they merge into one, each cup keeping
+   the character used in it.
 3. **Results**: per cup, either the cup totals from the results screen or each race's finishing place (track stats fill in). A blank racer sat that cup out.
    Add each cup's results photo; with a Gemini API key saved on the account page, Gemini reads it and fills in the points, matching
    highlighted rows to racers **by character** (then by name). Totals that disagree with the photo are flagged in red; highlighted rows
@@ -59,12 +63,15 @@ If someone photographed every race screen of a night, let Gemini read the lot in
 1. Put the photos in a folder, e.g. `data/cups_W2_results/`, and add `GEMINI_API_KEY=...` to `.env` (git-ignored; get a key at
    [Google AI Studio](https://aistudio.google.com/apikey)).
 2. `npm run backlog -- data/cups_W2_results` (the week comes from a `W2`-style folder name, or pass `--week 2`). Photos are ordered
-   by when they were taken; images without camera info (screenshots) are never sent. Each photo's reading is saved in
-   `gemini-reads.json` and reused, so re-running costs nothing; `--refresh` reads everything again.
-3. It groups the race screens into cups (a new cup starts when everyone's total equals their race points), works out each human's
-   place in every race from the `+N` points, and checks the running totals and the end-of-cup screen. Humans are told apart by their
-   row's highlight color, which stays with their controller even if they change character. `backlog.md` lists the cups and
-   anything to double-check.
+   by when they were taken; images without camera info (screenshots) are never sent. iPhone HEIC photos are converted on a Mac
+   (with the built-in `sips`), and each cup's photo is turned upright. Each photo's reading is saved in `gemini-reads.json` and
+   reused, so re-running costs nothing; `--refresh` reads everything again. A free Gemini key allows only a few photos a minute
+   (and a daily quota); the script waits and retries when Google asks it to.
+3. It groups the photos into cups from the humans' running totals (totals going down, or an end-of-cup screen, start a new cup),
+   works out each human's place in every race from the change in their total (checked against the `+N`, which also fills in one
+   missing photo), and flags numbers that don't add up. With only end-of-cup screens, each is its own cup with totals only.
+   Humans are told apart by character. Cups come in as **Unknown Cup**, since results screens don't name the cup: rename the
+   ones you know. `backlog.md` lists the cups and anything to double-check.
 4. On the site: **+ Add results › Import a backlog file** and pick `backlog-import.json` from the folder. Racers are matched to
    players by their usual character (otherwise unclaimed), unless you said who with `--who Luigi=Gerrard` (repeatable) when
    running the script; name the cups, check, then save or submit as usual.

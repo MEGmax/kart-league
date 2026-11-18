@@ -284,7 +284,7 @@ export default function AddPage() {
     <Container maxWidth="lg" sx={{ pt: 1, pb: 4 }}>
       <PageTitle
         title={TITLES[night.mode]}
-        sub={night.mode === "submit" ? "An admin checks your numbers against the photos before they count." : night.mode === "add" ? "Specific cups, one character per racer all night." : null}
+        sub={night.mode === "submit" ? "An admin checks your numbers against the photos before they count." : night.mode === "add" ? "The cups you raced, who raced, and everyone's points." : null}
         action={(night.mode === "add" || night.mode === "submit") && !isPristine(night) ? <Button size="small" onClick={startOver}>Start over</Button> : null}
       />
       {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice("")}>{notice}</Alert>}

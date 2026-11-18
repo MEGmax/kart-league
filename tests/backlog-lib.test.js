@@ -54,7 +54,7 @@ describe("grouping a night's photos into cups", () => {
     const g = groupBacklog(cupReads("a", A));
     expect(g.cups).toHaveLength(1);
     const [cup] = g.cups;
-    expect(cup).toMatchObject({ name: "Cup 1", complete: true, photo: "a-final.jpg", races: ["a-r1.jpg", "a-r2.jpg", "a-r3.jpg", "a-r4.jpg"], standings: ["a-final.jpg"] });
+    expect(cup).toMatchObject({ name: "Unknown Cup", complete: true, photo: "a-final.jpg", races: ["a-r1.jpg", "a-r2.jpg", "a-r3.jpg", "a-r4.jpg"], standings: ["a-final.jpg"] });
     expect(cup.racers.find((r) => r.character === "Yoshi")).toMatchObject({ id: "char:Yoshi", highlight: "orange", places: [2, 1, 3, 1], total: 52 });
     expect(cup.racers.find((r) => r.character === "Luigi")).toMatchObject({ places: [1, 4, 1, 5], total: 45 });
     expect(g.issues).toEqual([]);
@@ -91,7 +91,7 @@ describe("grouping a night's photos into cups", () => {
       .concat(cupReads("b", A, { from: 20, standings: false }));
     reads.splice(2, 0, { ...reads[1], file: "a-r2-again.jpg", screen: "standings", rows: reads[1].rows.map((r) => ({ ...r, gained: null })) });
     const g = groupBacklog(reads);
-    expect(g.cups.map((c) => [c.name, c.complete, c.photo])).toEqual([["Cup 1", true, "a-final.jpg"], ["Cup 2", true, "b-r4.jpg"]]);
+    expect(g.cups.map((c) => [c.name, c.complete, c.photo])).toEqual([["Unknown Cup", true, "a-final.jpg"], ["Unknown Cup", true, "b-r4.jpg"]]);
     expect(g.cups[0].files).toContain("a-r2-again.jpg");
     expect(g.skipped).toEqual([{ file: "kart-select.jpg", reason: "not a results screen" }]);
     expect(g.issues).toEqual([]);
@@ -122,6 +122,23 @@ describe("grouping a night's photos into cups", () => {
     expect(g.cups[0].racers.map((r) => [r.id, r.places])).toEqual([["char:Mii|blue", [1, 2, 3, 4]], ["char:Mii|red", [2, 1, 4, 3]]]);
   });
 
+  it("makes each end-of-cup photo its own cup when that's all there is, even when totals go up", () => {
+    const end = (tag, at, humans) => ({
+      file: `${tag}.jpg`, takenAt: `2026-11-08T${at}:00`, screen: "standings",
+      rows: humans.map(([character, points], i) => ({ pos: i + 1, character, name: character, gained: null, points, human: true, highlight: "green" })),
+    });
+    const g = groupBacklog([
+      end("c1", "20:35", [["Koopa Troopa", 51], ["Baby Peach", 49], ["Yoshi", 25]]),
+      end("c1-again", "20:36", [["Koopa Troopa", 51], ["Baby Peach", 49], ["Yoshi", 25]]),
+      end("c2", "20:56", [["Koopa Troopa", 55], ["Baby Peach", 30], ["Yoshi", 33]]),
+      end("c3", "21:15", [["Koopa Troopa", 29], ["Baby Peach", 33], ["Yoshi", 23]]),
+    ]);
+    expect(g.cups.map((c) => [c.files, c.complete])).toEqual([[["c1.jpg", "c1-again.jpg"], false], [["c2.jpg"], false], [["c3.jpg"], false]]);
+    expect(g.cups[1].racers.map((r) => [r.character, r.places, r.total])).toEqual([
+      ["Koopa Troopa", [null, null, null, null], 55], ["Baby Peach", [null, null, null, null], 30], ["Yoshi", [null, null, null, null], 33],
+    ]);
+  });
+
   it("maps +N back to a finishing place", () => {
     expect(RACE_POINTS.map(placeFromGained)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect(placeFromGained(9)).toBeNull();
@@ -148,7 +165,7 @@ describe("importing a backlog file on the Add page", () => {
     expect(n).toMatchObject({ mode: "add", date: "2026-11-15", week: 2, entry: "races" });
     expect(n.racers.map((r) => [r.character, r.assign])).toEqual([["Luigi", "unclaimed"], ["Yoshi", "pm"], ["Baby Peach", "pl"]]);
     const yoshi = n.racers[1];
-    expect(n.cups[0]).toMatchObject({ name: "Cup 1", photo: "QUJD", photoChanged: true });
+    expect(n.cups[0]).toMatchObject({ name: "Unknown Cup", photo: "QUJD", photoChanged: true });
     expect(n.cups[0].cells[yoshi.key].pos).toEqual(["2", "1", "3", "1"]);
     expect(n.cups[1].photo).toBeNull();
     expect(n.cups[1].cells[yoshi.key]).toMatchObject({ pts: "52", pos: ["", "", "", ""] });
@@ -164,6 +181,18 @@ describe("importing a backlog file on the Add page", () => {
     }));
     const n = nightFromBacklog(f, state, "add");
     expect(n.racers.map((r) => [r.character, r.assign, r.newName])).toEqual([["Luigi", "pk", ""], ["Yoshi", "pm", ""], ["Baby Peach", "new", "Gerrard"]]);
+    expect(validateNight(n, state.players)).toBe("");
+  });
+
+  it("makes one racer of characters --who gives to the same person", () => {
+    const f = file();
+    f.cups[1].racers = f.cups[1].racers.map((r) => (r.character === "Luigi" ? { ...r, id: "char:Mario", character: "Mario" } : r));
+    f.cups.forEach((c) => c.racers.forEach((r) => { if (r.character === "Luigi" || r.character === "Mario") r.who = "Kieran"; }));
+    const n = nightFromBacklog(f, state, "add");
+    const kieran = n.racers.filter((r) => r.assign === "pk");
+    expect(kieran).toHaveLength(1);
+    expect(n.cups.map((c) => c.cells[kieran[0].key].character)).toEqual(["", "Mario"]);
+    expect(kieran[0].character).toBe("Luigi");
     expect(validateNight(n, state.players)).toBe("");
   });
 
@@ -199,9 +228,9 @@ describe("reading a photo with Gemini", () => {
     const body = JSON.parse(init.body);
     expect(body.contents[0].parts[1]).toEqual({ inlineData: { mimeType: "image/jpeg", data: "QUJD" } });
     expect(body.generationConfig).toMatchObject({ responseMimeType: "application/json", mediaResolution: "MEDIA_RESOLUTION_HIGH" });
-    expect(body.generationConfig.responseJsonSchema.required).toEqual(["screen", "cup", "rows"]);
+    expect(body.generationConfig.responseJsonSchema.required).toEqual(["screen", "cup", "rows", "rotate"]);
     expect(out).toEqual({
-      screen: "race", cup: null,
+      screen: "race", cup: null, rotate: 0,
       rows: [{ pos: 1, name: "Yoshi", character: "Yoshi", points: 37, gained: 15, human: true, highlight: "orange" },
         { pos: 2, name: "Waluigi", character: "Waluigi", points: 20, gained: 12, human: false, highlight: "none" }],
     });
@@ -217,7 +246,9 @@ describe("reading a photo with Gemini", () => {
   });
 
   it("drops rows from screens that aren't results and unknown characters", () => {
-    expect(normalizeRead({ screen: "other", rows: [{ pos: 1 }] })).toEqual({ screen: "other", cup: null, rows: [] });
+    expect(normalizeRead({ screen: "other", rows: [{ pos: 1 }] })).toEqual({ screen: "other", cup: null, rotate: 0, rows: [] });
+    expect(normalizeRead({ screen: "standings", rotate: 90, rows: [] }).rotate).toBe(90);
+    expect(normalizeRead({ screen: "standings", rotate: 45, rows: [] }).rotate).toBe(0);
     expect(normalizeRead({ screen: "standings", cup: " Star Cup ", rows: [{ pos: "3", character: "Shy Guy", total: "21", human: true, highlight: "none" }] }).rows[0])
       .toMatchObject({ pos: 3, character: "", points: 21, gained: null, human: true, highlight: "other" });
   });

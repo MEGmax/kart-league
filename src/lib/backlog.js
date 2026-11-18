@@ -11,8 +11,8 @@
 // "+N" on screen confirms it or, when the photo before is missing, lets that race be worked out too.
 // Totals going down means a new cup. Screen type doesn't matter: the game shows a race's results with
 // "+N", then re-sorted by total without it, and the end-of-cup screen repeats the last race's totals.
-import { RACE_POINTS } from "./constants";
-import { newCup, newNight, newRacer, emptyCell, matchPlayer, suggestWeek } from "./night";
+import { RACE_POINTS, UNKNOWN_CUP } from "./constants";
+import { newCup, newNight, newRacer, emptyCell, matchPlayer, mergeRacers, suggestWeek } from "./night";
 
 export const BACKLOG_VERSION = 1;
 
@@ -58,7 +58,7 @@ export function groupBacklog(reads) {
   let cur = null;
 
   const open = () => {
-    cur = { snaps: [], totals: new Map(), race: 0, races: [null, null, null, null], lost: false, notes: [] };
+    cur = { snaps: [], totals: new Map(), race: 0, races: [null, null, null, null], lost: false, ended: false, notes: [] };
     cups.push(cur);
   };
   const record = (k, points) => {
@@ -73,11 +73,13 @@ export function groupBacklog(reads) {
     const withTotal = [...snap.humans].filter(([, h]) => h.total != null);
     if (!withTotal.length) { skipped.push({ file: read.file, reason: "no totals could be read" }); return; }
 
-    // Same cup, or a new one? Totals only go up within a cup.
+    // Same cup, or a new one? Totals only go up within a cup, and an end-of-cup screen closes it
+    // (once it has had 4 races, or when its races can't be counted, e.g. a night of end-of-cup photos only).
     if (cur) {
       const common = withTotal.filter(([id]) => cur.totals.has(id));
       const down = common.filter(([id, h]) => h.total < cur.totals.get(id)).length;
-      if (!common.length || down > common.length / 2) open();
+      const repeat = common.length && common.filter(([id, h]) => h.total === cur.totals.get(id)).length > common.length / 2;
+      if (!common.length || down > common.length / 2 || (cur.ended && !repeat)) open();
     } else open();
 
     const base = (id) => cur.totals.get(id) || 0;
@@ -88,6 +90,7 @@ export function groupBacklog(reads) {
 
     if (cur.snaps.length > 1 && same > ids.length / 2) {
       // Another photo of the last race (re-sorted, or the end-of-cup screen).
+      if (snap.screen === "standings" && (cur.race === 4 || cur.race === null)) cur.ended = true;
       const off = ids.filter((id) => diff.get(id) !== 0);
       if (off.length) issues.push(`${short(read.file)}: ${off.map((id) => `${who(id)} shows ${snap.humans.get(id).total}`).join(", ")}, but ${off.length === 1 ? "it was" : "they were"} ${off.map((id) => base(id)).join(", ")} on the photo before. Check the photo.`);
       return;
@@ -117,6 +120,7 @@ export function groupBacklog(reads) {
       cur.race = null;
     }
     ids.forEach((id) => cur.totals.set(id, snap.humans.get(id).total));
+    if (snap.screen === "standings" && (cur.race === 4 || cur.race === null)) cur.ended = true;
   });
 
   const out = cups.map((c, i) => {
@@ -151,7 +155,7 @@ export function groupBacklog(reads) {
     const standings = c.snaps.filter((s) => s.screen === "standings");
     const final = standings.filter((s) => [...s.humans].every(([id, h]) => !last.humans.has(id) || last.humans.get(id).total === h.total)).pop();
     return {
-      name: `Cup ${i + 1}`,
+      name: UNKNOWN_CUP,
       takenAt: c.snaps[0].takenAt || null,
       files: c.snaps.map((s) => s.file),
       photo: (final || last).file,
@@ -196,8 +200,9 @@ export class BacklogError extends Error {}
 
 // The file written by scripts/read-backlog.mjs, as a night for the Add page: one racer per character.
 // Who they are: the name given with --who (an existing player, else a new one), otherwise a guess from
-// whose main that character is, otherwise unclaimed. Race-by-race places where every race could be
-// worked out, the cup total where not.
+// whose main that character is, otherwise unclaimed. Characters --who gives to the same person (someone
+// who switched between cups) become one racer. Race-by-race places where every race could be worked
+// out, the cup total where not.
 export function nightFromBacklog(file, state, mode) {
   if (!file || file.version !== BACKLOG_VERSION || !Array.isArray(file.cups)) {
     throw new BacklogError("That isn't a backlog file from npm run backlog (or it's from an older version).");
@@ -240,6 +245,16 @@ export function nightFromBacklog(file, state, mode) {
     });
     return cup;
   });
-  if (!night.racers.length) night.racers = [newRacer()];
-  return night;
+  if (!night.racers.length) return { ...night, racers: [newRacer()] };
+
+  // One racer per person: fold together characters named as the same player.
+  let merged = night;
+  const first = {};
+  night.racers.forEach((r) => {
+    const k = r.assign === "new" ? `new:${r.newName.trim().toLowerCase()}` : r.assign !== "unclaimed" ? r.assign : null;
+    if (!k) return;
+    if (first[k]) merged = mergeRacers(merged, first[k], r.key);
+    else first[k] = r.key;
+  });
+  return merged;
 }

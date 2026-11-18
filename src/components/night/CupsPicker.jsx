@@ -12,7 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import CloseIcon from "@mui/icons-material/Close";
-import { BUILTIN_CUPS, TRACKS } from "../../lib/constants";
+import { BUILTIN_CUPS, TRACKS, UNKNOWN_CUP } from "../../lib/constants";
 import { cupFromTemplate, newCup } from "../../lib/night";
 import { colors } from "../../theme";
 import CupIcon from "../CupIcon";
@@ -96,6 +96,7 @@ export default function CupsPicker({ night, setNight, templates, singleCup }) {
     if (!value) return;
     let cup;
     if (value === "custom") cup = newCup({ name: "", maps: ["", "", "", ""] });
+    else if (value === "unknown") cup = newCup({ name: UNKNOWN_CUP, maps: [] });
     else {
       const t = BUILTIN_CUPS.concat(templates).find((x) => x.id === value);
       if (!t) return;
@@ -113,6 +114,7 @@ export default function CupsPicker({ night, setNight, templates, singleCup }) {
       {!singleCup && (
         <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
           Add each cup you played. Game cups and your templates come with their 4 tracks, so track stats work too.
+          Random tracks nobody remembers? Add an Unknown cup: its points count, it just has no track stats.
         </Typography>
       )}
       <Stack spacing={1.5}>
@@ -136,6 +138,9 @@ export default function CupsPicker({ night, setNight, templates, singleCup }) {
           ))}
           <ListSubheader>Other</ListSubheader>
           <MenuItem value="custom">Custom cup (pick 4 tracks)</MenuItem>
+          <MenuItem value="unknown">
+            <Stack direction="row" spacing={1} alignItems="center"><CupIcon cup={UNKNOWN_CUP} size={22} /><span>Unknown cup (tracks not recorded)</span></Stack>
+          </MenuItem>
         </TextField>
       )}
     </Paper>

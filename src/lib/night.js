@@ -1,5 +1,6 @@
-// Recording a cup night: the specific cups that were raced, each racer's one character for the whole
-// night, and every racer's result in every cup. Pure functions; the Add page holds the state.
+// Recording a cup night: the specific cups that were raced, each racer's character (usually one all night,
+// but a cell can say they switched for that cup), and every racer's result in every cup. Pure functions;
+// the Add page holds the state.
 //
 // night = {
 //   mode: "add" | "submit" | "review" | "edit",
@@ -7,7 +8,8 @@
 //   entry: "totals" | "races",            // cup totals, or each race's finishing position
 //   racers: [{ key, assign, newName, character }],   // assign: a player id, "new" or "unclaimed"
 //   cups: [{ key, cupId, name, maps[4]|[], locked, hasPhoto, addedAt, submission,
-//            photo: base64|null, photoChanged, cells: { [racerKey]: { pts, pos[4], rid } } }],
+//            photo: base64|null, photoChanged, cells: { [racerKey]: { pts, pos[4], rid, character } } }],
+// A cell's character is "" when the racer used their usual one (racer.character) in that cup.
 // }
 // A cell left empty means that racer sat the cup out. In race-by-race mode a cell with no positions
 // can still carry a total (e.g. read from the photo) and is saved without per-race rows.
@@ -49,7 +51,45 @@ export function matchPlayer(players, name) {
 }
 
 export function emptyCell() {
-  return { pts: "", pos: ["", "", "", ""], rid: null };
+  return { pts: "", pos: ["", "", "", ""], rid: null, character: "" };
+}
+
+// The character a racer used in one cup: the cell's, if they switched for it, else their usual one.
+export function cellCharacter(cell, racer) {
+  return (cell && cell.character) || (racer && racer.character) || "";
+}
+
+// Two racers can be one person (someone who changed character between cups) when both have results and
+// they never raced the same cup.
+export function canMerge(night, a, b) {
+  const has = (k, c) => cellPoints(cellOf(c, k), night.entry) !== null;
+  return !!a && !!b && a !== b && night.cups.some((c) => has(a, c)) && night.cups.some((c) => has(b, c))
+    && !night.cups.some((c) => has(a, c) && has(b, c));
+}
+
+// Folds racer `dropKey` into `keepKey`: one racer whose usual character is the one used in more cups, and
+// every cup keeps the character actually used in it. Returns the night unchanged if they can't merge.
+export function mergeRacers(night, keepKey, dropKey) {
+  const keep = night.racers.find((r) => r.key === keepKey);
+  const drop = night.racers.find((r) => r.key === dropKey);
+  if (!keep || !drop || !canMerge(night, keepKey, dropKey)) return night;
+  const used = (key) => night.cups.filter((c) => cellPoints(cellOf(c, key), night.entry) !== null).length;
+  const usual = drop.character && used(dropKey) > used(keepKey) ? drop.character : keep.character || drop.character;
+  const cups = night.cups.map((c) => {
+    const cells = { ...c.cells };
+    const kc = cells[keepKey], dc = cells[dropKey];
+    let cell = null;
+    if (dc && cellPoints(dc, night.entry) !== null) cell = { ...dc, character: cellCharacter(dc, drop) };
+    else if (kc) cell = { ...kc, character: cellCharacter(kc, keep) };
+    delete cells[dropKey];
+    if (cell) cells[keepKey] = { ...cell, character: cell.character === usual ? "" : cell.character };
+    return { ...c, cells };
+  });
+  return {
+    ...night,
+    cups,
+    racers: night.racers.filter((r) => r.key !== dropKey).map((r) => (r.key === keepKey ? { ...r, character: usual } : r)),
+  };
 }
 
 export function newRacer(patch = {}) {
@@ -231,9 +271,10 @@ export function buildSave(night, state, now = Date.now()) {
       const pts = cellPoints(cell, night.entry);
       if (pts === null) return;
       const pid = pidOf[r.key];
-      results.push({ rid: cell.rid || (pid ? "p_" + pid : "u" + uid()), p: pid, pts, character: r.character || "", raw: "" });
+      const character = cellCharacter(cell, r);
+      results.push({ rid: cell.rid || (pid ? "p_" + pid : "u" + uid()), p: pid, pts, character, raw: "" });
       if (night.entry === "races" && pid && filledPositions(cell) === 4) {
-        cell.pos.forEach((pos, k) => races.push({ player_id: pid, race: k + 1, position: Number(pos), character: r.character || "" }));
+        cell.pos.forEach((pos, k) => races.push({ player_id: pid, race: k + 1, position: Number(pos), character }));
       }
     });
     results.sort((a, b) => b.pts - a.pts);
@@ -258,7 +299,7 @@ export function buildSubmissions(night, players, batch = uid()) {
         .map((r) => ({ r, cell: cellOf(cup, r.key) }))
         .filter(({ cell }) => hasResult(cell, night.entry))
         .map(({ r, cell }) => ({
-          rid: uid(), raw: racerName(r, players), character: r.character || "", pts: cellPoints(cell, night.entry),
+          rid: uid(), raw: racerName(r, players), character: cellCharacter(cell, r), pts: cellPoints(cell, night.entry),
           assign: r.assign, newName: r.assign === "new" ? String(r.newName || "").trim() : "",
           races: night.entry === "races" && filledPositions(cell) === 4 ? cell.pos.map(Number) : null,
         })),
@@ -300,6 +341,7 @@ export function nightFromSubmissions(subs, state) {
         night.racers.push(racer);
       }
       const cell = emptyCell();
+      if (row.character && racer.character && row.character !== racer.character) cell.character = row.character;
       if (Array.isArray(row.races) && row.races.length === 4) cell.pos = row.races.map(String);
       else cell.pts = row.pts == null ? "" : String(row.pts);
       cup.cells[racer.key] = cell;

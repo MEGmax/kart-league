@@ -34,8 +34,9 @@ const SCHEMA = {
         required: ["pos", "character", "name", "gained", "total", "human", "highlight"],
       },
     },
+    rotate: { type: "integer", enum: [0, 90, 180, 270], description: "Degrees to turn the photo clockwise so the screen's text reads upright" },
   },
-  required: ["screen", "cup", "rows"],
+  required: ["screen", "cup", "rows", "rotate"],
 };
 
 function prompt(players, lineup) {
@@ -51,6 +52,7 @@ function prompt(players, lineup) {
     lineup && lineup.length ? `Tonight's human players were using: ${lineup.join(", ")}. Use this to tell highlighted rows apart.` : "",
     known ? `League players (for names on screen): ${known}.` : "",
     "Set cup to the cup name only if it is written on screen, otherwise null.",
+    "Set rotate to how many degrees the photo must be turned clockwise for the screen's text to read upright (0, 90, 180 or 270); the photo may have been taken with the phone sideways.",
   ].filter(Boolean).join("\n");
 }
 
@@ -76,6 +78,7 @@ export function normalizeRead(out) {
   return {
     screen,
     cup: (out && typeof out.cup === "string" && out.cup.trim()) || null,
+    rotate: [0, 90, 180, 270].includes(out && out.rotate) ? out.rotate : 0,
     rows: screen === "other" ? [] : rows.map((r) => {
       const highlight = HIGHLIGHTS.includes(r.highlight) ? r.highlight : "other";
       return {

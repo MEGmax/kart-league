@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildSave, buildSubmissions, cellPoints, emptyCell, matchPhotoRows, newCup, newNight, newRacer,
+  buildSave, buildSubmissions, canMerge, cellPoints, emptyCell, matchPhotoRows, mergeRacers, newCup, newNight, newRacer,
   nightFromCup, nightFromEvent, nightFromSubmissions, validateNight,
 } from "../src/lib/night.js";
 import { normalize } from "../src/lib/standings.js";
@@ -153,5 +153,55 @@ describe("round trips", () => {
     const n = nightFromEvent(ev, state, "add");
     expect(n.cups.map((c) => [c.name, c.maps.length])).toEqual([["Mushroom Cup", 4], ["Cursed Cup", 4], ["Mystery Cup", 0]]);
     expect(n.racers.map((r) => [r.assign, r.newName])).toEqual([["pa", ""], ["new", "Xan"]]);
+  });
+});
+
+describe("someone who switched character between cups", () => {
+  // Ada was Mario in cups 1 and 3, Donkey Kong in cup 2; she came in as two racers.
+  function switched() {
+    const n = newNight(state, "add");
+    const mario = newRacer({ assign: "pa", character: "Mario" });
+    const dk = newRacer({ assign: "unclaimed", character: "Donkey Kong" });
+    const ben = newRacer({ assign: "pb", character: "Yoshi" });
+    n.racers = [mario, dk, ben];
+    n.cups = ["Mushroom Cup", "Flower Cup", "Unknown Cup"].map((name) => newCup({ name }));
+    n.cups[0].cells = { [mario.key]: cell({ pts: "40" }), [ben.key]: cell({ pts: "30" }) };
+    n.cups[1].cells = { [dk.key]: cell({ pts: "35" }), [ben.key]: cell({ pts: "33" }) };
+    n.cups[2].cells = { [mario.key]: cell({ pts: "50" }), [ben.key]: cell({ pts: "20" }) };
+    return { n, mario, dk, ben };
+  }
+
+  it("merges two racers who never raced the same cup, keeping each cup's character", () => {
+    const { n, mario, dk, ben } = switched();
+    expect(canMerge(n, mario.key, dk.key)).toBe(true);
+    expect(canMerge(n, mario.key, ben.key)).toBe(false);
+    const blank = newRacer({ assign: "unclaimed" });
+    expect(canMerge({ ...n, racers: n.racers.concat(blank) }, mario.key, blank.key)).toBe(false);
+    const m = mergeRacers(n, mario.key, dk.key);
+    expect(m.racers.map((r) => [r.assign, r.character])).toEqual([["pa", "Mario"], ["pb", "Yoshi"]]);
+    expect(m.cups.map((c) => [c.cells[mario.key].pts, c.cells[mario.key].character])).toEqual([["40", ""], ["35", "Donkey Kong"], ["50", ""]]);
+    expect(validateNight(m, state.players)).toBe("");
+    expect(mergeRacers(n, mario.key, ben.key)).toBe(n);
+  });
+
+  it("saves and submits the character used in each cup, and reviews come back the same way", () => {
+    const { n, mario, dk } = switched();
+    const m = mergeRacers(n, mario.key, dk.key);
+    const { cups } = buildSave(m, state, 1000);
+    expect(cups.map((c) => c.results.find((r) => r.p === "pa").character)).toEqual(["Mario", "Donkey Kong", "Mario"]);
+    const subs = buildSubmissions(m, state.players, "b1");
+    expect(subs.map((x) => x.sub.rows.find((r) => r.assign === "pa").character)).toEqual(["Mario", "Donkey Kong", "Mario"]);
+    const back = nightFromSubmissions(subs.map((x) => ({ ...x.sub, hasPhoto: false })), state);
+    const ada = back.racers.find((r) => r.assign === "pa");
+    expect(ada.character).toBe("Mario");
+    expect(back.cups.map((c) => c.cells[ada.key].character)).toEqual(["", "Donkey Kong", ""]);
+  });
+
+  it("matches a photo using the character for that cup", () => {
+    const { n, mario, dk } = switched();
+    const m = mergeRacers(n, mario.key, dk.key);
+    const inCup2 = m.racers.map((r) => ({ ...r, character: (m.cups[1].cells[r.key] || {}).character || r.character }));
+    const { matches } = matchPhotoRows(inCup2, [{ character: "Donkey Kong", points: 35, human: true, name: "" }], state.players);
+    expect(Object.keys(matches)).toEqual([mario.key]);
   });
 });

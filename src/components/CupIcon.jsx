@@ -1,4 +1,4 @@
-import { hashHue } from "../lib/constants";
+import { hashHue, UNKNOWN_CUP } from "../lib/constants";
 
 const CUP_STYLE = {
   "Mushroom Cup": ["#FF5A5F", "M5 13a7 6 0 0 1 14 0zM10 13h4v5h-4z"],
@@ -12,8 +12,20 @@ const CUP_STYLE = {
   Other: ["#9AA3C7", "M8 5v14M8 5h9l-2 3 2 3H8"],
 };
 
-// A trophy in the cup's color with its emblem; custom cup names get a hue from their name.
+// A trophy in the cup's color with its emblem; custom cup names get a hue from their name, and a cup
+// with unknown tracks gets a grey trophy with a question mark.
 export default function CupIcon({ cup, size = 44 }) {
+  if (cup === UNKNOWN_CUP) {
+    const fill = "#8A93B8";
+    return (
+      <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" style={{ flexShrink: 0 }}>
+        <path d="M14 6h20v10a10 10 0 0 1-20 0z" fill={fill} />
+        <path d="M14 9H8a6 6 0 0 0 7 7M34 9h6a6 6 0 0 1-7 7" fill="none" stroke={fill} strokeWidth="3" strokeLinecap="round" />
+        <path d="M21 25h6v7h-6zM15 32h18l2 7H13z" fill={fill} opacity=".85" />
+        <text x="24" y="20.5" textAnchor="middle" fontSize="15" fontWeight="800" fontFamily="system-ui, sans-serif" fill="#0B0E1F" fillOpacity=".72">?</text>
+      </svg>
+    );
+  }
   const [fill, emblem] = CUP_STYLE[cup] || [`hsl(${hashHue(cup)} 80% 62%)`, CUP_STYLE.Other[1]];
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true" style={{ flexShrink: 0 }}>

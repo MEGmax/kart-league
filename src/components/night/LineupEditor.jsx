@@ -1,4 +1,5 @@
-// The night's racers: who they are in the league and the one character each used all night.
+// The night's racers: who they are in the league and the character each usually used. Picking a player
+// who's already in, for a racer who never raced the same cup as them, merges the two (someone who switched).
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -11,7 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import Alert from "@mui/material/Alert";
 import CloseIcon from "@mui/icons-material/Close";
 import { CHARACTERS } from "../../lib/constants";
-import { newRacer, sharedCharacters, hasResult, cellOf } from "../../lib/night";
+import { newRacer, sharedCharacters, hasResult, cellOf, canMerge, mergeRacers } from "../../lib/night";
 import { colors } from "../../theme";
 import CharacterFace from "../CharacterFace";
 
@@ -22,6 +23,12 @@ export default function LineupEditor({ night, setNight, players, locked }) {
 
   function patch(key, p) {
     setNight((n) => ({ ...n, racers: n.racers.map((r) => (r.key === key ? { ...r, ...p } : r)) }));
+  }
+  const holder = (pid) => night.racers.find((o) => o.assign === pid);
+  function assign(key, value) {
+    const other = value && value !== "new" && value !== "unclaimed" ? night.racers.find((o) => o.key !== key && o.assign === value) : null;
+    if (other) setNight((n) => mergeRacers(n, other.key, key));
+    else patch(key, { assign: value });
   }
   function remove(key) {
     setNight((n) => ({
@@ -50,7 +57,8 @@ export default function LineupEditor({ night, setNight, players, locked }) {
         <Typography variant="body2" sx={{ color: colors.muted }}>{night.racers.length} racer{night.racers.length === 1 ? "" : "s"}</Typography>
       </Stack>
       <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
-        Everyone kept one character for the whole night, so pick it once here. It's used to match each results photo to the right person.
+        Pick each racer's usual character; it's used to match each results photo to the right person. If someone switched for a cup,
+        change it for that cup under Results, or pick the same player for both characters and they're merged into one racer.
       </Typography>
 
       <Stack spacing={1.5}>
@@ -69,15 +77,20 @@ export default function LineupEditor({ night, setNight, players, locked }) {
               <Box sx={{ display: "grid", gap: 1, minWidth: 0 }}>
                 <TextField
                   select size="small" label={`Racer ${i + 1}`} value={r.assign} disabled={locked}
-                  onChange={(e) => patch(r.key, { assign: e.target.value })}
+                  onChange={(e) => assign(r.key, e.target.value)}
                 >
                   <MenuItem value="" disabled>Pick a player</MenuItem>
                   {sorted.length > 0 && <ListSubheader>League players</ListSubheader>}
-                  {sorted.map((p) => (
-                    <MenuItem key={p.id} value={p.id} disabled={used.has(p.id) && r.assign !== p.id}>
-                      {p.name}{used.has(p.id) && r.assign !== p.id ? " · already in" : ""}
-                    </MenuItem>
-                  ))}
+                  {sorted.map((p) => {
+                    const taken = used.has(p.id) && r.assign !== p.id;
+                    const other = taken ? holder(p.id) : null;
+                    const merge = other && canMerge(night, other.key, r.key);
+                    return (
+                      <MenuItem key={p.id} value={p.id} disabled={taken && !merge}>
+                        {p.name}{merge ? ` · same person as their ${other.character || "other racer"}: merge` : taken ? " · already in" : ""}
+                      </MenuItem>
+                    );
+                  })}
                   <ListSubheader>Other</ListSubheader>
                   <MenuItem value="new">+ New player…</MenuItem>
                   <MenuItem value="unclaimed">Unclaimed (a guest, or not sure who)</MenuItem>
