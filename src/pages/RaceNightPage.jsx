@@ -289,12 +289,12 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
               {photo ? "Use a different photo" : "Add the end-of-cup results photo"}
               <input type="file" accept="image/*" hidden onChange={onFile} />
             </Button>
-            {photo && getApiKey() && !reading && <Button size="small" onClick={() => readPhoto(photo)}>Read with Claude{read ? " again" : ""}</Button>}
-            {reading && <><CircularProgress size={18} /><Typography variant="body2">Claude is reading the results screen…</Typography></>}
+            {photo && getApiKey() && !reading && <Button size="small" onClick={() => readPhoto(photo)}>Read with Gemini{read ? " again" : ""}</Button>}
+            {reading && <><CircularProgress size={18} /><Typography variant="body2">Gemini is reading the results screen…</Typography></>}
           </Stack>
           <Typography variant="body2" sx={{ color: colors.muted }}>
             Optional. It's kept as the record for this cup.{" "}
-            {getApiKey() ? "Claude checks its totals against the entries below, matching racers by character." : "Compare its totals with the table below by eye, or add an Anthropic key on your Account page to have Claude check them."}
+            {getApiKey() ? "Gemini checks its totals against the entries below, matching racers by character." : "Compare its totals with the table below by eye, or add a Gemini key on your Account page to have Gemini check them."}
           </Typography>
         </Box>
       </Stack>

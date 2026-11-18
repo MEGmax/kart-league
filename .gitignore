@@ -8,3 +8,4 @@ dist/
 .env
 email-previews/
 supabase/.temp/
+data/**/backlog-import.json

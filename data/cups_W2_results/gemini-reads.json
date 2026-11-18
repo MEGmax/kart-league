@@ -1,0 +1,2720 @@
+{
+ "version": 1,
+ "reads": {
+  "60162291-BF02-4055-A3EF-2CE04262E59A_1_105_c.jpeg": {
+   "sha1": "49f87f6eebb931733fe8f4a903c9a963b6cb0ac5",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:25.711Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 25,
+     "gained": 15,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 2,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 19,
+     "gained": 12,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 3,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 12,
+     "gained": 10,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 4,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 20,
+     "gained": 8,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 5,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 10,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 21,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 11,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 12,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 8,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 6,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 2,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 0,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "E349CFE3-0699-460C-9CB4-369698CB3927_1_105_c.jpeg": {
+   "sha1": "4808d70ab196b3134ee5d05052008f8e874207b1",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:33.872Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 15,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 2,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 12,
+     "gained": null,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 3,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 10,
+     "gained": null,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 4,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 8,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 7,
+     "gained": null,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 6,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 6,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 5,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 4,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 3,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 2,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 11,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 1,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 0,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "B562A654-9397-4681-B2AA-640A98F38B36_1_105_c.jpeg": {
+   "sha1": "7f2cb35ed702a102115b2ed2b5e159de0c685044",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:36.898Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 42,
+     "gained": 15,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 37,
+     "gained": 12,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 3,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 29,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 40,
+     "gained": 8,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 5,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 26,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 37,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 14,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 32,
+     "gained": 4,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 9,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 5,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 13,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 15,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 2,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "C39FE045-B5EF-4982-B00E-8E6C03EA3DCA_1_105_c.jpeg": {
+   "sha1": "c806a43062347f0a5b8faf12d0edb7696d3923da",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:41.066Z",
+   "screen": "other",
+   "cup": null,
+   "rows": []
+  },
+  "6FF203D0-96C0-4590-A792-FE0EE363B425_1_105_c.jpeg": {
+   "sha1": "ccb8dbf899c5979515998b9b3eaf057015da4239",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:43.394Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 27,
+     "gained": 15,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 32,
+     "gained": 12,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 3,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 31,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 19,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 19,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 25,
+     "gained": 6,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 7,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 11,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 14,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 28,
+     "gained": 3,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 10,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 2,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 9,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 2,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "19158603-B20D-44ED-8053-481366C0CDED_1_105_c.jpeg": {
+   "sha1": "f3a280f1a4d49e143f31b1803e841623775b83e6",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:53.555Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 15,
+     "gained": 15,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 2,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 12,
+     "gained": 12,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 3,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 10,
+     "gained": 10,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 4,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 8,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 7,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 6,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 5,
+     "gained": 5,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 8,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 4,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 3,
+     "gained": 3,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 10,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 2,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 1,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 0,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "5CE65451-2869-4E6B-B25B-8F9DB638C560_1_105_c.jpeg": {
+   "sha1": "ee19522d1743b4ebb5909efc87acfe696188223d",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:16:58.715Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 32,
+     "gained": 15,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 2,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 30,
+     "gained": 12,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 3,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 20,
+     "gained": 10,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 4,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 17,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 19,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 20,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 32,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 12,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 7,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 8,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 2,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 20,
+     "gained": 0,
+     "human": true,
+     "highlight": "pink"
+    }
+   ]
+  },
+  "C6146B73-75AA-4009-955E-91AB8C118D66_1_105_c.jpeg": {
+   "sha1": "cdcaabdd9a1ab46e35481b88d4a544dc916ce22a",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:17:16.991Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 27,
+     "gained": 15,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 17,
+     "gained": 12,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 3,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 11,
+     "gained": 10,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 4,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 11,
+     "gained": 8,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 5,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 17,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 8,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 20,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 8,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 11,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 8,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 8,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 0,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "479B1CB8-8128-458C-A760-1A849CBE7F0B_1_105_c.jpeg": {
+   "sha1": "74cf5d23a56086479d14053ab88ea57495d32d30",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:17:28.970Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 26,
+     "gained": 15,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 2,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 39,
+     "gained": 12,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 3,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 27,
+     "gained": 10,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 4,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 19,
+     "gained": 8,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 5,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 27,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 14,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 13,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 12,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 14,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 2,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 18,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 8,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "D507D50F-123C-41B7-8E1D-B7CE04FC11E0_1_105_c.jpeg": {
+   "sha1": "d4b408849ac6996cb61a478e42c9adee888d9e90",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:17:32.062Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 17,
+     "gained": 15,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 2,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 32,
+     "gained": 12,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 3,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 29,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 20,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 37,
+     "gained": 7,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 6,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 23,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 37,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 11,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 23,
+     "gained": 3,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 10,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 10,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 21,
+     "gained": 1,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 12,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 32,
+     "gained": 0,
+     "human": true,
+     "highlight": "yellow"
+    }
+   ]
+  },
+  "57B8568E-28BC-4A2D-AFFF-89343B8B39CC_1_105_c.jpeg": {
+   "sha1": "3b7d0f2e8381f6f99a7c1b2d0c61f1978a512a72",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:17:42.469Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 15,
+     "gained": 15,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 2,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 12,
+     "gained": 12,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 3,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 10,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 8,
+     "gained": 8,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 5,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 7,
+     "gained": 7,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 6,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 6,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 5,
+     "gained": 5,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 8,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 4,
+     "gained": 4,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 9,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 3,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 2,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 1,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 0,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "C7579598-7568-45FF-A0D5-E816C9EE5DDC_1_105_c.jpeg": {
+   "sha1": "12a6a46bd36a23175fc9891160cbada2f8d533a5",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:17:50.097Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 41,
+     "gained": 15,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 2,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 51,
+     "gained": 12,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 3,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 28,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 22,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 26,
+     "gained": 7,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 6,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 33,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 13,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 18,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 16,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 14,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 3,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 27,
+     "gained": 0,
+     "human": true,
+     "highlight": "pink"
+    }
+   ]
+  },
+  "0EC0D06F-E10E-4607-99D1-5CED57E16E8D_1_105_c.jpeg": {
+   "sha1": "7e043b84ef4cc07cab99421a98b303ebd43752ec",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:17:56.004Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 20,
+     "gained": 15,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 20,
+     "gained": 12,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 3,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 22,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 12,
+     "gained": 8,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 5,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 14,
+     "gained": 7,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 6,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 21,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 5,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 14,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 5,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 5,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 7,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 1,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "FAE78EF0-A8A5-44E1-8011-20992BD8A24D_1_105_c.jpeg": {
+   "sha1": "3229d7e03eb930a7e44022eb232fa0be08a92409",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:04.787Z",
+   "screen": "standings",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 42,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 40,
+     "gained": null,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 3,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 37,
+     "gained": null,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 4,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 37,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 5,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 32,
+     "gained": null,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 6,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 29,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 26,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 15,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 14,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 13,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 5,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 2,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "B9D42D84-A5A3-445C-A80E-42AD91F9F96C_1_105_c.jpeg": {
+   "sha1": "7642d11123d242ce98df38c709333c6e729084ba",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:05.859Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 35,
+     "gained": 15,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 26,
+     "gained": 12,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 3,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 30,
+     "gained": 10,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 4,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 13,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 29,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 20,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 26,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 16,
+     "gained": 4,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 9,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 8,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 7,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 8,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 1,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "C61C0E15-3FD0-4E48-A9EE-615C0A02226F_1_105_c.jpeg": {
+   "sha1": "b8c5277ce2a2adeaefb28dffd662beaeb3f75107",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:07.313Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Peach",
+     "character": "Peach",
+     "points": 44,
+     "gained": 15,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 2,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 38,
+     "gained": 12,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 3,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 30,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 16,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 15,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 36,
+     "gained": 6,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 7,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 6,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 11,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 16,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 18,
+     "gained": 2,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 11,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 36,
+     "gained": 1,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 12,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 26,
+     "gained": 0,
+     "human": true,
+     "highlight": "pink"
+    }
+   ]
+  },
+  "2E028FFE-782D-44CB-AB6B-AF86E9FFB29D_1_105_c.jpeg": {
+   "sha1": "387db28b847fec88fb0ca9be486ebf2921418c5f",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:08.993Z",
+   "screen": "other",
+   "cup": null,
+   "rows": []
+  },
+  "4F714CAD-67A4-41F1-B24A-A42AB8B62AB7_1_105_c.jpeg": {
+   "sha1": "9666b636a01aeafba2786299177562d201d59575",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:19.047Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 15,
+     "gained": 15,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 2,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 12,
+     "gained": 12,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 3,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 10,
+     "gained": 10,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 4,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 8,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 7,
+     "gained": 7,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 6,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 6,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 5,
+     "gained": 5,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 4,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 3,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 2,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 1,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 0,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "4098A1EF-4E5B-440A-91D9-53E346DBC516_1_105_c.jpeg": {
+   "sha1": "eb89dc4718cb846b62ab8c06499e38cb34bca2e2",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:25.280Z",
+   "screen": "standings",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 27,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 27,
+     "gained": null,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 3,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 15,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 14,
+     "gained": null,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 5,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 13,
+     "gained": null,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 6,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 13,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 12,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 8,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 8,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 7,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 1,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 1,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "D511EF20-359E-4E3F-82F0-531E3CB77F15_1_105_c.jpeg": {
+   "sha1": "2b73c539ad1af423c39a4211e186dfa7f2894fac",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:27.133Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 50,
+     "gained": 15,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 2,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 36,
+     "gained": 12,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 3,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 28,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 50,
+     "gained": 8,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 5,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 21,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 11,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 30,
+     "gained": 5,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 8,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 17,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 20,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 15,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 12,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 2,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "49B13CE0-053C-42A5-9117-5832C620FE25_1_105_c.jpeg": {
+   "sha1": "d0bcba28d5506eea1bf24be1d020a3911aa0c705",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:31.695Z",
+   "screen": "standings",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 42,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 35,
+     "gained": null,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 3,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 25,
+     "gained": null,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 4,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 24,
+     "gained": null,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 5,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 18,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 17,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 14,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 13,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 13,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 11,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 5,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 2,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "D4F494A7-D4F9-480B-96FA-B75AB4C3E636_1_105_c.jpeg": {
+   "sha1": "08abb6691a6eebded598e7b51b6922ae531eabfe",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:32.280Z",
+   "screen": "other",
+   "cup": null,
+   "rows": []
+  },
+  "FCA26F0D-B1B1-4FFF-A516-00C021465271_1_105_c.jpeg": {
+   "sha1": "9bb0af15e855242b6c38186f73357851462ebd32",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:18:35.674Z",
+   "screen": "standings",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 50,
+     "gained": null,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 2,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 50,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 3,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 36,
+     "gained": null,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 4,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 30,
+     "gained": null,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 5,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 28,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 21,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 20,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 17,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 15,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 12,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 11,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 2,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "02D6AB70-C8C2-4D53-AC5D-C104838D81C2_1_105_c.jpeg": {
+   "sha1": "1829b6ff9f8a2ee6756901637ea438e98666cbae",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T00:23:27.248Z",
+   "screen": "standings",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 37,
+     "gained": null,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 37,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 3,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 32,
+     "gained": null,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 4,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 32,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 29,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 23,
+     "gained": null,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 7,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 23,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 8,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 21,
+     "gained": null,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 9,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 20,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 17,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 11,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 10,
+     "gained": null,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "D859EEA9-4FCD-414D-8023-5E455CBC5FCC_1_105_c.jpeg": {
+   "sha1": "7a9e3a233b6d5f26ebd4c0dd5e672f277e73a4f2",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T06:22:41.925Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 18,
+     "gained": 15,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 2,
+     "name": "Donkey Kong",
+     "character": "Donkey Kong",
+     "points": 27,
+     "gained": 12,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 3,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 12,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 20,
+     "gained": 8,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 5,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 17,
+     "gained": 7,
+     "human": true,
+     "highlight": "yellow"
+    },
+    {
+     "pos": 6,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 14,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 10,
+     "gained": 5,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 8,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 8,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Baby Mario",
+     "character": "Baby Mario",
+     "points": 4,
+     "gained": 3,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 10,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 9,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 1,
+     "gained": 1,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 12,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 6,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  },
+  "20D98724-9994-4824-8017-61BF4C4160AB_1_105_c.jpeg": {
+   "sha1": "e29c0fb3f0746d76197f32a636f4b15786756e88",
+   "model": "gemini-4-hydrogen",
+   "readAt": "2026-11-18T06:22:54.068Z",
+   "screen": "race",
+   "cup": null,
+   "rows": [
+    {
+     "pos": 1,
+     "name": "Toad",
+     "character": "Toad",
+     "points": 15,
+     "gained": 15,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 2,
+     "name": "Luigi",
+     "character": "Luigi",
+     "points": 12,
+     "gained": 12,
+     "human": true,
+     "highlight": "blue"
+    },
+    {
+     "pos": 3,
+     "name": "Diddy Kong",
+     "character": "Diddy Kong",
+     "points": 10,
+     "gained": 10,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 4,
+     "name": "Waluigi",
+     "character": "Waluigi",
+     "points": 8,
+     "gained": 8,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 5,
+     "name": "Mario",
+     "character": "Mario",
+     "points": 7,
+     "gained": 7,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 6,
+     "name": "Dry Bones",
+     "character": "Dry Bones",
+     "points": 6,
+     "gained": 6,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 7,
+     "name": "Koopa Troopa",
+     "character": "Koopa Troopa",
+     "points": 5,
+     "gained": 5,
+     "human": true,
+     "highlight": "pink"
+    },
+    {
+     "pos": 8,
+     "name": "Wario",
+     "character": "Wario",
+     "points": 4,
+     "gained": 4,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 9,
+     "name": "Baby Peach",
+     "character": "Baby Peach",
+     "points": 3,
+     "gained": 3,
+     "human": true,
+     "highlight": "green"
+    },
+    {
+     "pos": 10,
+     "name": "King Boo",
+     "character": "King Boo",
+     "points": 2,
+     "gained": 2,
+     "human": false,
+     "highlight": "none"
+    },
+    {
+     "pos": 11,
+     "name": "Yoshi",
+     "character": "Yoshi",
+     "points": 1,
+     "gained": 1,
+     "human": true,
+     "highlight": "orange"
+    },
+    {
+     "pos": 12,
+     "name": "Bowser",
+     "character": "Bowser",
+     "points": 0,
+     "gained": 0,
+     "human": false,
+     "highlight": "none"
+    }
+   ]
+  }
+ }
+}

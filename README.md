@@ -32,7 +32,7 @@ All of these numbers are editable by admins on the Admin page.
 
 1. **Build the cup** (admin, before racing): Cup builder › pick 4 tracks by hand, from a template (the 8 game cups are built in; save your own like "Cursed Cup"), or at random. **Lock in & start racing**. The tracks can't change after this.
 2. **After each race**: every racer opens **Race night** and enters their finishing position (1st–12th) and character. Points come from the 15-12-10-8-7-6-5-4-3-2-1-0 table. Admins can enter or fix results for anyone. Two people claiming the same place gets flagged.
-3. **After the cup**: an admin presses **Finish cup**, adds the results-screen photo, and the site compares the photo's totals with what everyone entered (Claude reads the photo if an Anthropic key is saved on the account page). Fix anything that's off, then **Finalize**. Only finalized cups count. Highlighted photo rows nobody entered can be saved as unclaimed points.
+3. **After the cup**: an admin presses **Finish cup**, adds the results-screen photo, and the site compares the photo's totals with what everyone entered (Gemini reads the photo if a Gemini API key is saved on the account page). Fix anything that's off, then **Finalize**. Only finalized cups count. Highlighted photo rows nobody entered can be saved as unclaimed points.
 
 Admins can reopen a finished race-by-race cup on Race night, or fix any finished cup with **Edit results** on the Cups page.
 
@@ -44,13 +44,30 @@ When you raced specific cups and everyone kept the same character all night, rec
 1. **Cups raced, in order**: game cups and your templates come with their 4 tracks; a custom cup takes any 4 tracks (or none).
 2. **Racers and their characters**: each racer once, as a league player, a new player, or unclaimed (a guest), with the one character they used all night.
 3. **Results**: per cup, either the cup totals from the results screen or each race's finishing place (track stats fill in). A blank racer sat that cup out.
-   Add each cup's results photo; with an Anthropic key saved on the account page, Claude reads it and fills in the points, matching
+   Add each cup's results photo; with a Gemini API key saved on the account page, Gemini reads it and fills in the points, matching
    highlighted rows to racers **by character** (then by name). Totals that disagree with the photo are flagged in red; highlighted rows
    that match nobody can be added as unclaimed.
 
 Admins save straight to the standings (`save_cup_night`, one transaction for every cup). Members submit the night instead: one
 submission per cup sharing a batch id, reviewed together from the Admin page in the same editor. An unsaved night is kept in the
 browser as a draft (without photos).
+
+### A folder of photos (backlog)
+
+If someone photographed every race screen of a night, let Gemini read the lot instead of typing it in:
+
+1. Put the photos in a folder, e.g. `data/cups_W2_results/`, and add `GEMINI_API_KEY=...` to `.env` (git-ignored; get a key at
+   [Google AI Studio](https://aistudio.google.com/apikey)).
+2. `npm run backlog -- data/cups_W2_results` (the week comes from a `W2`-style folder name, or pass `--week 2`). Photos are ordered
+   by when they were taken; images without camera info (screenshots) are never sent. Each photo's reading is saved in
+   `gemini-reads.json` and reused, so re-running costs nothing; `--refresh` reads everything again.
+3. It groups the race screens into cups (a new cup starts when everyone's total equals their race points), works out each human's
+   place in every race from the `+N` points, and checks the running totals and the end-of-cup screen. Humans are told apart by their
+   row's highlight color, which stays with their controller even if they change character. `backlog.md` lists the cups and
+   anything to double-check.
+4. On the site: **+ Add results › Import a backlog file** and pick `backlog-import.json` from the folder. Racers are matched to
+   players by their usual character (otherwise unclaimed), unless you said who with `--who Luigi=Gerrard` (repeatable) when
+   running the script; name the cups, check, then save or submit as usual.
 
 ## Cup nights
 
@@ -165,7 +182,8 @@ Free Supabase projects pause after 7 days without activity. The `Keep database a
 |---|---|
 | `src/` | The React app (components, pages, context providers, standings math) |
 | `src/lib/night.js`, `src/components/night/` | Recording a cup night: validation, photo matching by character, save payloads; the Add page's editors |
-| `src/lib/readPhoto.js` | Reads a results photo with Claude (`@anthropic-ai/sdk`, the visitor's own key, kept in their browser) |
+| `src/lib/gemini.js`, `src/lib/readPhoto.js` | Reads a results photo with Gemini (plain `fetch`; on the site, the visitor's own key kept in their browser) |
+| `src/lib/backlog.js`, `scripts/read-backlog.mjs` | `npm run backlog`: reads a folder of a night's photos with Gemini and groups them into cups for the Add page's import |
 | `index.html`, `vite.config.js` | Vite entry point and build config (`base: "/kart-league/"` for GitHub Pages) |
 | `src/lib/supabaseClient.js` | Supabase project URL and publishable key (not secret) |
 | `supabase/schema.sql` | Tables, permissions and save functions; paste into the Supabase SQL editor |

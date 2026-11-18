@@ -8,10 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "email:preview": "node scripts/email-preview.mjs"
+    "email:preview": "node scripts/email-preview.mjs",
+    "backlog": "vite-node scripts/read-backlog.mjs --"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.1.6",
@@ -25,6 +25,7 @@
     "@electric-sql/pglite": "^0.5.16",
     "@vitejs/plugin-react": "^4.3.3",
     "vite": "^5.4.11",
+    "vite-node": "^3.2.4",
     "vitest": "^3.2.7"
   }
 }

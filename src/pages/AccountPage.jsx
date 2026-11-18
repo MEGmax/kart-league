@@ -223,8 +223,8 @@ function EmailPreferences({ profile }) {
   );
 }
 
-// The Anthropic key lives only in this browser and is sent only to Anthropic, to read results photos.
-function ClaudeKey() {
+// The Gemini key lives only in this browser and is sent only to Google, to read results photos.
+function GeminiKey() {
   const [has, setHas] = useState(!!getApiKey());
   const [val, setVal] = useState("");
   const [editing, setEditing] = useState(false);
@@ -235,9 +235,11 @@ function ClaudeKey() {
   }
   return (
     <Paper sx={{ p: 3 }}>
-      <Typography variant="overline" sx={{ color: colors.muted }}>Read results photos with Claude</Typography>
+      <Typography variant="overline" sx={{ color: colors.muted }}>Read results photos with Gemini</Typography>
       <Typography variant="body2" sx={{ mt: 1 }}>
-        With an Anthropic API key, Claude reads each results-screen photo you add when recording cups and fills in everyone's points, matching rows to racers by their character. The key stays in this browser and is sent only to Anthropic ({MODEL}). Each photo costs a few cents on your key.
+        With a Gemini API key, Gemini reads each results-screen photo you add when recording cups and fills in everyone's points, matching rows to racers by their character.
+        The key stays in this browser and is sent only to Google ({MODEL}). Get one free at{" "}
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: colors.cool }}>Google AI Studio</a>; usage beyond the free tier is billed to the key.
       </Typography>
       {has && !editing ? (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}>
@@ -247,7 +249,7 @@ function ClaudeKey() {
         </Stack>
       ) : (
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ mt: 1.5 }}>
-          <TextField size="small" type="password" label="Anthropic API key" placeholder="sk-ant-…" value={val} onChange={(e) => setVal(e.target.value)} sx={{ flex: 1 }} autoComplete="off" />
+          <TextField size="small" type="password" label="Gemini API key" placeholder="AIza…" value={val} onChange={(e) => setVal(e.target.value)} sx={{ flex: 1 }} autoComplete="off" />
           <Button variant="contained" size="small" onClick={save} disabled={!val.trim()}>Save key</Button>
           {editing && <Button size="small" onClick={() => setEditing(false)}>Cancel</Button>}
         </Stack>
@@ -420,7 +422,7 @@ function SignedInView() {
         <ProfileEditor profile={profile} onSaved={() => setSavedFlash("Profile saved")} />
         <EmailPreferences key={String(profile.emailCupNights)} profile={profile} />
         <MyActivity />
-        <ClaudeKey />
+        <GeminiKey />
         <Button component={RouterLink} to="/add" variant="outlined">{isAdmin ? "Record a cup night" : "Submit a cup night's results"}</Button>
         <Paper sx={{ p: 3 }}>
           <Typography variant="overline" sx={{ color: colors.muted }}>Sign-in and security</Typography>

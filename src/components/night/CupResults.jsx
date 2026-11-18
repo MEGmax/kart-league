@@ -1,5 +1,5 @@
 // One cup's results for every racer: cup totals or each race's finishing position, plus its
-// results photo, which Claude can read and match to racers by their character for the night.
+// results photo, which Gemini can read and match to racers by their character for the night.
 import { useRef, useState } from "react";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -157,11 +157,11 @@ export default function CupResults({ night, cup, index, setNight, players, clash
               {cup.photo ? "Use a different photo" : cup.hasPhoto ? "Replace the results photo" : "Add the results photo"}
               <input type="file" accept="image/*" hidden onChange={onFile} />
             </Button>
-            {cup.photo && hasKey && !read.busy && <Button size="small" onClick={() => runRead()}>Read with Claude{showPhotoCol ? " again" : ""}</Button>}
+            {cup.photo && hasKey && !read.busy && <Button size="small" onClick={() => runRead()}>Read with Gemini{showPhotoCol ? " again" : ""}</Button>}
             {read.busy && (
               <>
                 <CircularProgress size={18} />
-                <Typography variant="body2">Claude is reading the results screen…</Typography>
+                <Typography variant="body2">Gemini is reading the results screen…</Typography>
                 <Button size="small" onClick={() => { if (ctl.current) ctl.current.abort(); }}>Stop</Button>
               </>
             )}
@@ -169,7 +169,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
           {!cup.photo && (
             <Typography variant="body2" sx={{ color: colors.muted }}>
               Optional. The photo of the end-of-cup standings is kept as the record.{" "}
-              {hasKey ? "Claude reads it and fills in each racer's points by their character." : "Add an Anthropic API key on your Account page and Claude will fill in the points from it."}
+              {hasKey ? "Gemini reads it and fills in each racer's points by their character." : "Add a Gemini API key on your Account page and Gemini will fill in the points from it."}
             </Typography>
           )}
           {read.info && <Alert severity="info">{read.info}</Alert>}

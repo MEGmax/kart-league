@@ -25,6 +25,7 @@ import {
   buildSave, buildSubmissions, cellOf, cellPoints, draftForStorage, newNight, nightFromCup, nightFromEvent,
   nightFromSubmissions, positionClashes, uid, validateNight,
 } from "../lib/night";
+import { BacklogError, nightFromBacklog } from "../lib/backlog";
 import { colors } from "../theme";
 import { Loading, PageTitle } from "../components/PageBits";
 import LineupEditor from "../components/night/LineupEditor";
@@ -206,6 +207,28 @@ export default function AddPage() {
     setNotice(`Started from the cup night on ${formatEventWhen(ev.startsAt).date}. Add each racer's character, then the points.`);
   }
 
+  // A backlog file from `npm run backlog`: a night's photos already read by Gemini and grouped into cups.
+  async function importBacklog(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const fresh = nightFromBacklog(data, state, night.mode);
+      setNight(fresh);
+      setError("");
+      const unclaimed = fresh.racers.filter((r) => r.assign === "unclaimed").length;
+      const checks = (data.issues || []).length;
+      setNotice(
+        `Imported ${fresh.cups.length} cup${fresh.cups.length === 1 ? "" : "s"} and ${fresh.racers.length} racers from ${data.source || file.name}. ` +
+        "Racers were matched to players by their usual character" + (unclaimed ? `; ${unclaimed} couldn't be, so pick who they are` : "") + ". " +
+        "Name each cup, check the numbers against the photos" + (checks ? `, and see the ${checks} thing${checks === 1 ? "" : "s"} to check in backlog.md` : "") + "."
+      );
+    } catch (err) {
+      setError(err instanceof BacklogError ? err.message : err instanceof SyntaxError ? "That file isn't valid JSON. Pick the backlog-import.json that npm run backlog wrote." : "Couldn't import that file.");
+    }
+  }
+
   function startOver() {
     clearDraft();
     setNight(newNight(state, mode));
@@ -276,6 +299,17 @@ export default function AddPage() {
                 return <MenuItem key={e.id} value={e.id}>{w.date} · {cupLabel(e.cups)}{e.going.length ? ` · ${e.going.length} in` : ""}</MenuItem>;
               })}
             </TextField>
+          )}
+          {(night.mode === "add" || night.mode === "submit") && (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+              <Button component="label" size="small" variant="outlined" sx={{ alignSelf: "flex-start", whiteSpace: "nowrap" }}>
+                Import a backlog file
+                <input type="file" accept=".json,application/json" hidden onChange={importBacklog} />
+              </Button>
+              <Typography variant="body2" sx={{ color: colors.muted }}>
+                A whole night's photos read by Gemini with <code>npm run backlog</code>: pick the <code>backlog-import.json</code> it writes.
+              </Typography>
+            </Stack>
           )}
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, minmax(0,1fr))" } }}>
             <TextField size="small" type="date" label="Date raced" value={night.date} onChange={(e) => set({ date: e.target.value })} InputLabelProps={{ shrink: true }} />
