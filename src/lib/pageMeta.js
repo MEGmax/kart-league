@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const PAGES = {
-  "/standings": ["Standings", "Live standings: points percentage, cup wins and characters for every racer."],
+  "/standings": ["Home", "Live standings: points percentage, cup wins and characters for every racer."],
   "/schedule": ["Schedule", "The season schedule: when each cup night is, which cups, who's in, and how past nights went."],
   "/join": ["Join", "Join the cup being raced and enter your finishing place after each race of tonight's cup."],
   "/history": ["History", "Every finished cup: results, race-by-race places and tracks."],

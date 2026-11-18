@@ -17,7 +17,7 @@ import BottomNavigationAction from "@mui/material/BottomNavigationAction";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
-import LeaderboardOutlinedIcon from "@mui/icons-material/LeaderboardOutlined";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import SportsScoreOutlinedIcon from "@mui/icons-material/SportsScoreOutlined";
 import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
@@ -36,7 +36,7 @@ import { usePageTitle } from "../lib/pageMeta";
 import { colors, brandStripe, fontDisplay } from "../theme";
 
 const TABS = [
-  { value: "/standings", label: "Standings", icon: <LeaderboardOutlinedIcon /> },
+  { value: "/standings", label: "Home", icon: <HomeOutlinedIcon /> },
   { value: "/schedule", label: "Schedule", icon: <EventOutlinedIcon /> },
   { value: "/join", label: "Join", icon: <SportsScoreOutlinedIcon /> },
   { value: "/history", label: "History", icon: <EmojiEventsOutlinedIcon /> },
@@ -48,7 +48,7 @@ const PRIMARY = 4; // on phones the first four sit in the bottom bar; the rest g
 
 const BAR_H = 60;
 
-// The tab a route belongs to: /standings/gsote is Standings, /schedule/<id> is Schedule.
+// The tab a route belongs to: /standings/gsote is Home, /schedule/<id> is Schedule.
 function sectionOf(pathname) {
   const first = "/" + (pathname.split("/")[1] || "");
   return first;
@@ -99,7 +99,7 @@ export default function Layout() {
             <Box
               component={RouterLink}
               to="/standings"
-              aria-label={`${league.name}: standings`}
+              aria-label={`${league.name}: home`}
               sx={{ display: "flex", flexShrink: 0, mr: { xs: 0, sm: 1 }, transition: "transform .15s", "&:hover": { transform: "translateY(-1px) rotate(-3deg)" } }}
             >
               <Box component="img" src={LOGO_SRC} alt="NKL" sx={{ height: 40, width: "auto", display: "block" }} />

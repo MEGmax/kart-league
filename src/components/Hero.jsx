@@ -3,6 +3,7 @@ import Container from "@mui/material/Container";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { LOGO_SRC } from "../lib/constants";
+import KartRacer from "./KartRacer";
 import { colors, brandStripe, fontDisplay } from "../theme";
 
 function Pill({ children }) {
@@ -16,9 +17,9 @@ function Pill({ children }) {
 const shortDate = (iso) => new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
 // The season at a glance. Everything here comes from seasonPlan() (standings.js), the same numbers the
-// Playoffs page uses: the week, the cups raced and to go, and one progress segment per cup.
+// Playoffs page uses: the week and the cups raced. A kart drives along the stripe at the bottom.
 export default function Hero({ league, plan, next }) {
-  const { seasonWeeks: W, current, played, left, seasonDone, justFinished } = plan;
+  const { seasonWeeks: W, current, played, seasonDone, justFinished } = plan;
   const status = seasonDone ? "Regular season complete"
     : justFinished ? (next ? `Week ${justFinished} done · next night ${shortDate(next.startsAt)}` : `Week ${justFinished} complete`)
     : null;
@@ -47,7 +48,7 @@ export default function Hero({ league, plan, next }) {
         }}
       />
 
-      <Container maxWidth="lg" sx={{ position: "relative", pt: { xs: 4, md: 5 }, pb: { xs: 2.5, md: 3 } }}>
+      <Container maxWidth="lg" sx={{ position: "relative", pt: { xs: 4, md: 5 }, pb: { xs: 8, md: 7 } }}>
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,1fr) auto" }, columnGap: 6, alignItems: "center" }}>
           <Box sx={{ minWidth: 0 }}>
             <Stack direction="row" spacing={1} alignItems="center">
@@ -81,13 +82,6 @@ export default function Hero({ league, plan, next }) {
               <Pill>
                 <Typography component="span" sx={{ fontWeight: 800 }}>{played}</Typography>
                 <Typography component="span" sx={{ color: colors.muted }}> raced</Typography>
-                {!seasonDone && (
-                  <>
-                    <Typography component="span" sx={{ color: colors.muted }}> · </Typography>
-                    <Typography component="span" sx={{ fontWeight: 800 }}>{left}</Typography>
-                    <Typography component="span" sx={{ color: colors.muted }}> to go</Typography>
-                  </>
-                )}
               </Pill>
             </Stack>
             {status && <Typography variant="body2" sx={{ color: "rgba(255,255,255,.8)", mt: 1 }}>{status}</Typography>}
@@ -101,30 +95,8 @@ export default function Hero({ league, plan, next }) {
           />
         </Box>
 
-        <Box aria-hidden sx={{ display: "grid", gridTemplateColumns: `repeat(${plan.weeks.length}, minmax(0,1fr))`, gap: 1, pt: 3 }}>
-          {plan.weeks.map(({ week: w, played: n, slots }) => {
-            const isCur = w === current;
-            return (
-              <Box key={w} sx={{ display: "grid", gap: 0.5, minWidth: 0 }}>
-                <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.66rem", letterSpacing: "0.06em", color: isCur ? colors.accent : colors.muted }}>
-                  Wk {w}
-                </Typography>
-                <Box sx={{ display: "grid", gridTemplateColumns: `repeat(${slots}, minmax(0,1fr))`, gap: 0.4, height: 12 }}>
-                  {Array.from({ length: slots }, (_, i) => (
-                    <Box
-                      key={i}
-                      sx={{
-                        borderRadius: "3px", transform: "skewX(-14deg)",
-                        background: i < n ? (isCur ? colors.accent : "rgba(255,255,255,.7)") : isCur ? "rgba(255,210,63,.18)" : "rgba(255,255,255,.1)",
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            );
-          })}
-        </Box>
       </Container>
+      <KartRacer bottom={5} />
       <Box aria-hidden sx={{ position: "relative", height: 5, background: brandStripe }} />
     </Box>
   );

@@ -4,7 +4,7 @@ import Layout from "./components/Layout";
 import StandingsPage from "./pages/StandingsPage";
 import { Loading } from "./components/PageBits";
 
-// Standings is the landing page and ships in the main bundle; every other page loads when first opened.
+// Home (the standings) is the landing page and ships in the main bundle; every other page loads when first opened.
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const AddPage = lazy(() => import("./pages/AddPage"));
 const BuildPage = lazy(() => import("./pages/BuildPage"));

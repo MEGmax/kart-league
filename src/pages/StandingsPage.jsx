@@ -13,12 +13,11 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { compute, playerFromSlug, playerSlug } from "../lib/standings";
 import { DEMO } from "../lib/demo";
-import { charColor, ord, pctTxt } from "../lib/constants";
+import { ord, pctTxt } from "../lib/constants";
 import { nextEvent } from "../lib/events";
 import { colors, fontDisplay } from "../theme";
 import Hero from "../components/Hero";
 import CharacterFace from "../components/CharacterFace";
-import CharacterChip from "../components/CharacterChip";
 import RacerDrawer from "../components/RacerDrawer";
 import { Loading, PageTitle, SectionTitle, plural } from "../components/PageBits";
 
@@ -32,23 +31,6 @@ const linkReset = {
 
 function names(list) {
   return list.length <= 2 ? list.join(" & ") : `${list.slice(0, -1).join(", ")} & ${list[list.length - 1]}`;
-}
-
-// Chip + bar + label; on phones the bar drops onto its own line so nothing overflows.
-function BarRow({ name, value, color, label }) {
-  return (
-    <Box
-      sx={{
-        display: "grid", alignItems: "center", columnGap: 1.5, rowGap: 0.75,
-        gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "160px minmax(0,1fr) auto" },
-        gridTemplateAreas: { xs: '"chip text" "bar bar"', sm: '"chip bar text"' },
-      }}
-    >
-      <Box sx={{ gridArea: "chip", minWidth: 0 }}><CharacterChip name={name} /></Box>
-      <LinearProgress variant="determinate" value={value} sx={{ gridArea: "bar", height: 8, "& .MuiLinearProgress-bar": { bgcolor: color } }} />
-      <Typography variant="body2" sx={{ gridArea: "text", color: colors.muted, whiteSpace: "nowrap", textAlign: "right" }}>{label}</Typography>
-    </Box>
-  );
 }
 
 function StatTile({ label, value, sub }) {
@@ -148,33 +130,6 @@ function BoardRow({ s, rank, href }) {
   );
 }
 
-function CharacterChart({ chars }) {
-  const top = chars.slice(0, 10);
-  if (!top.length) return null;
-  const most = top[0].picks;
-  return (
-    <Box>
-      <SectionTitle title="Most picked characters" count="By race: a cup entered from its totals counts as 4 races with that character" />
-      <Paper sx={{ p: 2 }}>
-        <Stack spacing={1.25}>
-          {top.map((c) => (
-            <BarRow
-              key={c.name}
-              name={c.name}
-              value={(c.picks / most) * 100}
-              color={charColor(c.name)}
-              label={`${plural(c.picks, "race")} · ${pctTxt(c.pts / c.max)} avg · ${plural(c.cupWins, "cup win")}`}
-            />
-          ))}
-        </Stack>
-      </Paper>
-      <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 1 }}>
-        A cup win counts for the character used most in that cup.
-      </Typography>
-    </Box>
-  );
-}
-
 export default function StandingsPage() {
   const { state, events, loadError } = useLeagueData();
   const { isAdmin } = useAuth();
@@ -195,8 +150,6 @@ export default function StandingsPage() {
   const everyone = m.ranked.concat(m.unranked);
   const topWins = everyone.length ? Math.max(...everyone.map((s) => s.wins)) : 0;
   const winLeaders = everyone.filter((s) => s.wins === topWins).map((s) => s.player.name);
-  const topPicks = m.chars.length ? m.chars[0].picks : 0;
-  const charLeaders = m.chars.filter((c) => c.picks === topPicks);
 
   return (
     <>
@@ -214,13 +167,6 @@ export default function StandingsPage() {
               label="Most cup wins"
               value={topWins ? names(winLeaders) : "None yet"}
               sub={topWins ? `${plural(topWins, "cup win")}${winLeaders.length > 1 ? " each · tied" : ""}` : ""}
-            />
-            <StatTile
-              label="Most picked character"
-              value={charLeaders.length ? names(charLeaders.map((c) => c.name)) : "–"}
-              sub={charLeaders.length > 1
-                ? `${plural(topPicks, "race")} each · tied`
-                : charLeaders.length ? `${plural(topPicks, "race")} · ${pctTxt(charLeaders[0].pts / charLeaders[0].max)} avg` : ""}
             />
             <StatTile label="Qualifying mark" value={plural(m.need, "cup")} sub={`${L.minParticipation}% of cups played so far`} />
           </Stack>
@@ -264,7 +210,6 @@ export default function StandingsPage() {
           <Typography variant="body2" sx={{ color: colors.muted, mt: 2 }}>Pick a racer for their season: every cup, tracks, head-to-heads and characters.</Typography>
         )}
 
-        {m.chars.length > 0 && <CharacterChart chars={m.chars} />}
       </Container>
       <RacerDrawer s={selected && selected.cp ? selected : null} m={m} players={st.players} onClose={() => navigate("/standings")} />
     </>
