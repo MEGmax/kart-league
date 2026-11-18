@@ -19,7 +19,6 @@ import { colors, fontDisplay } from "../theme";
 import Hero from "../components/Hero";
 import CharacterFace from "../components/CharacterFace";
 import CharacterChip from "../components/CharacterChip";
-import NextCupNight from "../components/NextCupNight";
 import RacerDrawer from "../components/RacerDrawer";
 import { Loading, PageTitle, SectionTitle, plural } from "../components/PageBits";
 
@@ -203,7 +202,6 @@ export default function StandingsPage() {
     <>
       <Hero league={L} plan={m.plan} next={events ? nextEvent(events) : null} />
       <Container maxWidth="lg" sx={{ pt: 3 }}>
-        <Box sx={{ mb: 4 }}><NextCupNight /></Box>
         {demo && (
           <Alert severity="info" sx={{ mb: 3 }} action={isAdmin ? <Button color="inherit" size="small" href="#/build">Build the first cup</Button> : null}>
             <b>Example standings.</b> These made-up results show how the site works. They disappear when the first real cup is added.

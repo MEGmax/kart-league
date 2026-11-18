@@ -97,7 +97,7 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
       await q(sb.rpc("reopen_cup", { p_cup: cup.id }));
       flash("Reopened. Fix the entries, then finish it again.");
       reload();
-      navigate("/race");
+      navigate("/join");
     } catch (e) {
       setError(dbErr(e));
       setBusy(false);
@@ -180,7 +180,7 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
                 {!(cup.maps && cup.maps.length) && (
                   <Button size="small" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Set cup &amp; tracks</Button>
                 )}
-                {info.hasRaces && <Button size="small" disabled={busy} onClick={reopen}>Reopen on Race night</Button>}
+                {info.hasRaces && <Button size="small" disabled={busy} onClick={reopen}>Reopen on Join</Button>}
                 <Button size="small" color="error" onClick={() => setConfirmDel(true)}>Delete</Button>
               </>
             )}
@@ -214,7 +214,7 @@ export default function CupsPage() {
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
       <PageTitle
-        title="Cup log"
+        title="History"
         sub={`${m.total} cup${m.total === 1 ? "" : "s"} finished · newest week first`}
         action={user && <Button component={RouterLink} to="/add" variant="contained" size="small">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
       />
@@ -230,9 +230,9 @@ export default function CupsPage() {
           key={c.id}
           severity="success"
           sx={{ mb: 2 }}
-          action={<Button component={RouterLink} to="/race" color="inherit" size="small">Race night</Button>}
+          action={<Button component={RouterLink} to="/join" color="inherit" size="small">Join</Button>}
         >
-          <b>{c.cup}</b> is being raced now. Enter your results on Race night.
+          <b>{c.cup}</b> is being raced now. Join it and enter your results.
         </Alert>
       ))}
 

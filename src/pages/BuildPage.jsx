@@ -1,5 +1,5 @@
 // Cup builder: an admin picks the 4 tracks before the first race (by hand, from a template, or at
-// random) and locks them in; Race night then opens for results. Also manages saved track templates.
+// random) and locks them in; Join then opens for results. Also manages saved track templates.
 import { useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Container from "@mui/material/Container";
@@ -81,9 +81,9 @@ export default function BuildPage() {
         id: "c" + uid(), cup: build.name.trim(), date: build.date, week: Number(build.week), max: 60, maps: build.maps,
         template_id: build.templateId && !build.templateId.startsWith("g") ? build.templateId : "",
       } }));
-      flash(`${build.name.trim()} is locked in. Enter results on Race night.`);
+      flash(`${build.name.trim()} is locked in. Enter results on Join.`);
       reload();
-      navigate("/race");
+      navigate("/join");
     } catch (e) {
       setError(dbErr(e));
       setBusy(false);
@@ -121,8 +121,8 @@ export default function BuildPage() {
     <Container maxWidth="lg" sx={{ pt: 1 }}>
       <PageTitle
         title="Cup builder"
-        sub="Pick the 4 tracks before the first race. Once locked in they can't change, and Race night opens for results."
-        action={<Button component={RouterLink} to="/race" size="small" variant="outlined">Race night</Button>}
+        sub="Pick the 4 tracks before the first race. Once locked in they can't change, and the cup opens on Join for results."
+        action={<Button component={RouterLink} to="/join" size="small" variant="outlined">Join</Button>}
       />
 
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>

@@ -270,9 +270,9 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
       // The photo goes up after the results are final, re-encoded without EXIF (GPS).
       let photoFailed = false;
       if (photo) await saveCupPhoto(cup.id, photo).catch(() => { photoFailed = true; });
-      flash(photoFailed ? `${cup.cup} is final, but its photo didn't upload. Add it with Edit results on the Cups page.` : `${cup.cup} is final. Standings updated.`);
+      flash(photoFailed ? `${cup.cup} is final, but its photo didn't upload. Add it with Edit results on the History page.` : `${cup.cup} is final. Standings updated.`);
       reload();
-      navigate("/cups");
+      navigate("/history");
     } catch (e) {
       setError(dbErr(e));
       setSaving(false);
@@ -500,7 +500,7 @@ export default function RaceNightPage() {
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
       <PageTitle
-        title="Race night"
+        title="Join"
         action={isAdmin && live.length > 0 && <Button component={RouterLink} to="/build" size="small" variant="outlined">+ Build another cup</Button>}
       />
 
@@ -522,8 +522,8 @@ export default function RaceNightPage() {
           <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", justifyContent: "center" }}>
             {isAdmin && <Button component={RouterLink} to="/build" variant="contained">Build a cup</Button>}
             {next
-              ? <Button component={RouterLink} to={`/events/${next.id}`} variant={isAdmin ? "outlined" : "contained"}>See the next cup night</Button>
-              : <Button component={RouterLink} to="/events" variant="outlined">Cup nights</Button>}
+              ? <Button component={RouterLink} to={`/schedule/${next.id}`} variant={isAdmin ? "outlined" : "contained"}>See the next cup night</Button>
+              : <Button component={RouterLink} to="/schedule" variant="outlined">Schedule</Button>}
           </Stack>
         </Paper>
       ) : (

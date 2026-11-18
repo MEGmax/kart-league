@@ -25,9 +25,9 @@ describe("renderEmail", () => {
     expect(m.subject).toBe("Cup night: Tuesday, January 15 at 8:00 PM EST");
     expect(m.text).toContain("Cups: Cup TBD");
     expect(m.text).toContain("Notes: Bring <snacks> & drinks");
-    expect(m.text).toContain("I'm in: https://kart.example/#/events/abc");
+    expect(m.text).toContain("I'm in: https://kart.example/#/schedule/abc");
     expect(m.text).toContain("Unsubscribe: https://kart.example/#/unsubscribe/11111111-2222-3333-4444-555555555555");
-    expect(m.html).toContain('href="https://kart.example/#/events/abc"');
+    expect(m.html).toContain('href="https://kart.example/#/schedule/abc"');
     expect(m.html).toContain("Bring &lt;snacks&gt; &amp; drinks");
     expect(m.html).not.toContain("<script>");
     expect(m.headers["List-Unsubscribe"]).toBe("<https://proj.supabase.co/functions/v1/unsubscribe?token=11111111-2222-3333-4444-555555555555>");

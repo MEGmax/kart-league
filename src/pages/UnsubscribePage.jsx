@@ -61,7 +61,7 @@ export default function UnsubscribePage() {
         {status !== "working" && (
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
             <Button component={RouterLink} to="/account" variant="outlined">Your account</Button>
-            <Button component={RouterLink} to="/events">Cup nights</Button>
+            <Button component={RouterLink} to="/schedule">Schedule</Button>
           </Stack>
         )}
       </Paper>

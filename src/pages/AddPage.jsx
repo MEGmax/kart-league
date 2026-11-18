@@ -87,7 +87,7 @@ export default function AddPage() {
     if (mode === "edit") {
       const cup = state.cups.find((c) => c.id === editId);
       if (!cup) { setInitError("That cup doesn't exist anymore."); return; }
-      if (cup.status === "racing") { setInitError(`${cup.cup} is still being raced. Fix its entries on Race night instead.`); return; }
+      if (cup.status === "racing") { setInitError(`${cup.cup} is still being raced. Fix its entries on Join instead.`); return; }
       setNight(nightFromCup(cup, state));
       return;
     }
@@ -169,7 +169,7 @@ export default function AddPage() {
     return (
       <Container maxWidth="md">
         <PageTitle title={TITLES[mode]} />
-        <Alert severity="info" action={<Button color="inherit" size="small" onClick={() => navigate(mode === "review" ? "/admin" : "/cups")}>Back</Button>}>{initError}</Alert>
+        <Alert severity="info" action={<Button color="inherit" size="small" onClick={() => navigate(mode === "review" ? "/admin" : "/history")}>Back</Button>}>{initError}</Alert>
       </Container>
     );
   }
@@ -268,7 +268,7 @@ export default function AddPage() {
       const what = night.mode === "edit" ? "Cup updated" : night.mode === "review" ? `Approved ${n} cup${n === 1 ? "" : "s"}` : `Saved ${n} cup${n === 1 ? "" : "s"}`;
       flash(failed.length ? `${what}, but the photo for ${failed.join(", ")} didn't upload. Edit the cup to try again.` : `${what}. Standings updated.`);
       reload();
-      navigate(night.mode === "review" ? "/admin" : "/cups");
+      navigate(night.mode === "review" ? "/admin" : "/history");
     } catch (e) {
       setError(dbErr(e));
       setSaving(false);
@@ -363,7 +363,7 @@ export default function AddPage() {
               {n} cup{n === 1 ? "" : "s"} · {night.racers.length} racer{night.racers.length === 1 ? "" : "s"} · {totalResults} result{totalResults === 1 ? "" : "s"} entered.{" "}
               {night.mode === "submit" ? "You can withdraw it from your Account page while it's pending." : "Unclaimed results show on the Unclaimed page for people to request."}
             </Typography>
-            <Button onClick={() => navigate(night.mode === "review" ? "/admin" : night.mode === "submit" ? "/account" : "/cups")} disabled={saving}>Cancel</Button>
+            <Button onClick={() => navigate(night.mode === "review" ? "/admin" : night.mode === "submit" ? "/account" : "/history")} disabled={saving}>Cancel</Button>
           </Stack>
         </Paper>
       </Stack>

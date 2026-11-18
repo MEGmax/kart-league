@@ -37,9 +37,9 @@ import { colors, brandStripe, fontDisplay } from "../theme";
 
 const TABS = [
   { value: "/standings", label: "Standings", icon: <LeaderboardOutlinedIcon /> },
-  { value: "/events", label: "Cup nights", icon: <EventOutlinedIcon /> },
-  { value: "/race", label: "Race night", icon: <SportsScoreOutlinedIcon /> },
-  { value: "/cups", label: "Cups", icon: <EmojiEventsOutlinedIcon /> },
+  { value: "/schedule", label: "Schedule", icon: <EventOutlinedIcon /> },
+  { value: "/join", label: "Join", icon: <SportsScoreOutlinedIcon /> },
+  { value: "/history", label: "History", icon: <EmojiEventsOutlinedIcon /> },
   { value: "/unclaimed", label: "Unclaimed", icon: <HelpOutlineIcon /> },
   { value: "/playoffs", label: "Playoffs", icon: <AccountTreeOutlinedIcon /> },
   { value: "/rules", label: "Rules", icon: <MenuBookOutlinedIcon /> },
@@ -48,7 +48,7 @@ const PRIMARY = 4; // on phones the first four sit in the bottom bar; the rest g
 
 const BAR_H = 60;
 
-// The tab a route belongs to: /standings/gsote is Standings, /events/<id> is Cup nights.
+// The tab a route belongs to: /standings/gsote is Standings, /schedule/<id> is Schedule.
 function sectionOf(pathname) {
   const first = "/" + (pathname.split("/")[1] || "");
   return first;
@@ -81,11 +81,11 @@ export default function Layout() {
     if (t.value === "/unclaimed" && unclaimed) {
       return <Badge color="warning" badgeContent={unclaimed} max={99} sx={{ mr: 1.5, "& .MuiBadge-badge": { right: -12 } }}><span>{t.label}</span></Badge>;
     }
-    if (t.value === "/race" && live) return <Badge color="error" variant="dot"><span>{t.label}</span></Badge>;
+    if (t.value === "/join" && live) return <Badge color="error" variant="dot"><span>{t.label}</span></Badge>;
     return t.label;
   };
   const tabAria = (t) => (t.value === "/unclaimed" && unclaimed ? `Unclaimed, ${unclaimed} results waiting`
-    : t.value === "/race" && live ? "Race night, a cup is being raced" : t.label);
+    : t.value === "/join" && live ? "Join, a cup is being raced" : t.label);
 
   const more = tabs.slice(PRIMARY);
   const moreActive = more.some((t) => t.value === section) || section === "/account";
@@ -193,13 +193,13 @@ export default function Layout() {
             bgcolor: "rgba(7,10,31,.96)", height: 64,
             "& .MuiBottomNavigationAction-root": { color: colors.muted, minWidth: 0, px: 0.25 },
             "& .MuiBottomNavigationAction-root.Mui-selected": { color: colors.ink },
-            // Same label size selected or not, so "Cup nights" never wraps.
+            // Same label size selected or not, so a label never wraps.
             "& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected": { fontSize: "0.7rem", whiteSpace: "nowrap", fontWeight: 600 },
           }}
         >
           {tabs.slice(0, PRIMARY).map((t) => (
             <BottomNavigationAction key={t.value} value={t.value} label={t.label} aria-label={tabAria(t)}
-              icon={t.value === "/race" && live ? <Badge color="error" variant="dot">{t.icon}</Badge> : t.icon} />
+              icon={t.value === "/join" && live ? <Badge color="error" variant="dot">{t.icon}</Badge> : t.icon} />
           ))}
           <BottomNavigationAction value="more" label="More" aria-label={unclaimed ? `More: unclaimed (${unclaimed}), playoffs, rules` : "More: unclaimed, playoffs, rules"} aria-haspopup="menu"
             icon={<Badge color="warning" variant="dot" invisible={!unclaimed}><MoreHorizIcon /></Badge>} />

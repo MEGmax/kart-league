@@ -31,10 +31,10 @@ All of these numbers are editable by admins on the Admin page.
 ## Cup night workflow
 
 1. **Build the cup** (admin, before racing): Cup builder › pick 4 tracks by hand, from a template (the 8 game cups are built in; save your own like "Cursed Cup"), or at random. **Lock in & start racing**. The tracks can't change after this.
-2. **After each race**: every racer opens **Race night** and enters their finishing position (1st–12th) and character. Points come from the 15-12-10-8-7-6-5-4-3-2-1-0 table. Admins can enter or fix results for anyone. Two people claiming the same place gets flagged.
+2. **After each race**: every racer opens **Join** and enters their finishing position (1st–12th) and character. Points come from the 15-12-10-8-7-6-5-4-3-2-1-0 table. Admins can enter or fix results for anyone. Two people claiming the same place gets flagged.
 3. **After the cup**: an admin presses **Finish cup**, adds the results-screen photo, and the site compares the photo's totals with what everyone entered (Gemini reads the photo if a Gemini API key is saved on the account page). Fix anything that's off, then **Finalize**. Only finalized cups count. Highlighted photo rows nobody entered can be saved as unclaimed points.
 
-Admins can reopen a finished race-by-race cup on Race night, or fix any finished cup with **Edit results** on the Cups page.
+Admins can reopen a finished race-by-race cup on Join, or fix any finished cup with **Edit results** on the History page.
 
 ## Recording a whole night afterwards
 
@@ -59,7 +59,7 @@ browser as a draft (without photos).
 ### Results photos and privacy
 
 Results photos show the inside of someone's home, so only signed-in members can see them. They're kept in a private Supabase
-Storage bucket (`cup-photos`), with a small thumbnail that the Cups page loads only when a cup scrolls into view; tap it for the
+Storage bucket (`cup-photos`), with a small thumbnail that the History page loads only when a cup scrolls into view; tap it for the
 full photo. Every photo is re-encoded in the browser before it's uploaded, which removes its metadata (GPS location, camera).
 
 Photos saved before this change sit in the old `photos` table with their metadata. After running the latest `supabase/schema.sql`,
@@ -159,7 +159,7 @@ Per cup and racer: finishing position, character, points, and a race-by-race gri
 
 ## Character art
 
-Character images appear next to racers in cups, the leaderboard, the podium, player cards and Race night. Characters without an image (currently Daisy, Toadette, Rosalina, Funky Kong, Dry Bowser and Mii) show a colored initial badge instead. To add one, see the top of `tools/characters.py`.
+Character images appear next to racers in cups, the leaderboard, the podium, player cards and Join. Characters without an image (currently Daisy, Toadette, Rosalina, Funky Kong, Dry Bowser and Mii) show a colored initial badge instead. To add one, see the top of `tools/characters.py`.
 
 The artwork belongs to Nintendo; it's used here as a fan site and should be removed if Nintendo asks.
 

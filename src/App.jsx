@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import Layout from "./components/Layout";
 import StandingsPage from "./pages/StandingsPage";
 import { Loading } from "./components/PageBits";
@@ -17,6 +17,12 @@ const RaceNightPage = lazy(() => import("./pages/RaceNightPage"));
 const EventsPage = lazy(() => import("./pages/EventsPage"));
 const UnsubscribePage = lazy(() => import("./pages/UnsubscribePage"));
 
+// Old links (and cup night emails already sent) used #/events, #/race and #/cups.
+function ScheduleRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/schedule/${id}`} replace />;
+}
+
 const page = (P) => <Suspense fallback={<Loading />}><P /></Suspense>;
 import { AuthProvider } from "./context/AuthContext";
 import { LeagueDataProvider } from "./context/LeagueDataContext";
@@ -33,10 +39,14 @@ export default function App() {
                 <Route index element={<Navigate to="/standings" replace />} />
                 <Route path="standings" element={<StandingsPage />} />
                 <Route path="standings/:player" element={<StandingsPage />} />
-                <Route path="race" element={page(RaceNightPage)} />
-                <Route path="cups" element={page(CupsPage)} />
-                <Route path="events" element={page(EventsPage)} />
-                <Route path="events/:id" element={page(EventsPage)} />
+                <Route path="join" element={page(RaceNightPage)} />
+                <Route path="history" element={page(CupsPage)} />
+                <Route path="schedule" element={page(EventsPage)} />
+                <Route path="schedule/:id" element={page(EventsPage)} />
+                <Route path="race" element={<Navigate to="/join" replace />} />
+                <Route path="cups" element={<Navigate to="/history" replace />} />
+                <Route path="events" element={<Navigate to="/schedule" replace />} />
+                <Route path="events/:id" element={<ScheduleRedirect />} />
                 <Route path="unsubscribe/:token" element={page(UnsubscribePage)} />
                 <Route path="unclaimed" element={page(UnclaimedPage)} />
                 <Route path="playoffs" element={page(PlayoffsPage)} />

@@ -35,7 +35,7 @@ function blobToBase64(blob) {
   });
 }
 
-// A base64 JPEG (as the Add page and Race night hold photos) as clean JPEGs with no metadata.
+// A base64 JPEG (as the Add page and Join hold photos) as clean JPEGs with no metadata.
 export async function cleanPhoto(b64) {
   const img = await loadImage("data:image/jpeg;base64," + b64);
   return {

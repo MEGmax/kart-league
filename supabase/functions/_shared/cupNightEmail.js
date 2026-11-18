@@ -31,7 +31,7 @@ export function parseAddress(s) {
 }
 
 export function eventLink(cfg, eventId) {
-  return `${cfg.siteUrl}#/events/${eventId}`;
+  return `${cfg.siteUrl}#/schedule/${eventId}`;
 }
 
 export function unsubscribeLink(cfg, token) {
@@ -62,7 +62,7 @@ export function renderEmail(row, cfg, now = new Date()) {
   const copy = COPY[row.kind];
   if (!copy) throw new Error(`Unknown email kind: ${row.kind}`);
   const when = formatWhen(row.starts_at, row.timezone || "America/Toronto");
-  const link = row.kind === "cancel" ? `${cfg.siteUrl}#/events` : eventLink(cfg, row.event_id);
+  const link = row.kind === "cancel" ? `${cfg.siteUrl}#/schedule` : eventLink(cfg, row.event_id);
   const unsub = unsubscribeLink(cfg, row.unsubscribe_token);
   const cups = cupsLabel(row.cups);
   const notes = (row.notes || "").trim();
