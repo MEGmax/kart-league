@@ -37,6 +37,7 @@ import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
 import TrackVote from "../components/TrackVote";
+import TrackImage from "../components/TrackImage";
 
 // One row per racer who has entered anything for this cup, best total first.
 function liveRows(races, cupId) {
@@ -103,10 +104,7 @@ function RaceCard({ cup, n, forId, forOther, ringColor, existing, defaultChar })
 
   return (
     <Paper variant="outlined" sx={{ p: 2, bgcolor: colors.bg2, display: "grid", gap: 1.5, alignContent: "start" }}>
-      <Box>
-        <Typography variant="overline" sx={{ color: colors.accent, lineHeight: 1.4 }}>Race {n}</Typography>
-        <Typography sx={{ fontWeight: 700 }}>{cup.maps[n - 1] || `Track ${n}`}</Typography>
-      </Box>
+      <TrackImage track={cup.maps[n - 1] || `Track ${n}`} label caption={`Race ${n}`} />
       <Box sx={{ display: "flex", justifyContent: "center" }}>
         <CharacterFace name={ch} ring={ringColor} size={64} />
       </Box>
@@ -448,13 +446,9 @@ function LiveCup({ cup, state }) {
           ))}
         </Box>
       ) : (
-        <Stack direction="row" spacing={2} useFlexGap sx={{ flexWrap: "wrap" }}>
-          {[1, 2, 3, 4].map((n) => (
-            <Typography key={n} variant="body2" sx={{ color: colors.muted }}>
-              <b style={{ color: colors.ink }}>R{n}</b> {cup.maps[n - 1] || `Track ${n}`}
-            </Typography>
-          ))}
-        </Stack>
+        <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))" } }}>
+          {[1, 2, 3, 4].map((n) => <TrackImage key={n} track={cup.maps[n - 1] || `Track ${n}`} label caption={`Race ${n}`} />)}
+        </Box>
       )}
 
       <LiveTotals cup={cup} rows={rows} playerById={playerById} />

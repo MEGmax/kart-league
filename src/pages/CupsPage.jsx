@@ -20,6 +20,7 @@ import { sb, q, dbErr } from "../lib/supabaseClient";
 import { colors, fontData } from "../theme";
 import { PageTitle } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
+import TrackImage from "../components/TrackImage";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
 import CupPhoto from "../components/CupPhoto";
@@ -117,13 +118,9 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
         </Stack>
 
         {cup.maps && cup.maps.length > 0 && (
-          <Stack direction="row" spacing={2} useFlexGap sx={{ flexWrap: "wrap", mt: 1 }}>
-            {cup.maps.map((mp, k) => (
-              <Typography key={k} variant="body2" sx={{ color: colors.muted }}>
-                <b style={{ color: colors.ink }}>R{k + 1}</b> {mp}
-              </Typography>
-            ))}
-          </Stack>
+          <Box sx={{ display: "grid", gap: 1, mt: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(4, minmax(0,1fr))" }, maxWidth: 760 }}>
+            {cup.maps.map((mp, k) => <TrackImage key={k} track={mp} label caption={`Race ${k + 1}`} />)}
+          </Box>
         )}
         {cup.notes && <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>{cup.notes}</Typography>}
 

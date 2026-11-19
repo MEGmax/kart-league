@@ -167,6 +167,10 @@ create table if not exists public.event_track_votes (
   primary key (event_id, user_id, track)
 );
 
+-- Up to 3 favourite tracks, shown on the profile (added in v8).
+alter table public.profiles add column if not exists favorite_tracks text[] not null default '{}'
+  check (cardinality(favorite_tracks) <= 3 and char_length(array_to_string(favorite_tracks, '|')) <= 200);
+
 -- "Email me about cup nights". Off until the person turns it on.
 alter table public.profiles add column if not exists email_cup_nights boolean not null default false;
 
@@ -336,7 +340,7 @@ drop policy if exists "update own" on public.profiles;
 create policy "read own or admin" on public.profiles for select to authenticated using (id = auth.uid() or public.is_admin());
 create policy "update own" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 revoke insert, update, delete on public.profiles from anon, authenticated;
-grant update (display_name, color, favorite_character, favorite_vehicle, email_cup_nights, updated_at) on public.profiles to authenticated;
+grant update (display_name, color, favorite_character, favorite_vehicle, favorite_tracks, email_cup_nights, updated_at) on public.profiles to authenticated;
 
 -- Submissions: members create and see their own; admins see and review all.
 drop policy if exists "read own or admin" on public.submissions;

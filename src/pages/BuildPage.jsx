@@ -23,6 +23,7 @@ import { suggestWeek, today, uid } from "../lib/night";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { colors } from "../theme";
 import CupIcon from "../components/CupIcon";
+import TrackImage from "../components/TrackImage";
 import { TrackSelect } from "../components/night/CupsPicker";
 import { Loading, PageTitle, SectionTitle } from "../components/PageBits";
 
@@ -185,8 +186,11 @@ export default function BuildPage() {
 
         <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(4, minmax(0,1fr))" } }}>
           {[0, 1, 2, 3].map((i) => (
-            <TrackSelect key={i} label={`Race ${i + 1}`} value={build.maps[i]}
-              onChange={(v) => { const maps = build.maps.slice(); maps[i] = v; set({ maps, templateId: "" }); }} />
+            <Stack key={i} spacing={1}>
+              <TrackImage track={build.maps[i] || `Race ${i + 1}`} sx={{ opacity: build.maps[i] ? 1 : 0.45 }} />
+              <TrackSelect label={`Race ${i + 1}`} value={build.maps[i]}
+                onChange={(v) => { const maps = build.maps.slice(); maps[i] = v; set({ maps, templateId: "" }); }} />
+            </Stack>
           ))}
         </Box>
 

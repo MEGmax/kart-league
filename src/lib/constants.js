@@ -48,6 +48,12 @@ const RETRO = [
 ];
 export const TRACKS = NITRO.concat(RETRO);
 
+// A picture of each track (public/assets/tracks, made by tools/tracks.py), or null for a custom track.
+export function trackSrc(track) {
+  if (TRACKS.indexOf(track) < 0) return null;
+  return `${import.meta.env.BASE_URL}assets/tracks/${track.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.webp`;
+}
+
 export const BUILTIN_CUPS = ["Mushroom Cup", "Flower Cup", "Star Cup", "Special Cup", "Shell Cup", "Banana Cup", "Leaf Cup", "Lightning Cup"]
   .map((n, i) => ({ id: "g" + i, name: n, maps: TRACKS.slice(i * 4, i * 4 + 4), builtin: true }));
 

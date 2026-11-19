@@ -14,6 +14,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import LinearProgress from "@mui/material/LinearProgress";
+import Autocomplete from "@mui/material/Autocomplete";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import GoogleIcon from "@mui/icons-material/Google";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
@@ -30,7 +32,8 @@ import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { CHARACTERS, charSrc, fmtDate, LOGO_SRC, ord, pctTxt } from "../lib/constants";
+import { CHARACTERS, charSrc, fmtDate, LOGO_SRC, ord, pctTxt, TRACKS } from "../lib/constants";
+import { bestTracks, trackCup } from "../lib/tracks";
 import { compute, playerSlug } from "../lib/standings";
 import { getApiKey, setApiKey, MODEL } from "../lib/readPhoto";
 import { groupBatches, useMyData } from "../lib/accountData";
@@ -38,6 +41,7 @@ import { PLAYER_COLORS, brandStripe, colors, fontData, fontDisplay } from "../th
 import { plural } from "../components/PageBits";
 import CharacterFace from "../components/CharacterFace";
 import CupIcon from "../components/CupIcon";
+import TrackImage from "../components/TrackImage";
 
 function roleLabel(r) {
   return r === "owner" ? "Owner" : r === "admin" ? "Admin" : "Member";
@@ -142,6 +146,7 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
   const [draft, setDraft] = useState({
     displayName: profile.displayName || "", color: profile.color || PLAYER_COLORS[0],
     favoriteCharacter: profile.favoriteCharacter || "", favoriteVehicle: profile.favoriteVehicle || "",
+    favoriteTracks: profile.favoriteTracks || [],
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -152,14 +157,19 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
     if (!name) { setError("Enter a display name."); return; }
     setBusy(true); setError("");
     try {
-      await q(sb.from("profiles").update({
+      const row = {
         display_name: name, color: draft.color, favorite_character: draft.favoriteCharacter || "",
         favorite_vehicle: draft.favoriteVehicle.trim(), updated_at: new Date().toISOString(),
-      }).eq("id", user.id));
+      };
+      // Only sent when changed, so the rest of the profile still saves before the v8 schema is run.
+      if (draft.favoriteTracks.join("|") !== (profile.favoriteTracks || []).join("|")) row.favorite_tracks = draft.favoriteTracks;
+      await q(sb.from("profiles").update(row).eq("id", user.id));
       await refreshProfile();
       onSaved();
     } catch (err) {
-      setError(dbErr(err));
+      setError(/favorite_tracks/.test((err && err.message) || "")
+        ? "Favourite tracks need the latest database update (run supabase/schema.sql). The rest saves if you clear them."
+        : dbErr(err));
     } finally {
       setBusy(false);
     }
@@ -187,6 +197,17 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
             ))}
           </TextField>
           <TextField label="Favorite kart or bike" placeholder="e.g. Flame Runner" value={draft.favoriteVehicle} onChange={(e) => setDraft({ ...draft, favoriteVehicle: e.target.value })} inputProps={{ maxLength: 40 }} />
+          <Autocomplete
+            multiple disableCloseOnSelect options={TRACKS} value={draft.favoriteTracks}
+            onChange={(_, v) => setDraft({ ...draft, favoriteTracks: v.slice(0, 3) })}
+            getOptionDisabled={(t) => draft.favoriteTracks.length >= 3 && draft.favoriteTracks.indexOf(t) < 0}
+            groupBy={(t) => (TRACKS.indexOf(t) < 16 ? "Nitro" : "Retro")}
+            renderOption={(props, t) => {
+              const { key, ...rest } = props;
+              return <Box component="li" key={key} {...rest} sx={{ gap: 1.25 }}><TrackImage track={t} width={56} radius={0.75} />{t}</Box>;
+            }}
+            renderInput={(params) => <TextField {...params} label="Favourite tracks" helperText="Up to 3" />}
+          />
           <Box>
             <Typography variant="caption" sx={{ color: colors.muted, display: "block", mb: 1 }}>Color</Typography>
             <Box role="radiogroup" aria-label="Color" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -298,6 +319,50 @@ function ProfileHero({ profile, player, stats, need, slug, onEdit }) {
       </Box>
       <Box aria-hidden sx={{ position: "relative", height: 4, background: brandStripe }} />
     </Paper>
+  );
+}
+
+// Favourite tracks (picked in Edit profile), each with how you do on it, then where you actually score best.
+function FavouriteTracks({ favourites, stats, onEdit }) {
+  const all = useMemo(() => (stats ? bestTracks(stats.log) : []), [stats]);
+  const statOf = (t) => all.find((x) => x.track === t);
+  const best = all.filter((x) => favourites.indexOf(x.track) < 0).slice(0, 3);
+  const line = (st) => st
+    ? `${st.avgPts.toFixed(1)} pts avg${st.avgPos != null ? ` · ${st.avgPos.toFixed(1)} place` : ""} · ${plural(st.races, "race")}`
+    : "Not raced yet";
+  const grid = { display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(3, minmax(0,1fr))" } };
+
+  return (
+    <Panel icon={<FavoriteBorderIcon fontSize="small" />} title="Favourite tracks">
+      <Box sx={grid}>
+        {favourites.map((t) => (
+          <Box key={t} sx={{ minWidth: 0 }}>
+            <TrackImage track={t} label caption={trackCup(t) || "Custom"} />
+            <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 0.5 }} noWrap>{line(statOf(t))}</Typography>
+          </Box>
+        ))}
+        {Array.from({ length: 3 - favourites.length }, (_, i) => (
+          <Box key={`empty-${i}`} component="button" type="button" onClick={onEdit}
+            sx={{ aspectRatio: "16 / 9", borderRadius: 1.5, border: `1px dashed ${colors.line}`, bgcolor: "transparent", color: colors.muted, cursor: "pointer", font: "inherit", fontSize: "0.8rem", "&:hover": { borderColor: colors.accent, color: colors.ink } }}>
+            + Pick a favourite
+          </Box>
+        ))}
+      </Box>
+
+      {best.length > 0 && (
+        <>
+          <Typography variant="overline" sx={{ color: colors.muted, display: "block", mt: 2.5, mb: 1, lineHeight: 1.4 }}>Where you score best</Typography>
+          <Box sx={grid}>
+            {best.map((st) => (
+              <Box key={st.track} sx={{ minWidth: 0 }}>
+                <TrackImage track={st.track} label caption={st.wins ? plural(st.wins, "race win") : trackCup(st.track) || "Custom"} />
+                <Typography variant="caption" sx={{ color: st.vsUsual > 0 ? colors.good : colors.muted, display: "block", mt: 0.5 }} noWrap>{line(st)}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </>
+      )}
+    </Panel>
   );
 }
 
@@ -570,6 +635,7 @@ function SignedInView() {
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, gap: 2, mt: 2, alignItems: "start" }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <FavouriteTracks favourites={profile.favoriteTracks || []} stats={stats} onEdit={() => setEditing(true)} />
           <RecentForm stats={stats} />
           <MyActivity />
           <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", justifyContent: "space-between" }}>

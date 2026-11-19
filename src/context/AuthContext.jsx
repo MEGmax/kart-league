@@ -7,6 +7,7 @@ function mapProfile(u) {
   return {
     id: u.id, displayName: u.display_name, email: u.email, role: u.role,
     color: u.color, favoriteCharacter: u.favorite_character, favoriteVehicle: u.favorite_vehicle,
+    favoriteTracks: u.favorite_tracks || [],
     emailCupNights: !!u.email_cup_nights,
   };
 }

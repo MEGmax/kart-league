@@ -14,6 +14,7 @@ import { colors, fontData } from "../theme";
 import CharacterChip from "./CharacterChip";
 import CharacterFace from "./CharacterFace";
 import CupIcon from "./CupIcon";
+import TrackImage from "./TrackImage";
 import { plural } from "./PageBits";
 
 function Section({ title, children }) {
@@ -135,7 +136,8 @@ export default function RacerDrawer({ s, m, players, onClose }) {
             <Section title="Track by track">
               <Stack spacing={0.5}>
                 {s.mapList.map((t) => (
-                  <Stack key={t.map} direction="row" spacing={1} alignItems="baseline">
+                  <Stack key={t.map} direction="row" spacing={1} alignItems="center">
+                    <TrackImage track={t.map} width={44} radius={0.75} />
                     <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{t.map}</Typography>
                     <Typography variant="caption" sx={{ color: colors.muted }}>{plural(t.n, "race")}</Typography>
                     <Typography variant="body2" sx={{ fontFamily: fontData, width: 104, textAlign: "right" }} title="Average finishing place">avg place {t.avgPos.toFixed(1)}</Typography>

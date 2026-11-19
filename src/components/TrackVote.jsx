@@ -24,14 +24,14 @@ import { TRACKS } from "../lib/constants";
 import { MAX_TRACK_VOTES, bestTracks, trackCup, trackKind } from "../lib/tracks";
 import { useTrackVotes } from "../lib/trackVotes";
 import { colors, fontData, fontDisplay } from "../theme";
-import CupIcon from "./CupIcon";
+import TrackImage from "./TrackImage";
 import { SectionTitle, plural } from "./PageBits";
 
-function TrackName({ track, size = 22 }) {
+function TrackName({ track, width = 64 }) {
   const cup = trackCup(track);
   return (
-    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-      <CupIcon cup={cup || "Other"} size={size} />
+    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+      <TrackImage track={track} width={width} radius={1} />
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{track}</Typography>
         <Typography variant="caption" sx={{ color: colors.muted, display: "block", lineHeight: 1.3 }} noWrap>
@@ -260,7 +260,7 @@ export default function TrackVote({ event }) {
                   return (
                     <Box key={t.track} sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.25, borderRadius: 1.5, border: `1px solid ${colors.line}`, bgcolor: colors.bg2 }}>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <TrackName track={t.track} size={20} />
+                        <TrackName track={t.track} width={72} />
                         <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 0.5 }}>
                           <Box component="span" sx={{ color: t.vsUsual > 0 ? colors.good : colors.ink, fontWeight: 700 }}>{t.avgPts.toFixed(1)} pts</Box>
                           {t.avgPos != null ? ` · ${t.avgPos.toFixed(1)} avg place` : ""} · {plural(t.races, "race")}

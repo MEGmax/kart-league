@@ -16,18 +16,20 @@ import { BUILTIN_CUPS, TRACKS, UNKNOWN_CUP } from "../../lib/constants";
 import { cupFromTemplate, newCup } from "../../lib/night";
 import { colors } from "../../theme";
 import CupIcon from "../CupIcon";
+import TrackImage from "../TrackImage";
 
 const NITRO = TRACKS.slice(0, 16);
 const RETRO = TRACKS.slice(16);
 
 export function TrackSelect({ label, value, onChange, disabled }) {
   return (
-    <TextField select size="small" label={label} value={value || ""} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+    <TextField select size="small" label={label} value={value || ""} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+      SelectProps={{ renderValue: (v) => v }}>
       <MenuItem value="">Pick a track</MenuItem>
       <ListSubheader>Nitro</ListSubheader>
-      {NITRO.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+      {NITRO.map((t) => <MenuItem key={t} value={t} sx={{ gap: 1.25 }}><TrackImage track={t} width={48} radius={0.75} />{t}</MenuItem>)}
       <ListSubheader>Retro</ListSubheader>
-      {RETRO.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}
+      {RETRO.map((t) => <MenuItem key={t} value={t} sx={{ gap: 1.25 }}><TrackImage track={t} width={48} radius={0.75} />{t}</MenuItem>)}
     </TextField>
   );
 }
