@@ -17,6 +17,7 @@ const RaceNightPage = lazy(() => import("./pages/RaceNightPage"));
 const EventsPage = lazy(() => import("./pages/EventsPage"));
 const UnsubscribePage = lazy(() => import("./pages/UnsubscribePage"));
 const StatsPage = lazy(() => import("./pages/StatsPage"));
+const UploadPage = lazy(() => import("./pages/UploadPage"));
 
 // Old links (and cup night emails already sent) used #/events, #/race and #/cups.
 function ScheduleRedirect() {
@@ -54,6 +55,7 @@ export default function App() {
                 <Route path="playoffs" element={page(PlayoffsPage)} />
                 <Route path="rules" element={page(RulesPage)} />
                 <Route path="add" element={page(AddPage)} />
+                <Route path="upload" element={page(UploadPage)} />
                 <Route path="build" element={page(BuildPage)} />
                 <Route path="admin" element={page(AdminPage)} />
                 <Route path="account" element={page(AccountPage)} />

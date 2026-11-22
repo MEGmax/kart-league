@@ -26,6 +26,7 @@ import { CHARACTERS, RACE_POINTS, fmtDate, initials, ord } from "../lib/constant
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { prepImage, PHOTO_FORMAT_ERROR } from "../lib/photos";
 import { getApiKey, readResultsPhoto, ReadError } from "../lib/readPhoto";
+import PhotoPickButton from "../components/PhotoPickButton";
 import { matchPhotoRows } from "../lib/night";
 import { saveCupPhoto } from "../lib/cupPhotos";
 import { cupLabel, formatEventWhen, nextEvent } from "../lib/events";
@@ -498,6 +499,17 @@ export default function RaceNightPage() {
         title="Join"
         action={isAdmin && live.length > 0 && <Button component={RouterLink} to="/build" size="small" variant="outlined">+ Build another cup</Button>}
       />
+      {isAdmin && (
+        <Paper sx={{ p: { xs: 2, sm: 2.25 }, mb: 2.5, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", borderLeft: `3px solid ${colors.accent}` }}>
+          <Box sx={{ flex: 1, minWidth: 200 }}>
+            <Typography sx={{ fontWeight: 800 }}>Done racing?</Typography>
+            <Typography variant="body2" sx={{ color: colors.muted }}>
+              Upload every cup's end-of-cup photo at once. The points, players and tracks are read from them, and the standings update live.
+            </Typography>
+          </Box>
+          <PhotoPickButton variant="contained" />
+        </Paper>
+      )}
 
       {!live.length ? (
         <Paper sx={{ p: { xs: 3, sm: 4 }, display: "grid", justifyItems: "center", gap: 1.5, textAlign: "center" }}>

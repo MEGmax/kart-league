@@ -22,11 +22,13 @@ import { sb, q, dbErr } from "../lib/supabaseClient";
 import { mapSub } from "../lib/accountData";
 import { isOver, formatEventWhen, cupLabel } from "../lib/events";
 import {
-  buildSave, buildSubmissions, cellOf, cellPoints, draftForStorage, newNight, nightFromCup, nightFromEvent,
+  buildSubmissions, cellOf, cellPoints, draftForStorage, newNight, nightFromCup, nightFromEvent,
   nightFromSubmissions, positionClashes, uid, validateNight,
 } from "../lib/night";
 import { BacklogError, nightFromBacklog } from "../lib/backlog";
-import { saveCupPhoto } from "../lib/cupPhotos";
+import { saveNightAsAdmin } from "../lib/saveNight";
+import { takeNight } from "../lib/handoff";
+import PhotoPickButton from "../components/PhotoPickButton";
 import { colors } from "../theme";
 import { Loading, PageTitle } from "../components/PageBits";
 import LineupEditor from "../components/night/LineupEditor";
@@ -113,6 +115,12 @@ export default function AddPage() {
           setInitError(dbErr(e));
         }
       })();
+      return;
+    }
+    const handed = mode === "add" ? takeNight() : null;
+    if (handed) {
+      setNight({ ...handed, mode });
+      setNotice("From your uploaded photos. Everything here can be changed; save when it looks right.");
       return;
     }
     if (eventId) {
@@ -250,20 +258,8 @@ export default function AddPage() {
         navigate("/account");
         return;
       }
-      const payload = buildSave(night, state);
-      await q(sb.rpc("save_cup_night", { p_cups: payload.cups, p_players: payload.players }));
       // Photos go up one at a time after the results are safely saved, re-encoded without EXIF (GPS).
-      const failed = [];
-      for (let i = 0; i < night.cups.length; i++) {
-        const c = night.cups[i];
-        if (!c.photo || !c.photoChanged) continue;
-        try {
-          await saveCupPhoto(payload.cups[i].id, c.photo);
-        } catch {
-          failed.push(c.name);
-          await q(sb.from("cups").update({ has_photo: c.hasPhoto }).eq("id", payload.cups[i].id)).catch(() => {});
-        }
-      }
+      const failed = await saveNightAsAdmin(night, state);
       clearDraft();
       const what = night.mode === "edit" ? "Cup updated" : night.mode === "review" ? `Approved ${n} cup${n === 1 ? "" : "s"}` : `Saved ${n} cup${n === 1 ? "" : "s"}`;
       flash(failed.length ? `${what}, but the photo for ${failed.join(", ")} didn't upload. Edit the cup to try again.` : `${what}. Standings updated.`);
@@ -289,6 +285,17 @@ export default function AddPage() {
         action={(night.mode === "add" || night.mode === "submit") && !isPristine(night) ? <Button size="small" onClick={startOver}>Start over</Button> : null}
       />
       {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice("")}>{notice}</Alert>}
+      {night.mode === "add" && isPristine(night) && (
+        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2.5, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", borderLeft: `3px solid ${colors.accent}` }}>
+          <Box sx={{ flex: 1, minWidth: 220 }}>
+            <Typography sx={{ fontWeight: 800 }}>Quickest: upload the photos</Typography>
+            <Typography variant="body2" sx={{ color: colors.muted }}>
+              Pick each cup's end-of-cup standings photo at once. Gemini reads the points, who's who and the tracks; you check and save.
+            </Typography>
+          </Box>
+          <PhotoPickButton variant="contained" />
+        </Paper>
+      )}
 
       <Stack spacing={2.5}>
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>

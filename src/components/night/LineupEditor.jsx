@@ -16,7 +16,7 @@ import { newRacer, sharedCharacters, hasResult, cellOf, canMerge, mergeRacers } 
 import { colors } from "../../theme";
 import CharacterFace from "../CharacterFace";
 
-export default function LineupEditor({ night, setNight, players, locked }) {
+export default function LineupEditor({ night, setNight, players, locked, title = "2 · Racers and their characters", help }) {
   const sorted = players.slice().sort((a, b) => a.name.localeCompare(b.name));
   const used = new Set(night.racers.map((r) => r.assign).filter((a) => a && a !== "new" && a !== "unclaimed"));
   const dupChars = sharedCharacters(night.racers);
@@ -53,12 +53,12 @@ export default function LineupEditor({ night, setNight, players, locked }) {
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 } }}>
       <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.5, gap: 1, flexWrap: "wrap" }}>
-        <Typography variant="overline" sx={{ color: colors.accent }}>2 · Racers and their characters</Typography>
+        <Typography variant="overline" sx={{ color: colors.accent }}>{title}</Typography>
         <Typography variant="body2" sx={{ color: colors.muted }}>{night.racers.length} racer{night.racers.length === 1 ? "" : "s"}</Typography>
       </Stack>
       <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
-        Pick each racer's usual character; it's used to match each results photo to the right person. If someone switched for a cup,
-        change it for that cup under Results, or pick the same player for both characters and they're merged into one racer.
+        {help || <>Pick each racer's usual character; it's used to match each results photo to the right person. If someone switched for a cup,
+        change it for that cup under Results, or pick the same player for both characters and they're merged into one racer.</>}
       </Typography>
 
       <Stack spacing={1.5}>

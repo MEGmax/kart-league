@@ -12,6 +12,7 @@ const PAGES = {
   "/playoffs": ["Playoffs", "The playoff picture: seeds, the bracket and who's on the bubble."],
   "/rules": ["Rules", "How the league works: scoring, qualifying, tiebreakers and playoffs."],
   "/add": ["Add results", "Record a cup night's results."],
+  "/upload": ["Upload results", "Upload a night's results photos and save the cups."],
   "/build": ["Cup builder", "Build the next cup and start racing."],
   "/admin": ["Admin", "League admin."],
   "/account": ["Your account", "Sign in, your profile and cup night emails."],

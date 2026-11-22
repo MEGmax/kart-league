@@ -424,7 +424,7 @@ function EmailPreferences({ profile }) {
   );
 }
 
-// The Gemini key lives only in this browser and is sent only to Google, to read results photos.
+// The Gemini key lives only in this browser and is sent only to Google, to read results photos. Admins only.
 function GeminiKey() {
   const [has, setHas] = useState(!!getApiKey());
   const [val, setVal] = useState("");
@@ -437,7 +437,7 @@ function GeminiKey() {
   return (
     <Panel icon={<AutoAwesomeOutlinedIcon fontSize="small" />} title="Read results photos with Gemini">
       <Typography variant="body2">
-        With a Gemini API key, Gemini reads each results-screen photo you add when recording cups and fills in everyone's points, matching rows to racers by their character.
+        With a Gemini API key, Gemini reads the results photos you upload: everyone's points, who's who (by character) and the tracks. Admins only.
         The key stays in this browser and is sent only to Google ({MODEL}). Get one free at{" "}
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: colors.cool }}>Google AI Studio</a>; usage beyond the free tier is billed to the key.
       </Typography>
@@ -639,7 +639,7 @@ function SignedInView() {
 
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <EmailPreferences key={String(profile.emailCupNights)} profile={profile} />
-          <GeminiKey />
+          {isAdmin && <GeminiKey />}
           <Panel icon={<LockOutlinedIcon fontSize="small" />} title="Sign-in and security">
             <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
               Signed in as <b>{user.email}</b>{isPw ? " with a password" : ""}.

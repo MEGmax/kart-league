@@ -3,7 +3,8 @@
 // the Add page's "Import a backlog file" calls nightFromBacklog() with the file it wrote.
 //
 // read  = { file, takenAt, screen: "race" | "standings" | "other", rows: [{pos, character, name, gained, points, human, highlight}] }
-// group = { cups: [{ name, takenAt, files, photo, races, standings, complete, racers: [{ id, character, highlight, places[4], total }] }],
+// group = { cups: [{ name, takenAt, files, photo, races, standings, complete,
+//                    racers: [{ id, character, highlight, name, places[4], total }] }],
 //           skipped: [{ file, reason }], issues: [string] }
 //
 // Every results screen is a snapshot of the humans' running cup totals. A race's points are the change
@@ -30,7 +31,7 @@ function snapshot(read) {
   const humans = new Map();
   hs.forEach((h) => {
     const id = count[h.character] > 1 ? `char:${h.character || "?"}|${h.highlight}` : `char:${h.character || "?"}`;
-    humans.set(id, { character: h.character, highlight: h.highlight, gained: h.gained, total: h.points });
+    humans.set(id, { character: h.character, highlight: h.highlight, gained: h.gained, total: h.points, name: h.name || "" });
   });
   return { file: read.file, takenAt: read.takenAt, screen: read.screen, humans };
 }
@@ -139,7 +140,10 @@ export function groupBacklog(reads) {
       // The running total that checked out, not a later photo that disagreed with it.
       const lastSeen = c.snaps.slice().reverse().map((s) => s.humans.get(id)).find((h) => h && h.total != null);
       const total = c.totals.has(id) ? c.totals.get(id) : lastSeen ? lastSeen.total : null;
-      return { id, character: mostCommon(mine.map((h) => h.character)), highlight: mostCommon(mine.map((h) => h.highlight)), places, total };
+      return {
+        id, character: mostCommon(mine.map((h) => h.character)), highlight: mostCommon(mine.map((h) => h.highlight)),
+        name: mostCommon(mine.map((h) => h.name)), places, total,
+      };
     });
     const complete = !c.lost && c.race === 4 && racers.every((r) => r.places.every(Boolean));
     racers.forEach((r) => {

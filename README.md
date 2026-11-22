@@ -38,6 +38,12 @@ Admins can reopen a finished race-by-race cup on Join, or fix any finished cup w
 
 ## Recording a whole night afterwards
 
+**Quickest (admins):** press **Upload photos** on Join or Add (or open `#/upload`) and pick every cup's end-of-cup
+standings photo at once. Gemini reads each one with the Gemini key saved on your account page. The site puts them in the
+order they were taken, makes one cup per photo, and matches racers to players by the name on screen or their usual character.
+Then you check the screen: who's who, each cup's tracks (a game cup, a saved cup, or the 4 tracks you picked; VS end screens
+don't show the course), and the points. One tap saves every cup to the standings, and everyone's open pages update.
+
 To record a night after the fact, do it in one go with
 **+ Add results** (`#/add`), or **Record results** on a past cup night (which brings in its cups and everyone who was in):
 

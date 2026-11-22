@@ -21,6 +21,7 @@ import { CHARACTERS, RACE_POINTS, ord } from "../../lib/constants";
 import { cellCharacter, cellOf, cellPoints, emptyCell, matchPhotoRows, newRacer, racerName } from "../../lib/night";
 import { prepImage, PHOTO_FORMAT_ERROR } from "../../lib/photos";
 import { getApiKey, readResultsPhoto, ReadError } from "../../lib/readPhoto";
+import { useAuth } from "../../context/AuthContext";
 import { colors, fontData } from "../../theme";
 import CupIcon from "../CupIcon";
 import CharacterFace from "../CharacterFace";
@@ -38,7 +39,9 @@ export default function CupResults({ night, cup, index, setNight, players, clash
   const latest = useRef(night);
   latest.current = night;
   const races = night.entry === "races";
-  const hasKey = !!getApiKey();
+  const { isAdmin } = useAuth();
+  // Reading photos with Gemini is for admins (their key, on their device).
+  const hasKey = isAdmin && !!getApiKey();
 
   function setCell(racerKey, p) {
     setNight((n) => ({
@@ -69,7 +72,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
     }
     setNight((n) => ({ ...n, cups: n.cups.map((c) => (c.key === cup.key ? { ...c, photo: b64, photoChanged: true } : c)) }));
     setRead({ busy: false, error: "", info: "", byRacer: {}, extra: [] });
-    if (getApiKey()) runRead(b64);
+    if (hasKey) runRead(b64);
   }
 
   async function runRead(b64 = cup.photo) {
@@ -176,7 +179,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
           {!cup.photo && (
             <Typography variant="body2" sx={{ color: colors.muted }}>
               Optional. The photo of the end-of-cup standings is kept as the record.{" "}
-              {hasKey ? "Gemini reads it and fills in each racer's points by their character." : "Add a Gemini API key on your Account page and Gemini will fill in the points from it."}
+              {hasKey ? "Gemini reads it and fills in each racer's points by their character." : isAdmin ? "Add a Gemini API key on your Account page and Gemini will fill in the points from it." : "An admin checks your numbers against it."}
             </Typography>
           )}
           {read.info && <Alert severity="info">{read.info}</Alert>}

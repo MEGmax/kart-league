@@ -24,3 +24,22 @@ export function prepImage(file) {
 
 export const PHOTO_FORMAT_ERROR =
   "This browser can't open that photo format. On iPhone, set Settings › Camera › Formats to Most Compatible, or upload a screenshot of it.";
+
+// A base64 JPEG turned 90° clockwise (for a results photo taken with the phone sideways).
+export function rotateB64(b64) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalHeight;
+      c.height = img.naturalWidth;
+      const g = c.getContext("2d");
+      g.translate(c.width, 0);
+      g.rotate(Math.PI / 2);
+      g.drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/jpeg", 0.85).split(",")[1]);
+    };
+    img.onerror = () => reject(new Error("decode"));
+    img.src = "data:image/jpeg;base64," + b64;
+  });
+}
