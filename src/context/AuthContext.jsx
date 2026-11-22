@@ -54,9 +54,6 @@ export function AuthProvider({ children }) {
     return q(sb.auth.signUp({ email: email.trim(), password, options: { data: { display_name: name.trim() }, emailRedirectTo: siteUrl() } }))
       .catch((e) => { throw new Error(authErr(e)); });
   }
-  async function signInGoogle() {
-    return q(sb.auth.signInWithOAuth({ provider: "google", options: { redirectTo: siteUrl() } })).catch((e) => { throw new Error(authErr(e)); });
-  }
   async function signOut() {
     return sb.auth.signOut();
   }
@@ -69,7 +66,7 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(() => ({
     user, profile, ready, recovery, hasOwner, isAdmin, isOwner, myName,
-    signIn, signUp, signInGoogle, signOut, updatePassword, refreshProfile,
+    signIn, signUp, signOut, updatePassword, refreshProfile,
   }), [user, profile, ready, recovery, hasOwner, isAdmin, isOwner, myName]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

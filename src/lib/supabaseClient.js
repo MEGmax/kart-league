@@ -37,15 +37,14 @@ export function dbErr(e) {
 const AUTH_ERRORS = {
   invalid_credentials: "That email and password don't match an account.",
   email_not_confirmed: "Confirm your email first: open the link we sent you, then sign in.",
-  user_already_exists: "There's already an account with that email. Sign in instead, or use Google if you signed up with it.",
-  email_exists: "There's already an account with that email. Sign in instead, or use Google if you signed up with it.",
+  user_already_exists: "There's already an account with that email. Sign in instead.",
+  email_exists: "There's already an account with that email. Sign in instead.",
   weak_password: "Use a longer password: at least 6 characters.",
   email_address_invalid: "Enter a valid email address.",
   validation_failed: "Check the email and password and try again.",
   over_email_send_rate_limit: "Too many emails sent. Wait a few minutes and try again.",
   over_request_rate_limit: "Too many attempts. Wait a few minutes and try again.",
   signup_disabled: "New sign-ups are switched off for this league.",
-  provider_disabled: "Google sign-in isn't switched on yet. Use email and password for now.",
   same_password: "That's already your password. Pick a different one.",
   reauthentication_needed: "For security, sign out and back in, then try again.",
 };

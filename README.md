@@ -169,7 +169,7 @@ Highlighted rows on a results photo that aren't matched to anyone are saved as *
 
 ## Accounts and roles
 
-Sign-in and data use [Supabase](https://supabase.com) (free plan): email and password or Google sign-in, and a Postgres database. Row level security in `supabase/schema.sql` enforces who can do what:
+Sign-in and data use [Supabase](https://supabase.com) (free plan): email and password sign-in, and a Postgres database. Row level security in `supabase/schema.sql` enforces who can do what:
 
 | Role | Can |
 |---|---|
@@ -189,12 +189,6 @@ Free Supabase projects pause after 7 days without activity. The `Keep database a
 3. **Authentication › URL Configuration**: Site URL `https://megmax.github.io/kart-league/`; add the same under Redirect URLs (and the custom domain later).
 4. **Project Settings › API** (or **Connect**): copy the Project URL and the publishable/anon key into `src/lib/supabaseClient.js`.
 5. Open the site, create an account, and press **Claim league ownership** on the account page.
-
-### Google sign-in (optional)
-
-1. [Google Cloud Console](https://console.cloud.google.com) › create a project › **APIs & Services › OAuth consent screen**: External, app name "Kart Night League", your email; publish it.
-2. **Credentials › Create credentials › OAuth client ID** › Web application. Authorized redirect URI: `https://YOUR-PROJECT.supabase.co/auth/v1/callback`.
-3. Supabase › **Authentication › Sign In / Providers › Google**: enable, paste the client ID and secret, save.
 
 ## Files
 

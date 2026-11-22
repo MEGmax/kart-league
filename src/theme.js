@@ -64,7 +64,11 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        // No browser pull-to-refresh or rubber band at the top: the site's own pull to refresh
+        // (components/PullToRefresh.jsx) reloads the data in place instead.
+        html: { overscrollBehaviorY: "none" },
         body: {
+          overscrollBehaviorY: "none",
           backgroundColor: colors.bg,
           // A faint navy glow top-left and red glow top-right, like the logo's two halves.
           backgroundImage:

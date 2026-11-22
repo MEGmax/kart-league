@@ -899,6 +899,19 @@ language sql stable security definer set search_path = public as $$
   order by c.created_at;
 $$;
 
+-- Everyone who has signed up (confirmed accounts only), for the Stats page. Signed-in members only, and
+-- never emails: just what the profile shows, plus which player each account is (added in v9).
+create or replace function public.league_members()
+returns table (display_name text, color text, role text, favorite_character text, favorite_tracks text[],
+               joined_at timestamptz, player_id text, is_me boolean)
+language sql stable security definer set search_path = public as $$
+  select p.display_name, p.color, p.role, p.favorite_character, p.favorite_tracks, p.created_at,
+         (select pl.id from players pl where pl.user_id = p.id limit 1), p.id = auth.uid()
+  from profiles p join auth.users u on u.id = p.id
+  where auth.uid() is not null and u.email_confirmed_at is not null
+  order by p.created_at;
+$$;
+
 -- The unsubscribe link in every email. The token is the only credential, so signed-out visitors can use it.
 create or replace function public.unsubscribe_email(p_token uuid) returns boolean
 language plpgsql security definer set search_path = public as $$
@@ -1019,6 +1032,8 @@ revoke execute on function public.create_event, public.update_event, public.canc
 grant execute on function public.create_event, public.update_event, public.cancel_event, public.join_event, public.leave_event to authenticated;
 revoke execute on function public.vote_track, public.unvote_track, public.track_vote_tally from public, anon;
 grant execute on function public.vote_track, public.unvote_track, public.track_vote_tally to authenticated;
+revoke execute on function public.league_members from public, anon;
+grant execute on function public.league_members to authenticated;
 grant execute on function public.event_attendees, public.unsubscribe_email, public.league_timezone, public.event_cups to anon, authenticated;
 -- Background-job functions: the service role (Edge Functions) and pg_cron only.
 revoke execute on function public.queue_event_emails, public.queue_event_reminders, public.claim_emails, public.complete_email

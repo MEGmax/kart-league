@@ -16,7 +16,6 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import LinearProgress from "@mui/material/LinearProgress";
 import Autocomplete from "@mui/material/Autocomplete";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
-import GoogleIcon from "@mui/icons-material/Google";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
@@ -48,7 +47,7 @@ function roleLabel(r) {
 }
 
 function AuthForm() {
-  const { signIn, signUp, signInGoogle } = useAuth();
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState("signin");
   const [form, setForm] = useState({ email: "", password: "", name: "" });
   const [busy, setBusy] = useState(false);
@@ -74,11 +73,6 @@ function AuthForm() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function google() {
-    setError(""); setMsg(""); setBusy(true);
-    try { await signInGoogle(); } catch (err) { setError(err.message); setBusy(false); }
   }
 
   async function forgot() {
@@ -109,10 +103,6 @@ function AuthForm() {
             If an admin already added you as a player, sign up with the email they used and your results link up automatically once you confirm it.
           </Typography>
         )}
-        <Button fullWidth variant="outlined" startIcon={<GoogleIcon />} disabled={busy} onClick={google} sx={{ mb: 2 }}>
-          Continue with Google
-        </Button>
-        <Divider sx={{ mb: 2 }}>or with email</Divider>
         <Box component="form" onSubmit={submit} sx={{ display: "grid", gap: 2 }}>
           {up && <TextField label="Display name" value={form.name} onChange={set("name")} inputProps={{ maxLength: 40 }} required />}
           <TextField label="Email" type="email" value={form.email} onChange={set("email")} autoComplete="email" required />
@@ -652,7 +642,7 @@ function SignedInView() {
           <GeminiKey />
           <Panel icon={<LockOutlinedIcon fontSize="small" />} title="Sign-in and security">
             <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
-              Signed in as <b>{user.email}</b> {isPw ? "with a password" : "with Google"}.
+              Signed in as <b>{user.email}</b>{isPw ? " with a password" : ""}.
             </Typography>
             <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
               {isPw && <Button size="small" onClick={() => setChangingPw((v) => !v)}>Change password</Button>}

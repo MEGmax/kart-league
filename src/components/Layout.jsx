@@ -28,6 +28,8 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
+import PullToRefresh from "./PullToRefresh";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { compute, liveCups } from "../lib/standings";
@@ -40,6 +42,7 @@ const TABS = [
   { value: "/schedule", label: "Schedule", icon: <EventOutlinedIcon /> },
   { value: "/join", label: "Join", icon: <SportsScoreOutlinedIcon /> },
   { value: "/history", label: "History", icon: <EmojiEventsOutlinedIcon /> },
+  { value: "/stats", label: "Stats", icon: <InsightsOutlinedIcon /> },
   { value: "/unclaimed", label: "Unclaimed", icon: <HelpOutlineIcon /> },
   { value: "/playoffs", label: "Playoffs", icon: <AccountTreeOutlinedIcon /> },
   { value: "/rules", label: "Rules", icon: <MenuBookOutlinedIcon /> },
@@ -156,6 +159,8 @@ export default function Layout() {
         </Container>
       </AppBar>
 
+      <PullToRefresh top={59} />
+
       <Box component="main" sx={{ flex: 1, py: 3, pb: { xs: 11, md: 3 } }}>
         <Outlet />
       </Box>
@@ -201,7 +206,7 @@ export default function Layout() {
             <BottomNavigationAction key={t.value} value={t.value} label={t.label} aria-label={tabAria(t)}
               icon={t.value === "/join" && live ? <Badge color="error" variant="dot">{t.icon}</Badge> : t.icon} />
           ))}
-          <BottomNavigationAction value="more" label="More" aria-label={unclaimed ? `More: unclaimed (${unclaimed}), playoffs, rules` : "More: unclaimed, playoffs, rules"} aria-haspopup="menu"
+          <BottomNavigationAction value="more" label="More" aria-label={unclaimed ? `More: stats, unclaimed (${unclaimed}), playoffs, rules` : "More: stats, unclaimed, playoffs, rules"} aria-haspopup="menu"
             icon={<Badge color="warning" variant="dot" invisible={!unclaimed}><MoreHorizIcon /></Badge>} />
         </BottomNavigation>
       </Paper>

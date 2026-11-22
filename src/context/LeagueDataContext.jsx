@@ -80,7 +80,10 @@ export function LeagueDataProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const value = useMemo(() => ({ state, events, loadError, version, reload: reloadSoon }), [state, events, loadError, version]);
+  // Pull to refresh: reload everything now and resolve when it's in (pages with private data refetch on `version`).
+  const refresh = () => loadPublic().catch((e) => { setLoadError((e && e.message) || "Couldn't load league data."); throw e; });
+
+  const value = useMemo(() => ({ state, events, loadError, version, reload: reloadSoon, refresh }), [state, events, loadError, version]);
 
   return <LeagueDataContext.Provider value={value}>{children}</LeagueDataContext.Provider>;
 }
