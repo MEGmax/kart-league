@@ -102,7 +102,7 @@ function MonthGroups({ groups, render }) {
 export default function EventsPage() {
   const { id } = useParams();
   const { events, state, loadError } = useLeagueData();
-  const m = useMemo(() => (state ? compute(state) : null), [state]);
+  const m = useMemo(() => (state ? compute(state, { season: "all" }) : null), [state]);
   const { isAdmin } = useAuth();
   const [creating, setCreating] = useState(false);
 

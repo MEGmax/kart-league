@@ -17,7 +17,7 @@ const COLS = {
 
 function mapCup(c) {
   return {
-    id: c.id, cup: c.cup, date: c.date, week: c.week, max: c.max, results: c.results || [],
+    id: c.id, cup: c.cup, date: c.date, week: c.week, season: Number(c.season) || 1, max: c.max, results: c.results || [],
     notes: c.notes || "", hasPhoto: !!c.has_photo || !!c.photo_path, photoPath: c.photo_path || null,
     addedAt: Number(c.added_at) || 0, status: c.status || "complete", maps: c.maps || [],
   };
@@ -38,8 +38,10 @@ export function LeagueDataProvider({ children }) {
       q(sb.from("players").select(COLS.players)),
       // Which account each player is: signed-in members only.
       auth && auth.session ? q(sb.from("players").select("id,user_id")).catch(() => []) : Promise.resolve([]),
-      // photo_path arrives with the v6 schema; before it's run, fall back to the columns there are.
-      q(sb.from("cups").select(COLS.cups + ",photo_path")).catch(() => q(sb.from("cups").select(COLS.cups))),
+      // photo_path arrives with the v6 schema and season with v10; before they're run, fall back to the columns there are.
+      q(sb.from("cups").select(COLS.cups + ",photo_path,season"))
+        .catch(() => q(sb.from("cups").select(COLS.cups + ",photo_path")))
+        .catch(() => q(sb.from("cups").select(COLS.cups))),
       // These two tables arrive with the race-by-race update; an older database just has none yet.
       q(sb.from("race_results").select(COLS.races)).catch(() => []),
       q(sb.from("cup_templates").select(COLS.templates)).catch(() => []),

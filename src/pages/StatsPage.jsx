@@ -1,4 +1,5 @@
-// Stats: the league in numbers, the most-raced tracks, and everyone who has signed up (members only).
+// Stats: the league in numbers, tracks (table, chaos index, coverage), characters, and everyone who has
+// signed up (members only). League stats follow the season picker; the member list is everyone.
 import { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import Container from "@mui/material/Container";
@@ -14,7 +15,10 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { compute, playerSlug } from "../lib/standings";
 import { useMembers } from "../lib/members";
-import { fmtDay, pctTxt } from "../lib/constants";
+import { fmtDate, fmtDay, pctTxt } from "../lib/constants";
+import { leagueTracks } from "../lib/tracks";
+import SeasonPicker, { useSeason } from "../components/SeasonPicker";
+import CharacterChip from "../components/CharacterChip";
 import { colors, fontData } from "../theme";
 import CharacterFace from "../components/CharacterFace";
 import TrackImage from "../components/TrackImage";
@@ -134,11 +138,82 @@ function Members({ m, players, members, error, missing }) {
   );
 }
 
+// A compact table: header row plus rows, scrolling sideways on a phone if it must.
+function Table({ cols, head, rows, label }) {
+  const cell = { py: 0.9, px: 1, borderBottom: `1px solid ${colors.line}`, minWidth: 0, display: "flex", alignItems: "center" };
+  return (
+    <Paper sx={{ px: 1, py: 0.5, overflowX: "auto" }} role="table" aria-label={label}>
+      <Box sx={{ display: "grid", gridTemplateColumns: cols, minWidth: 480 }}>
+        {head.map((h, i) => (
+          <Box key={"h" + i} role="columnheader" sx={{ ...cell, color: colors.muted, fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", justifyContent: i ? "flex-end" : "flex-start" }}>{h}</Box>
+        ))}
+        {rows.map((r, k) => r.map((v, i) => (
+          <Box key={k + "-" + i} role="cell" sx={{ ...cell, justifyContent: i ? "flex-end" : "flex-start", fontFamily: i ? fontData : "inherit", fontSize: "0.875rem", borderBottom: k === rows.length - 1 ? "none" : cell.borderBottom }}>{v}</Box>
+        )))}
+      </Box>
+    </Paper>
+  );
+}
+
+function TrackSection({ m }) {
+  const lt = useMemo(() => leagueTracks(m), [m]);
+  if (!lt.tracks.length) return null;
+  const { coverage } = lt;
+  const chaotic = lt.tracks.filter((x) => x.chaos != null && x.races >= 2).sort((a, b) => b.chaos - a.chaos)[0];
+  return (
+    <>
+      <SectionTitle title="Tracks" count={`${coverage.raced} of ${coverage.total} raced`} />
+      <Table
+        label="Track table"
+        cols="minmax(170px,2fr) repeat(4, minmax(64px,1fr))"
+        head={["Track", "Cups", "Avg win", "Chaos", "Last raced"]}
+        rows={lt.tracks.map((x) => [
+          <Stack key="t" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <TrackImage track={x.track} width={40} radius={0.75} />
+            <Typography variant="body2" noWrap>{x.track}</Typography>
+          </Stack>,
+          x.times,
+          x.avgWin != null ? x.avgWin.toFixed(1) : "–",
+          x.chaos != null ? x.chaos.toFixed(1) : "–",
+          fmtDate(x.last),
+        ])}
+      />
+      <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
+        Avg win: the best league player's points per race there. Chaos: how many places finishes there stray from each racer's usual place
+        {chaotic ? ` (most chaotic so far: ${chaotic.track})` : ""}. Both need races entered race by race.
+      </Typography>
+      {coverage.unraced.length > 0 && (
+        <Typography variant="body2" sx={{ mt: 1 }}>
+          <b>Not raced yet:</b> {coverage.unraced.join(", ")}.
+        </Typography>
+      )}
+    </>
+  );
+}
+
+// Characters picked for 4+ cups (16 races): cup wins and points percentage.
+function CharacterSection({ m }) {
+  const list = m.chars.filter((c) => c.picks >= 16).sort((a, b) => b.cupWins - a.cupWins || b.pts / (b.max || 1) - a.pts / (a.max || 1));
+  if (!list.length) return null;
+  return (
+    <>
+      <SectionTitle title="Characters" count="4+ cups" />
+      <Table
+        label="Character win rates"
+        cols="minmax(160px,2fr) repeat(3, minmax(72px,1fr))"
+        head={["Character", "Cups", "Cup wins", "Points %"]}
+        rows={list.map((c) => [<CharacterChip key="c" name={c.name} />, Math.round(c.picks / 4), c.cupWins, pctTxt(c.max ? c.pts / c.max : 0)])}
+      />
+    </>
+  );
+}
+
 export default function StatsPage() {
   const { state, loadError } = useLeagueData();
   const { user } = useAuth();
   const { members, error, missing } = useMembers();
-  const m = useMemo(() => (state ? compute(state) : null), [state]);
+  const { season, seasons, setSeason } = useSeason(state);
+  const m = useMemo(() => (state ? compute(state, { season }) : null), [state, season]);
   const t = useMemo(() => (m ? leagueTotals(m) : null), [m]);
 
   if (!state) return <Loading error={loadError} />;
@@ -146,6 +221,7 @@ export default function StatsPage() {
   return (
     <Container maxWidth="lg">
       <PageTitle title="Stats" sub="The league in numbers, and everyone who's signed up." />
+      <SeasonPicker season={season} seasons={seasons} setSeason={setSeason} />
       <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", md: "repeat(6, 1fr)" } }}>
         <Tile label="Accounts" value={members ? members.length : user && !missing && !error ? null : "—"} />
         <Tile label="Racers" value={t.racers} />
@@ -168,6 +244,8 @@ export default function StatsPage() {
           </Box>
         </>
       )}
+      <TrackSection m={m} />
+      <CharacterSection m={m} />
     </Container>
   );
 }

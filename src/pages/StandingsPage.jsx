@@ -13,12 +13,13 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { compute, playerFromSlug, playerSlug } from "../lib/standings";
 import { DEMO } from "../lib/demo";
-import { ord, pctTxt } from "../lib/constants";
+import { fmtDate, ord, pctTxt } from "../lib/constants";
 import { nextEvent } from "../lib/events";
 import { colors, fontDisplay } from "../theme";
 import Hero from "../components/Hero";
 import CharacterFace from "../components/CharacterFace";
 import RacerDrawer from "../components/RacerDrawer";
+import { FormArrow, ProvisionalBadge, RatingDelta, fmtRating } from "../components/RatingBits";
 import { Loading, PageTitle, SectionTitle, plural } from "../components/PageBits";
 
 const MEDAL = { 1: colors.gold, 2: colors.silver, 3: colors.bronze };
@@ -43,8 +44,13 @@ function StatTile({ label, value, sub }) {
   );
 }
 
+// The number a row is ranked by: the rating (Season 2 on) or the points percentage.
+function headline(s, rankBy) {
+  return rankBy === "rating" ? fmtRating(s.rating) : pctTxt(s.pct);
+}
+
 // 2nd, 1st, 3rd in one row at every width (smaller on phones).
-function Podium({ ranked, hrefOf }) {
+function Podium({ ranked, hrefOf, rankBy }) {
   const top = ranked.slice(0, 3);
   if (top.length < 2) return null;
   const order = top.length === 3 ? [top[1], top[0], top[2]] : [top[1], top[0]];
@@ -54,7 +60,7 @@ function Podium({ ranked, hrefOf }) {
       {order.map((s) => (
         <Box
           key={s.player.id} component={RouterLink} to={hrefOf(s.player)}
-          aria-label={`${s.rank}${ord(s.rank)}: ${s.player.name}, ${pctTxt(s.pct)}. Open their season`}
+          aria-label={`${s.rank}${ord(s.rank)}: ${s.player.name}, ${rankBy === "rating" ? "rating " : ""}${headline(s, rankBy)}. Open their season`}
           sx={{ ...linkReset, textAlign: "center", width: { xs: "31%", sm: 140 }, maxWidth: 140, minWidth: 0 }}
         >
           <Box sx={{ display: "flex", justifyContent: "center" }}>
@@ -74,7 +80,7 @@ function Podium({ ranked, hrefOf }) {
             <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.05rem", sm: "1.3rem" }, color: MEDAL[s.rank] || colors.ink, transform: "skewX(-7deg)" }}>
               {s.rank}<sup style={{ fontSize: "0.5em" }}>{ord(s.rank)}</sup>
             </Typography>
-            <Typography variant="body2" sx={{ color: colors.muted, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{pctTxt(s.pct)}</Typography>
+            <Typography variant="body2" sx={{ color: colors.muted, fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>{headline(s, rankBy)}</Typography>
           </Box>
         </Box>
       ))}
@@ -100,13 +106,17 @@ function RankBadge({ rank }) {
   );
 }
 
-function BoardRow({ s, rank, href }) {
+function BoardRow({ s, rank, href, m }) {
   const p = s.player;
-  const facts = `${s.pts}/${s.max} pts · ${plural(s.cp, "cup")} · ${plural(s.wins, "cup win")}`;
+  const rating = m.rankBy === "rating";
+  const att = s.attendance;
+  const facts = rating
+    ? `${pctTxt(s.pct)} · ${att.played}/${att.held} cups · ${plural(s.wins, "cup win")}${att.streak > 1 ? ` · ${att.streak} nights in a row` : ""}`
+    : `${s.pts}/${s.max} pts · ${att.played}/${att.held} cups · ${plural(s.wins, "cup win")}${s.rating != null ? ` · rating ${fmtRating(s.rating)}` : ""}`;
   return (
     <Box
       component={RouterLink} to={href}
-      aria-label={`${rank ? `${rank}${ord(rank)}` : "Not yet ranked"}: ${p.name}, ${pctTxt(s.pct)}, ${facts}. Open their season`}
+      aria-label={`${rank ? `${rank}${ord(rank)}` : "Not yet ranked"}: ${p.name}, ${rating ? `rating ${fmtRating(s.rating)}${s.provisional ? " (provisional)" : ""}` : pctTxt(s.pct)}, ${facts}. Open their season`}
       sx={{
         ...linkReset, display: "grid", alignItems: "center", columnGap: 2, rowGap: 1,
         gridTemplateColumns: { xs: "32px minmax(0,1fr)", sm: "48px minmax(0,1fr) auto" },
@@ -117,13 +127,26 @@ function BoardRow({ s, rank, href }) {
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
         <CharacterFace name={s.main && s.main.name} ring={p.color} size={36} />
         <Box sx={{ minWidth: 0 }}>
-          <Typography noWrap sx={{ fontWeight: 700 }}>{p.name}</Typography>
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
+            <Typography noWrap sx={{ fontWeight: 700 }}>{p.name}</Typography>
+            {rating && s.provisional && <ProvisionalBadge cups={m.rated.cfg.provisional} />}
+            <FormArrow form={s.form} />
+          </Stack>
           <Typography variant="caption" sx={{ color: colors.muted }}>{s.main ? s.main.name : "No character yet"}</Typography>
         </Box>
       </Stack>
       <Stack sx={{ minWidth: { sm: 190 }, gridColumn: { xs: "2", sm: "auto" }, textAlign: { xs: "left", sm: "right" } }}>
-        <Typography sx={{ fontWeight: 800 }}>{pctTxt(s.pct)}</Typography>
-        <LinearProgress variant="determinate" value={Math.min(100, s.pct * 100)} sx={{ height: 6, my: 0.5, "& .MuiLinearProgress-bar": { bgcolor: p.color } }} />
+        {rating ? (
+          <Stack direction="row" spacing={1} alignItems="baseline" justifyContent={{ xs: "flex-start", sm: "flex-end" }}>
+            <Typography sx={{ fontWeight: 800, fontSize: "1.15rem" }}>{fmtRating(s.rating)}</Typography>
+            <RatingDelta delta={s.ratingDelta} />
+          </Stack>
+        ) : (
+          <>
+            <Typography sx={{ fontWeight: 800 }}>{pctTxt(s.pct)}</Typography>
+            <LinearProgress variant="determinate" value={Math.min(100, s.pct * 100)} sx={{ height: 6, my: 0.5, "& .MuiLinearProgress-bar": { bgcolor: p.color } }} />
+          </>
+        )}
         <Typography variant="caption" sx={{ color: colors.muted }}>{facts}</Typography>
       </Stack>
     </Box>
@@ -160,7 +183,7 @@ export default function StandingsPage() {
             <b>Example standings.</b> These made-up results show how the site works. They disappear when the first real cup is added.
           </Alert>
         )}
-        <Podium ranked={m.ranked} hrefOf={hrefOf} />
+        <Podium ranked={m.ranked} hrefOf={hrefOf} rankBy={m.rankBy} />
         {m.ranked.length > 0 && (
           <Stack direction="row" spacing={2} useFlexGap sx={{ mb: 4, flexWrap: "wrap" }}>
             <StatTile
@@ -168,22 +191,28 @@ export default function StandingsPage() {
               value={topWins ? names(winLeaders) : "None yet"}
               sub={topWins ? `${plural(topWins, "cup win")}${winLeaders.length > 1 ? " each · tied" : ""}` : ""}
             />
-            <StatTile label="Qualifying mark" value={plural(m.need, "cup")} sub={`${L.minParticipation}% of cups played so far`} />
+            <StatTile
+              label="Qualifying mark" value={plural(m.minCups, "cup")}
+              sub={m.minCups > m.need ? `${L.minParticipation}% of cups so far, and at least ${m.minCups}` : `${L.minParticipation}% of cups played so far`}
+            />
+            {m.mvp && (
+              <StatTile label="Weekly MVP" value={m.mvp.s.player.name} sub={`+${Math.round(m.mvp.delta)} rating on ${fmtDate(m.mvp.date)}`} />
+            )}
           </Stack>
         )}
 
-        <PageTitle title="Standings" sub={`Ranked by points percentage · top ${L.playoffSpots} make the playoffs`} />
+        <PageTitle title="Standings" sub={`Ranked by ${m.rankBy === "rating" ? "skill rating" : "points percentage"} · top ${L.playoffSpots} make the playoffs`} />
         {!m.ranked.length ? (
           <Paper sx={{ p: 3 }}>
             <Typography sx={{ fontWeight: 700 }}>No qualified players yet.</Typography>
-            <Typography variant="body2" sx={{ color: colors.muted }}>Players appear here once they have played {m.need} cups.</Typography>
+            <Typography variant="body2" sx={{ color: colors.muted }}>Players appear here once they have played {plural(m.minCups, "cup")}.</Typography>
           </Paper>
         ) : (
           <Paper sx={{ p: 1 }} component="nav" aria-label="Standings">
             <Stack divider={<Divider />}>
               {m.ranked.map((s, i) => (
                 <Box key={s.player.id}>
-                  <BoardRow s={s} rank={s.rank} href={hrefOf(s.player)} />
+                  <BoardRow s={s} rank={s.rank} href={hrefOf(s.player)} m={m} />
                   {i === L.playoffSpots - 1 && m.ranked.length > L.playoffSpots && (
                     <Divider sx={{ "&::before, &::after": { borderTop: `2px dashed ${colors.hot}` } }}>
                       <Typography variant="overline" sx={{ px: 1, color: colors.hot, lineHeight: 1 }}>Playoff line</Typography>
@@ -197,10 +226,10 @@ export default function StandingsPage() {
 
         {m.unranked.length > 0 && (
           <>
-            <SectionTitle title="Not yet qualified" count={`Need ${plural(m.need, "cup")} to be ranked`} />
+            <SectionTitle title="Not yet qualified" count={`Need ${plural(m.minCups, "cup")} to be ranked`} />
             <Paper sx={{ p: 1 }} component="nav" aria-label="Not yet qualified">
               <Stack divider={<Divider />}>
-                {m.unranked.map((s) => <BoardRow key={s.player.id} s={s} rank={null} href={hrefOf(s.player)} />)}
+                {m.unranked.map((s) => <BoardRow key={s.player.id} s={s} rank={null} href={hrefOf(s.player)} m={m} />)}
               </Stack>
             </Paper>
           </>

@@ -25,6 +25,9 @@ import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
 import CupPhoto from "../components/CupPhoto";
 import { deleteCupPhoto } from "../lib/cupPhotos";
+import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
+import SeasonPicker, { useSeason } from "../components/SeasonPicker";
 
 // Race-by-race places. On a phone each race is just the place (details in the tooltip), so all four
 // races and the total fit without scrolling; wider screens add the character and points.
@@ -115,6 +118,11 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
           <Typography variant="body2" sx={{ color: colors.muted }}>
             {fmtDate(cup.date)}{info.max !== 60 ? ` · max ${info.max} pts` : ""}
           </Typography>
+          {info.upset && (
+            <Tooltip title={`${(playerById(info.upset.winner) || {}).name || "The winner"} won over ${info.upset.over.map((id) => (playerById(id) || {}).name || "?").join(" and ")}, rated 75+ higher going in`}>
+              <Chip size="small" label="Upset" sx={{ height: 22, fontWeight: 800, bgcolor: colors.hot, color: "#fff" }} />
+            </Tooltip>
+          )}
         </Stack>
 
         {cup.maps && cup.maps.length > 0 && (
@@ -195,7 +203,8 @@ export default function CupsPage() {
   const { user, isAdmin } = useAuth();
   const demo = state && state.cups.length === 0;
   const st = demo ? DEMO : state;
-  const m = useMemo(() => (st ? compute(st) : null), [st]);
+  const { season, seasons, setSeason } = useSeason(st);
+  const m = useMemo(() => (st ? compute(st, { season }) : null), [st, season]);
 
   if (!state) {
     return (
@@ -212,7 +221,7 @@ export default function CupsPage() {
     <Container maxWidth="lg" sx={{ pt: 1 }}>
       <PageTitle
         title="History"
-        sub={`${m.total} cup${m.total === 1 ? "" : "s"} finished · newest week first`}
+        sub={`${seasons.length > 1 ? `Season ${season} · ` : ""}${m.total} cup${m.total === 1 ? "" : "s"} finished · newest week first`}
         action={user && <Button component={RouterLink} to="/add" variant="contained" size="small">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
       />
 
@@ -221,6 +230,8 @@ export default function CupsPage() {
           <b>Example cups.</b> These made-up results show how the site works. They disappear when the first real cup is added.
         </Alert>
       )}
+
+      <SeasonPicker season={season} seasons={seasons} setSeason={setSeason} />
 
       {live.map((c) => (
         <Alert

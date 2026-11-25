@@ -117,7 +117,7 @@ export default function UnclaimedPage() {
   const [error, setError] = useState("");
   const demo = state && state.cups.length === 0;
   const st = demo ? DEMO : state;
-  const m = useMemo(() => (st ? compute(st) : null), [st]);
+  const m = useMemo(() => (st ? compute(st, { season: "all" }) : null), [st]);
 
   if (!state) return <Loading error={loadError} />;
 

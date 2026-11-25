@@ -26,12 +26,13 @@ export function today() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// The current week, or the next one once this week has its full count of cups.
+// The current week of the current season, or the next one once this week has its full count of cups.
 export function suggestWeek(state) {
   if (!state || !state.cups.length) return 1;
   const L = state.league, byWeek = {};
+  const season = Math.max(1, Number(L.currentSeason) || 1);
   let cur = 1;
-  state.cups.forEach((c) => { byWeek[c.week] = (byWeek[c.week] || 0) + 1; if (c.week > cur) cur = c.week; });
+  state.cups.filter((c) => (c.season || 1) === season).forEach((c) => { byWeek[c.week] = (byWeek[c.week] || 0) + 1; if (c.week > cur) cur = c.week; });
   return (byWeek[cur] || 0) >= L.cupsPerWeek && cur < L.seasonWeeks ? cur + 1 : cur;
 }
 

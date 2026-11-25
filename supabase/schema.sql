@@ -207,7 +207,22 @@ alter table public.submissions add column if not exists maps text[] not null def
 alter table public.submissions add column if not exists batch text;
 create index if not exists submissions_batch on public.submissions (batch);
 
+-- ---- added in v10: seasons ----
+-- Every cup belongs to a season. New cups (and members' submissions) take league.settings.currentSeason,
+-- which an admin bumps with Start next season; existing rows are Season 1. Editing a cup keeps its season,
+-- and approving a submission files its cup in the season it was raced in.
+alter table public.cups add column if not exists season int not null default 1 check (season between 1 and 99);
+alter table public.submissions add column if not exists season int not null default 1 check (season between 1 and 99);
+create index if not exists cups_season on public.cups (season);
+
 -- ============ helpers ============
+
+-- The season new cups go into (league.settings.currentSeason, 1 until an admin starts Season 2).
+create or replace function public.current_season() returns int
+language sql stable security definer set search_path = public as $$
+  select coalesce((select case when settings->>'currentSeason' ~ '^\d{1,2}$' then greatest(1, (settings->>'currentSeason')::int) end
+                   from league where id = 1), 1);
+$$;
 
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
@@ -430,9 +445,10 @@ begin
     select x->>'id', x->>'name', x->>'color', coalesce(array(select jsonb_array_elements_text(x->'aliases')), '{}')
     from jsonb_array_elements(p_players) x
   on conflict (id) do update set name = excluded.name, color = excluded.color, aliases = excluded.aliases;
-  insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by)
+  insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, season)
   values (p_cup->>'id', p_cup->>'cup', (p_cup->>'date')::date, coalesce((p_cup->>'week')::int, 1), (p_cup->>'max')::int, p_cup->'results',
-          coalesce(p_cup->>'notes', ''), coalesce((p_cup->>'has_photo')::boolean, false), (p_cup->>'added_at')::bigint, auth.uid())
+          coalesce(p_cup->>'notes', ''), coalesce((p_cup->>'has_photo')::boolean, false), (p_cup->>'added_at')::bigint, auth.uid(),
+          coalesce((select season from submissions where id = p_submission), current_season()))
   on conflict (id) do update set cup = excluded.cup, date = excluded.date, week = excluded.week, max = excluded.max, results = excluded.results,
     notes = excluded.notes, has_photo = excluded.has_photo;
   if p_photo is not null then
@@ -458,11 +474,11 @@ end $$;
 create or replace function public.submit_cup(p_sub jsonb, p_photo text default null) returns void
 language plpgsql security invoker set search_path = public as $$
 begin
-  insert into submissions (id, cup, date, week, max, rows, notes, has_photo, status, submitted_by, submitter_name, submitted_at, maps, batch)
+  insert into submissions (id, cup, date, week, max, rows, notes, has_photo, status, submitted_by, submitter_name, submitted_at, maps, batch, season)
   values (p_sub->>'id', p_sub->>'cup', (p_sub->>'date')::date, coalesce((p_sub->>'week')::int, 1), (p_sub->>'max')::int, p_sub->'rows', coalesce(p_sub->>'notes', ''),
           p_photo is not null, 'pending', auth.uid(),
           coalesce((select display_name from profiles where id = auth.uid()), ''), (extract(epoch from now()) * 1000)::bigint,
-          array(select jsonb_array_elements_text(coalesce(p_sub->'maps', '[]'::jsonb))), nullif(p_sub->>'batch', ''));
+          array(select jsonb_array_elements_text(coalesce(p_sub->'maps', '[]'::jsonb))), nullif(p_sub->>'batch', ''), current_season());
   if p_photo is not null then
     insert into submission_photos (id, data, submitted_by) values (p_sub->>'id', p_photo, auth.uid());
   end if;
@@ -577,10 +593,10 @@ begin
   if cardinality(m) <> 4 or exists (select 1 from unnest(m) x where coalesce(trim(x), '') = '') then
     raise exception 'Pick all 4 tracks.';
   end if;
-  insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, status, maps, template_id)
+  insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, status, maps, template_id, season)
   values (p_cup->>'id', left(trim(p_cup->>'cup'), 40), (p_cup->>'date')::date, coalesce((p_cup->>'week')::int, 1),
           coalesce((p_cup->>'max')::int, 60), '[]'::jsonb, '', false, (extract(epoch from now()) * 1000)::bigint, auth.uid(),
-          'racing', m, nullif(p_cup->>'template_id', ''));
+          'racing', m, nullif(p_cup->>'template_id', ''), current_season());
 end $$;
 
 -- Your own player, created from your profile the first time you need one.
@@ -719,9 +735,10 @@ begin
     select status into old_status from cups where id = cid for update;
     if old_status = 'racing' then raise exception '% is still being raced. Finish it on Race night first.', nm; end if;
 
-    insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, status, maps)
+    insert into cups (id, cup, date, week, max, results, notes, has_photo, added_at, added_by, status, maps, season)
     values (cid, nm, (c->>'date')::date, coalesce((c->>'week')::int, 1), mx, c->'results', left(coalesce(c->>'notes', ''), 500),
-            coalesce((c->>'has_photo')::boolean, false), coalesce((c->>'added_at')::bigint, now_ms + n), auth.uid(), 'complete', m)
+            coalesce((c->>'has_photo')::boolean, false), coalesce((c->>'added_at')::bigint, now_ms + n), auth.uid(), 'complete', m,
+            coalesce((select season from submissions where id = nullif(c->>'submission', '')), current_season()))
     on conflict (id) do update set cup = excluded.cup, date = excluded.date, week = excluded.week, max = excluded.max,
       results = excluded.results, notes = excluded.notes, has_photo = cups.has_photo or excluded.has_photo,
       maps = case when cardinality(cups.maps) > 0 then cups.maps else excluded.maps end;
@@ -1026,7 +1043,7 @@ grant execute on function public.claim_ownership, public.set_role, public.save_c
   public.submit_cup, public.save_settings, public.delete_my_account, public.save_players, public.approve_claim,
   public.reject_claim, public.create_cup, public.my_player_id, public.enter_race, public.clear_race, public.finish_cup,
   public.reopen_cup, public.save_cup_night to authenticated;
-grant execute on function public.is_admin, public.league_has_owner, public.result_unclaimed, public.race_points to anon, authenticated;
+grant execute on function public.is_admin, public.league_has_owner, public.result_unclaimed, public.race_points, public.current_season to anon, authenticated;
 
 revoke execute on function public.create_event, public.update_event, public.cancel_event, public.join_event, public.leave_event from public, anon;
 grant execute on function public.create_event, public.update_event, public.cancel_event, public.join_event, public.leave_event to authenticated;
@@ -1062,7 +1079,7 @@ revoke insert, update, delete, truncate on all tables in schema public from anon
 revoke select on public.players, public.cups, public.race_results, public.cup_templates, public.events,
   public.event_commitments, public.event_track_votes, public.photos from anon;
 grant select (id, name, color, aliases, registered_at) on public.players to anon;
-grant select (id, cup, date, week, max, results, notes, has_photo, added_at, status, maps, template_id, photo_path) on public.cups to anon;
+grant select (id, cup, date, week, max, results, notes, has_photo, added_at, status, maps, template_id, photo_path, season) on public.cups to anon;
 grant select (cup_id, race, player_id, position, points, character, entered_at) on public.race_results to anon;
 grant select (id, name, maps, created_at) on public.cup_templates to anon;
 grant select (id, starts_at, cups, notes, status, sequence, created_at, updated_at) on public.events to anon;

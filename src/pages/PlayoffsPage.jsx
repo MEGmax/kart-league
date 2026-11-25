@@ -1,5 +1,6 @@
-// Playoff picture: the top qualified players by points percentage, seeded into a single-elimination
-// bracket (top seeds get byes when the field isn't a power of two). Projected until the regular season ends.
+// Playoff picture: the top qualified players (by rating, or points percentage in Season 1), seeded into a
+// single-elimination bracket (top seeds get byes when the field isn't a power of two). Projected until the
+// regular season ends. Each round is playoffCupsPerRound cups on aggregate points.
 import { useMemo } from "react";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
@@ -15,6 +16,7 @@ import { DEMO } from "../lib/demo";
 import { pctTxt } from "../lib/constants";
 import { colors, fontData } from "../theme";
 import CharacterFace from "../components/CharacterFace";
+import { fmtRating } from "../components/RatingBits";
 import { Loading, PageTitle, SectionTitle } from "../components/PageBits";
 
 // Standard seeding order: 1 v 8, 4 v 5, 2 v 7, 3 v 6, …
@@ -31,7 +33,7 @@ function roundName(matches) {
   return matches === 1 ? "Final" : matches === 2 ? "Semifinals" : matches === 4 ? "Quarterfinals" : `Round of ${matches * 2}`;
 }
 
-function Slot({ seed, s, note }) {
+function Slot({ seed, s, note, rankBy }) {
   return (
     <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 1.25, py: 0.75, minHeight: 40 }}>
       <Typography sx={{ fontFamily: fontData, color: colors.muted, width: 18, textAlign: "right" }}>{seed || ""}</Typography>
@@ -39,7 +41,7 @@ function Slot({ seed, s, note }) {
         <>
           <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={24} />
           <Typography variant="body2" sx={{ fontWeight: 700, flex: 1, minWidth: 0 }} noWrap>{s.player.name}</Typography>
-          <Typography variant="caption" sx={{ fontFamily: fontData, color: colors.muted }}>{pctTxt(s.pct)}</Typography>
+          <Typography variant="caption" sx={{ fontFamily: fontData, color: colors.muted }}>{rankBy === "rating" ? fmtRating(s.rating) : pctTxt(s.pct)}</Typography>
         </>
       ) : (
         <Typography variant="body2" sx={{ color: colors.muted, fontStyle: "italic" }}>{note || "TBD"}</Typography>
@@ -48,11 +50,11 @@ function Slot({ seed, s, note }) {
   );
 }
 
-function Match({ a, b }) {
+function Match({ a, b, rankBy }) {
   return (
     <Paper variant="outlined" sx={{ bgcolor: colors.bg2, "& > *:first-of-type": { borderBottom: `1px solid ${colors.line}` } }}>
-      <Slot {...a} />
-      <Slot {...b} />
+      <Slot {...a} rankBy={rankBy} />
+      <Slot {...b} rankBy={rankBy} />
     </Paper>
   );
 }
@@ -66,6 +68,8 @@ export default function PlayoffsPage() {
 
   const L = st.league;
   const K = Math.max(2, Number(L.playoffSpots) || 4);
+  const byRating = m.rankBy === "rating";
+  const perRound = Math.max(1, Number(L.playoffCupsPerRound) || 1);
   const seeds = m.ranked.slice(0, K);
   const bubble = m.ranked.slice(K, K + 3);
   const plan = m.plan;
@@ -99,7 +103,7 @@ export default function PlayoffsPage() {
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
-      <PageTitle title="Playoffs" sub={`Top ${K} qualified players by points percentage after week ${lastWeek}`} />
+      <PageTitle title="Playoffs" sub={`Top ${K} qualified players by ${byRating ? "skill rating" : "points percentage"} after week ${lastWeek}`} />
       {demo && <Alert severity="info" sx={{ mb: 2 }}><b>Example standings.</b> This fills in from real results once the first cup is added.</Alert>}
 
       <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 3 }}>
@@ -110,7 +114,7 @@ export default function PlayoffsPage() {
         <LinearProgress variant="determinate" value={Math.min(100, (plan.played / plan.total) * 100)}
           sx={{ height: 8, borderRadius: 4, bgcolor: colors.panel2, "& .MuiLinearProgress-bar": { bgcolor: colors.accent } }} />
         <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
-          {plan.played} of {plan.total} cups played · week {plan.current} of {lastWeek} · {m.ranked.length} qualified (played {m.need}+ cups)
+          {plan.played} of {plan.total} cups played · week {plan.current} of {lastWeek} · {m.ranked.length} qualified (played {m.minCups}+ cups)
         </Typography>
         {everyoneIn && (
           <Typography variant="body2" sx={{ mt: 1 }}>
@@ -123,7 +127,7 @@ export default function PlayoffsPage() {
       {seeds.length < 2 ? (
         <Paper sx={{ p: 3 }}>
           <Typography sx={{ fontWeight: 700 }}>Not enough qualified players for a bracket yet.</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>It appears once at least 2 players have played {L.minParticipation}% of the cups.</Typography>
+          <Typography variant="body2" sx={{ color: colors.muted }}>It appears once at least 2 players have played {L.minParticipation}% of the cups{m.minCups > m.need ? ` and at least ${m.minCups}` : ""}.</Typography>
         </Paper>
       ) : (
         <>
@@ -137,7 +141,7 @@ export default function PlayoffsPage() {
               {rounds.map((r, i) => (
                 <Box key={i} sx={{ display: "grid", gap: 2 }}>
                   <Typography variant="overline" sx={{ color: colors.muted }}>{roundName(size / 2 ** (i + 1))}</Typography>
-                  {r.map((mt, k) => <Match key={k} a={mt[0]} b={mt[1]} />)}
+                  {r.map((mt, k) => <Match key={k} a={mt[0]} b={mt[1]} rankBy={m.rankBy} />)}
                 </Box>
               ))}
             </Box>
@@ -148,7 +152,11 @@ export default function PlayoffsPage() {
             </Typography>
           )}
           <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
-            Each matchup is one cup; the higher score advances. A tied cup goes to a single-race runoff on a track an admin picks.
+            {perRound === 1
+              ? "Each matchup is one cup; the higher score advances. A tied cup goes to a single-race runoff on a track an admin picks."
+              : `Each round is ${perRound} cups on aggregate points; the higher total advances, and a tie goes to a single-race runoff on a track an admin picks.`}
+            {perRound > 1 && size === 4 && seeds.length === 4 && " All four semifinalists race the same cups together: 1 v 4 and 2 v 3 compare totals, and the two winners race the final."}
+            {byRating && " Playoff cups count in stats and records but don't move the locked season rating."}
           </Typography>
         </>
       )}
@@ -158,13 +166,13 @@ export default function PlayoffsPage() {
           <SectionTitle title="On the bubble" />
           <Stack spacing={1}>
             {bubble.map((s) => {
-              const gap = (seeds[seeds.length - 1].pct - s.pct) * 100;
+              const gap = byRating ? Math.round(seeds[seeds.length - 1].rating) - Math.round(s.rating) : (seeds[seeds.length - 1].pct - s.pct) * 100;
               return (
                 <Paper key={s.player.id} sx={{ p: 1.5, display: "flex", alignItems: "center", gap: 1.5 }}>
                   <Typography sx={{ fontFamily: fontData, color: colors.muted, width: 24 }}>{s.rank}</Typography>
                   <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={28} />
                   <Typography sx={{ fontWeight: 700, flex: 1 }}>{s.player.name}</Typography>
-                  <Typography variant="body2" sx={{ fontFamily: fontData, color: colors.muted }}>{pctTxt(s.pct)} · {gap.toFixed(1)} percentage points behind seed {seeds.length}</Typography>
+                  <Typography variant="body2" sx={{ fontFamily: fontData, color: colors.muted }}>{byRating ? `${fmtRating(s.rating)} · ${gap} rating points` : `${pctTxt(s.pct)} · ${gap.toFixed(1)} percentage points`} behind seed {seeds.length}</Typography>
                 </Paper>
               );
             })}

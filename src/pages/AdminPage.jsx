@@ -17,10 +17,15 @@ import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import TableContainer from "@mui/material/TableContainer";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { useFlash } from "../context/FlashContext";
-import { compute } from "../lib/standings";
+import { compute, currentSeason } from "../lib/standings";
+import { RATING_DEFAULTS } from "../lib/rating";
 import { fmtDate, fmtDay, nextColor, ord } from "../lib/constants";
 import { groupBatches, useAdminData } from "../lib/accountData";
 import { uid } from "../lib/night";
@@ -261,35 +266,100 @@ const TIMEZONES = (() => {
   try { return Intl.supportedValuesOf("timeZone"); } catch { return ["America/Toronto"]; }
 })();
 
+// The settings form starts from the saved settings with every key filled in, so a save never drops one.
+function settingsDraft(league) {
+  return {
+    ...RATING_DEFAULTS, playoffCupsPerRound: 2, rankBy: "pct", ...league,
+    currentSeason: currentSeason(league), timezone: league.timezone || "America/Toronto", reminderHour: league.reminderHour ?? 9,
+  };
+}
+
+// Checks and tidies the settings before save_settings (which replaces the whole object). "" when they're fine.
+function checkSettings(cur) {
+  const n = {
+    ...cur, name: String(cur.name || "").trim(), season: String(cur.season || "").trim(), seasonWeeks: Number(cur.seasonWeeks),
+    cupsPerWeek: Number(cur.cupsPerWeek), playoffSpots: Number(cur.playoffSpots), minParticipation: Number(cur.minParticipation),
+    defaultMax: Number(cur.defaultMax), reminderHour: Number(cur.reminderHour), timezone: cur.timezone,
+    currentSeason: Number(cur.currentSeason), rankBy: cur.rankBy === "rating" ? "rating" : "pct",
+    ratingStart: Number(cur.ratingStart), ratingK: Number(cur.ratingK), ratingKProvisional: Number(cur.ratingKProvisional),
+    provisionalCups: Number(cur.provisionalCups), marginCap: Number(cur.marginCap), carryOver: Number(cur.carryOver),
+    playoffCupsPerRound: Number(cur.playoffCupsPerRound),
+  };
+  const whole = (v, lo, hi) => v >= lo && v <= hi && Math.round(v) === v;
+  let err = "";
+  if (!n.name) err = "Give the league a name.";
+  else if (!n.season) err = "Give the season a name.";
+  else if (!whole(n.seasonWeeks, 1, 52)) err = "Weeks must be a whole number from 1 to 52.";
+  else if (!whole(n.cupsPerWeek, 1, 20)) err = "Cups per week must be a whole number from 1 to 20.";
+  else if (!whole(n.playoffSpots, 2, 32)) err = "Playoff spots must be a whole number from 2 to 32.";
+  else if (!(n.minParticipation >= 0 && n.minParticipation <= 100)) err = "Qualifying % must be between 0 and 100.";
+  else if (!whole(n.defaultMax, 1, 1000)) err = "Default max points must be a whole number above 0.";
+  else if (!whole(n.reminderHour, 0, 23)) err = "Reminder hour must be from 0 to 23.";
+  else if (!whole(n.currentSeason, 1, 99)) err = "The current season must be a whole number from 1 to 99.";
+  else if (!whole(n.ratingStart, 0, 5000)) err = "Starting rating must be a whole number from 0 to 5000.";
+  else if (!(n.ratingK > 0 && n.ratingK <= 200) || !(n.ratingKProvisional > 0 && n.ratingKProvisional <= 200)) err = "K values must be above 0 and at most 200.";
+  else if (!whole(n.provisionalCups, 0, 50)) err = "Provisional cups must be a whole number from 0 to 50.";
+  else if (!(n.marginCap >= 1 && n.marginCap <= 1000)) err = "The margin cap must be at least 1 point.";
+  else if (!(n.carryOver >= 0 && n.carryOver <= 1)) err = "Carry-over must be between 0 and 1 (0.5 = halfway).";
+  else if (!whole(n.playoffCupsPerRound, 1, 10)) err = "Playoff cups per round must be a whole number from 1 to 10.";
+  return { n, err };
+}
+
+function StartSeason({ league }) {
+  const { busy, error, setError, run } = useAction();
+  const [open, setOpen] = useState(false);
+  const now = currentSeason(league);
+  const [rankBy, setRankBy] = useState("rating");
+  async function start() {
+    const { n, err } = checkSettings({
+      ...settingsDraft(league),
+      currentSeason: now + 1, season: `Season ${now + 1}`, rankBy,
+      // The season that's ending keeps the ranking rule it was played under.
+      seasonRankBy: { ...(league.seasonRankBy || {}), [now]: league.rankBy === "rating" ? "rating" : "pct" },
+    });
+    if (err) { setError(err); return; }
+    if (await run(sb.rpc("save_settings", { p_settings: n }), `Season ${now + 1} has started`)) setOpen(false);
+  }
+  return (
+    <>
+      <Button variant="outlined" onClick={() => setOpen(true)}>Start Season {now + 1}…</Button>
+      <Dialog open={open} onClose={() => !busy && setOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Start Season {now + 1}?</DialogTitle>
+        <DialogContent sx={{ display: "grid", gap: 2 }}>
+          <Typography variant="body2">
+            New cups go into Season {now + 1} and the standings start empty. Season {now}'s cups, standings and records stay on History and Stats under its season.
+            {" "}Ratings carry over: everyone starts {Math.round((1 - (Number(league.carryOver ?? RATING_DEFAULTS.carryOver))) * 100)}% of the way back to {league.ratingStart || RATING_DEFAULTS.ratingStart}.
+          </Typography>
+          <TextField select size="small" label={`Rank Season ${now + 1} by`} value={rankBy} onChange={(e) => setRankBy(e.target.value)}>
+            <MenuItem value="rating">Skill rating</MenuItem>
+            <MenuItem value="pct">Points percentage</MenuItem>
+          </TextField>
+          {error && <Alert severity="error">{error}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setOpen(false); setError(""); }} disabled={busy}>Cancel</Button>
+          <Button variant="contained" onClick={start} disabled={busy}>{busy ? "Starting…" : `Start Season ${now + 1}`}</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
+
 function SettingsEditor({ league }) {
   const { busy, error, setError, run } = useAction();
   const [s, setS] = useState(null);
-  const cur = s || { ...league, timezone: league.timezone || "America/Toronto", reminderHour: league.reminderHour ?? 9 };
+  const cur = s || settingsDraft(league);
   function set(k) { return (e) => setS({ ...cur, [k]: e.target.value }); }
 
   async function save() {
     // save_settings replaces the whole object, so every key (including timezone and reminderHour) goes back.
-    const n = {
-      ...cur, name: String(cur.name || "").trim(), season: String(cur.season || "").trim(), seasonWeeks: Number(cur.seasonWeeks),
-      cupsPerWeek: Number(cur.cupsPerWeek), playoffSpots: Number(cur.playoffSpots), minParticipation: Number(cur.minParticipation),
-      defaultMax: Number(cur.defaultMax), reminderHour: Number(cur.reminderHour), timezone: cur.timezone,
-    };
-    const whole = (v, lo, hi) => v >= lo && v <= hi && Math.round(v) === v;
-    let err = "";
-    if (!n.name) err = "Give the league a name.";
-    else if (!n.season) err = "Give the season a name.";
-    else if (!whole(n.seasonWeeks, 1, 52)) err = "Weeks must be a whole number from 1 to 52.";
-    else if (!whole(n.cupsPerWeek, 1, 20)) err = "Cups per week must be a whole number from 1 to 20.";
-    else if (!whole(n.playoffSpots, 2, 32)) err = "Playoff spots must be a whole number from 2 to 32.";
-    else if (!(n.minParticipation >= 0 && n.minParticipation <= 100)) err = "Qualifying % must be between 0 and 100.";
-    else if (!whole(n.defaultMax, 1, 1000)) err = "Default max points must be a whole number above 0.";
-    else if (!whole(n.reminderHour, 0, 23)) err = "Reminder hour must be from 0 to 23.";
+    const { n, err } = checkSettings(cur);
     if (err) { setError(err); return; }
     const ok = await run(sb.rpc("save_settings", { p_settings: n }), "Settings saved");
     if (ok) setS(null);
   }
 
-  const num = (label, k) => <TextField size="small" type="number" label={label} value={cur[k]} onChange={set(k)} inputProps={{ min: 0, step: 1 }} />;
+  const num = (label, k, step = 1) => <TextField size="small" type="number" label={label} value={cur[k]} onChange={set(k)} inputProps={{ min: 0, step }} />;
   return (
     <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, minmax(0,1fr))" } }}>
@@ -306,11 +376,27 @@ function SettingsEditor({ league }) {
         <TextField select size="small" label="Day-of reminder at" value={cur.reminderHour} onChange={set("reminderHour")}>
           {Array.from({ length: 24 }, (_, h) => <MenuItem key={h} value={h}>{new Date(2000, 0, 1, h).toLocaleTimeString("en-US", { hour: "numeric" })}</MenuItem>)}
         </TextField>
+        {num("Playoff cups per round", "playoffCupsPerRound")}
+      </Box>
+      <Typography variant="overline" sx={{ color: colors.muted, lineHeight: 1.4 }}>Ranking and rating (season {cur.currentSeason})</Typography>
+      <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, minmax(0,1fr))" } }}>
+        <TextField select size="small" label="Rank this season by" value={cur.rankBy} onChange={set("rankBy")}>
+          <MenuItem value="pct">Points percentage</MenuItem>
+          <MenuItem value="rating">Skill rating</MenuItem>
+        </TextField>
+        {num("Starting rating", "ratingStart")}
+        {num("Provisional cups (and minimum to rank)", "provisionalCups")}
+        {num("K (cup weight)", "ratingK")}
+        {num("Provisional K", "ratingKProvisional")}
+        {num("Margin cap (points)", "marginCap")}
+        {num("Season carry-over (0–1)", "carryOver", 0.05)}
       </Box>
       {error && <Alert severity="error">{error}</Alert>}
       <Stack direction="row" spacing={1}>
         <Button variant="contained" disabled={busy || !s} onClick={save}>{busy ? "Saving…" : "Save settings"}</Button>
         {s && <Button onClick={() => { setS(null); setError(""); }}>Discard changes</Button>}
+        <Box sx={{ flex: 1 }} />
+        {!s && <StartSeason league={league} />}
       </Stack>
     </Paper>
   );
@@ -379,7 +465,7 @@ export default function AdminPage() {
   const { state, loadError } = useLeagueData();
   const { user, ready, isAdmin } = useAuth();
   const admin = useAdminData();
-  const m = useMemo(() => (state ? compute(state) : null), [state]);
+  const m = useMemo(() => (state ? compute(state, { season: "all" }) : null), [state]);
 
   if (!state || !ready) return <Loading error={loadError} />;
   if (!user || !isAdmin) {

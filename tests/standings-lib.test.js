@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compute, normalize, seasonPlan } from "../src/lib/standings.js";
 import { RACE_POINTS } from "../src/lib/constants.js";
+import season1 from "./fixtures/season1.json";
 
 // Week 1: two cups entered from totals (unclaimed rows included). Week 2: five race-by-race cups, so the
 // week ran over its 4. Gee (Luigi) wins every week-2 cup, two of them tied, with 8 race wins in all.
@@ -85,5 +86,62 @@ describe("claiming week 1's unclaimed results", () => {
     expect(after.unclaimed).toHaveLength(0);
     // Everyone else's numbers are untouched.
     expect(after.byId.get("pm").pct).toBe(before.byId.get("pm").pct);
+  });
+});
+
+describe("ranking by points percentage or by rating", () => {
+  const s1 = (league = {}) => normalize({ ...season1, league: { ...season1.league, ...league } });
+  const order = (m) => m.ranked.map((s) => s.player.name);
+
+  it("leaves Season 1 as it was with rankBy pct (the default)", () => {
+    const m = compute(s1());
+    expect(m.rankBy).toBe("pct");
+    expect(m.need).toBe(2);
+    expect(order(m)).toEqual(["gsote", "Kieran4145", "Matty G", "licia", "JJ Siwa", "unphyt"]);
+    expect(m.ranked[1].back).toBeCloseTo(6.53, 2);
+  });
+
+  it("ranks by rating, needing 5 cups as well as the qualifying %", () => {
+    const m = compute(s1({ rankBy: "rating" }));
+    expect(m.minCups).toBe(5);
+    expect(order(m)).toEqual(["gsote", "Matty G", "licia", "JJ Siwa"]);
+    expect(m.unranked.map((s) => s.player.name)).toEqual(["Kieran4145", "unphyt"]);
+    expect(m.ranked[1].back).toBe(58);
+  });
+
+  it("shows one season at a time, and a past season keeps its own ranking rule", () => {
+    const st = s1({ currentSeason: 2, rankBy: "rating", seasonRankBy: { 1: "pct" } });
+    st.cups.push({ ...st.cups[0], id: "new", season: 2, results: [{ rid: "a", p: st.players[0].id, pts: 40 }, { rid: "b", p: st.players[1].id, pts: 20 }] });
+    const now = compute(st);
+    expect(now).toMatchObject({ season: 2, rankBy: "rating", total: 1 });
+    const past = compute(st, { season: 1 });
+    expect(past).toMatchObject({ season: 1, rankBy: "pct", total: 12 });
+    expect(compute(st, { season: "all" }).total).toBe(13);
+  });
+});
+
+describe("rating tiebreakers (ratings held level with K = 0)", () => {
+  const flat = { rankBy: "rating", ratingK: 0, ratingKProvisional: 0, provisionalCups: 0, minParticipation: 0, seasonWeeks: 5, cupsPerWeek: 4 };
+  const run = (cups) => {
+    const players = ["a", "b", "z"].map((id) => ({ id, name: id.toUpperCase() }));
+    const list = cups.map((res, i) => ({
+      id: "c" + i, cup: "Cup", date: "2026-12-0" + (i + 1), week: 1, max: 60, addedAt: i, status: "complete",
+      results: Object.entries(res).map(([p, pts]) => ({ rid: p, p, pts })),
+    }));
+    return compute(normalize({ league: flat, players, cups: list })).ranked.map((s) => s.player.id);
+  };
+
+  it("splits equal ratings by cup wins", () => {
+    expect(run([{ a: 40, b: 30 }, { a: 41, z: 30 }, { b: 50, z: 10 }])).toEqual(["a", "b", "z"]);
+  });
+  it("then by head-to-head points, even with fewer points overall", () => {
+    const r = run([{ b: 40, a: 30 }, { a: 50, b: 35 }, { b: 20, z: 60 }]);
+    expect(r.indexOf("a")).toBeLessThan(r.indexOf("b"));
+  });
+  it("then by total points", () => {
+    expect(run([{ z: 50, a: 40 }, { z: 50, b: 30 }]).slice(1)).toEqual(["a", "b"]);
+  });
+  it("and finally by name", () => {
+    expect(run([{ a: 30, b: 30 }])).toEqual(["a", "b"]);
   });
 });

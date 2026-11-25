@@ -147,3 +147,45 @@ describe("finish_cup on a reopened cup", () => {
     expect(res.filter((r) => r.p).map((r) => [r.p, r.pts])).toEqual([["pa", 57], ["pb", 49]]);
   });
 });
+
+describe("seasons (v10)", () => {
+  const setSeason = (n) => db.query(`update public.league set settings = settings || '{"currentSeason": ${n}}'::jsonb where id = 1`);
+  const seasons = async () => (await db.query("select id, season from public.cups order by id")).rows;
+
+  beforeEach(async () => {
+    await db.query("insert into public.league (id, settings) values (1, '{}'::jsonb) on conflict (id) do nothing");
+  });
+
+  it("files cups in Season 1 until the league moves on", async () => {
+    await save(admin, night());
+    expect(await seasons()).toEqual([{ id: "c1", season: 1 }, { id: "c2", season: 1 }]);
+  });
+
+  it("puts new cups in the current season and keeps an edited cup's season", async () => {
+    await save(admin, night());
+    await setSeason(2);
+    const edit = night();
+    edit[1].results[0].pts = 41;
+    await save(admin, [edit[1]]);
+    await as(db, admin, "select public.create_cup($1)", [JSON.stringify({ id: "c3", cup: "Star Cup", date: "2026-12-01", week: 1, maps: MUSHROOM })]);
+    expect(await seasons()).toEqual([{ id: "c1", season: 1 }, { id: "c2", season: 1 }, { id: "c3", season: 2 }]);
+  });
+
+  it("approves a submission into the season it was sent in", async () => {
+    await as(db, member, "select public.submit_cup($1, $2)", [JSON.stringify({
+      id: "s1", cup: "Mushroom Cup", date: "2026-11-29", week: 5, max: 60, maps: MUSHROOM,
+      rows: [{ rid: "r1", raw: "Ben", character: "Yoshi", pts: 44, assign: "pb", newName: "", races: null }],
+    }), null]);
+    await setSeason(2);
+    const cups = night();
+    cups[0].submission = "s1";
+    await save(admin, cups);
+    expect(await seasons()).toEqual([{ id: "c1", season: 1 }, { id: "c2", season: 2 }]);
+  });
+
+  it("lets signed-out visitors read a cup's season", async () => {
+    await save(admin, night());
+    const r = await as(db, null, "select season from public.cups where id = 'c1'");
+    expect(r.rows).toEqual([{ season: 1 }]);
+  });
+});

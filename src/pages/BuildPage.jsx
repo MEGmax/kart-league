@@ -20,6 +20,7 @@ import { formatEventWhen, nextEvent } from "../lib/events";
 import { useTrackVotes } from "../lib/trackVotes";
 import Chip from "@mui/material/Chip";
 import { suggestWeek, today, uid } from "../lib/night";
+import { currentSeason } from "../lib/standings";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { colors } from "../theme";
 import CupIcon from "../components/CupIcon";
@@ -71,6 +72,10 @@ export default function BuildPage() {
     set({ templateId: t.id, name: t.name, maps: t.maps.slice() });
   }
   const weeks = Array.from({ length: Math.max(state.league.seasonWeeks, build.week) }, (_, i) => i + 1);
+  // Track coverage this season: tracks no cup has used yet (cups being raced count as used).
+  const season = currentSeason(state.league);
+  const usedNow = new Set(state.cups.filter((c) => (c.season || 1) === season).flatMap((c) => c.maps || []));
+  const unraced = TRACKS.filter((t) => !usedNow.has(t));
   const dup = build.maps.filter((m, i) => m && build.maps.indexOf(m) !== i);
   // The vote's leaders that haven't been raced yet on this cup's date: the next cup by popular demand.
   const racedToday = new Set(state.cups.filter((c) => c.date === build.date).flatMap((c) => c.maps || []));
@@ -182,7 +187,15 @@ export default function BuildPage() {
           <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(TRACKS), templateId: "" })}>Any 4 tracks</Button>
           <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(NITRO), templateId: "" })}>Nitro only</Button>
           <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(RETRO), templateId: "" })}>Retro only</Button>
+          {unraced.length > 0 && (
+            <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(unraced).concat(pickRandom(TRACKS.filter((t) => unraced.indexOf(t) < 0))).slice(0, 4), templateId: "" })}>Not raced yet</Button>
+          )}
         </Stack>
+        {unraced.length > 0 && (
+          <Typography variant="body2" sx={{ color: colors.muted, mt: -1 }}>
+            {TRACKS.length - unraced.length} of {TRACKS.length} tracks raced this season. Not yet: {unraced.join(", ")}.
+          </Typography>
+        )}
 
         <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(4, minmax(0,1fr))" } }}>
           {[0, 1, 2, 3].map((i) => (

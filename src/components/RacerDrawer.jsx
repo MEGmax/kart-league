@@ -16,6 +16,8 @@ import CharacterFace from "./CharacterFace";
 import CupIcon from "./CupIcon";
 import TrackImage from "./TrackImage";
 import { plural } from "./PageBits";
+import { ProvisionalBadge, RatingDelta, fmtRating, signed } from "./RatingBits";
+import { headToHead as h2hTable, nemesisAndFavourite } from "../lib/rivals";
 
 function Section({ title, children }) {
   return (
@@ -44,23 +46,43 @@ function Trend({ log }) {
   );
 }
 
+// Rating after every cup this season, starting from the season's starting rating.
+function RatingChart({ s }) {
+  const hist = s.ratingHistory || [];
+  if (hist.length < 2) return null;
+  const vals = [s.ratingStart].concat(hist.map((h) => h.after));
+  const W = 320, H = 110, pad = 12;
+  const lo = Math.min(...vals) - 5, hi = Math.max(...vals) + 5;
+  const x = (i) => pad + (i * (W - 2 * pad)) / (vals.length - 1);
+  const y = (v) => H - pad - ((v - lo) / (hi - lo)) * (H - 2 * pad);
+  const mid = s.ratingStart;
+  return (
+    <Box component="svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Rating over the season: from ${fmtRating(s.ratingStart)} to ${fmtRating(s.rating)}`}
+      sx={{ width: "100%", height: "auto", display: "block", bgcolor: colors.bg2, borderRadius: 2, border: `1px solid ${colors.line}` }}>
+      <line x1={pad} x2={W - pad} y1={y(mid)} y2={y(mid)} stroke={colors.line} strokeDasharray="3 4" />
+      <polyline points={vals.map((v, i) => `${x(i)},${y(v)}`).join(" ")} fill="none" stroke={colors.cool} strokeWidth="2.5" />
+      {vals.map((v, i) => (
+        <circle key={i} cx={x(i)} cy={y(v)} r={i === vals.length - 1 ? 4 : 2.5} fill={colors.cool}>
+          <title>{i ? `After cup ${i} of theirs: ${fmtRating(v)}` : `Season start: ${fmtRating(v)}`}</title>
+        </circle>
+      ))}
+    </Box>
+  );
+}
+
 function headToHead(s, m) {
-  const out = {};
-  s.log.forEach((l) => {
-    const info = m.cupInfo.get(l.cup.id);
-    info.res.forEach((o) => {
-      if (!o.p || o.p === s.player.id) return;
-      const h = out[o.p] || (out[o.p] = { id: o.p, cups: 0, won: 0, lost: 0, tied: 0, diff: 0 });
-      h.cups++; h.diff += l.pts - o.pts;
-      if (l.pts > o.pts) h.won++; else if (l.pts < o.pts) h.lost++; else h.tied++;
-    });
-  });
-  return Object.values(out).sort((a, b) => b.cups - a.cups || b.diff - a.diff);
+  const h = h2hTable(m);
+  const list = h.ids.filter((o) => o !== s.player.id).map((o) => {
+    const r = h.get(s.player.id, o);
+    return r && { id: o, cups: r.n, won: r.w, lost: r.l, tied: r.t, diff: r.diff };
+  }).filter(Boolean).sort((a, b) => b.cups - a.cups || b.diff - a.diff);
+  return { list, ...nemesisAndFavourite(h, s.player.id) };
 }
 
 export default function RacerDrawer({ s, m, players, onClose }) {
   const phone = useMediaQuery("(max-width:599.95px)");
-  const h2h = useMemo(() => (s ? headToHead(s, m) : []), [s, m]);
+  const rivals = useMemo(() => (s ? headToHead(s, m) : { list: [] }), [s, m]);
+  const h2h = rivals.list;
   const open = !!s;
   const byPct = s ? s.log.slice().sort((a, b) => b.pts / b.max - a.pts / a.max) : [];
   const best = byPct[0], worst = byPct.length > 1 ? byPct[byPct.length - 1] : null;
@@ -75,8 +97,10 @@ export default function RacerDrawer({ s, m, players, onClose }) {
             <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={52} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="h5" noWrap sx={{ fontFamily: "inherit" }}>{s.player.name}</Typography>
-              <Typography variant="body2" sx={{ color: colors.muted }}>
-                {s.rank ? `${s.rank}${ord(s.rank)} · ` : "Not yet qualified · "}{pctTxt(s.pct)} of points possible
+              <Typography variant="body2" sx={{ color: colors.muted }} component="div">
+                {s.rank ? `${s.rank}${ord(s.rank)} · ` : "Not yet qualified · "}
+                {m.rankBy === "rating" ? <>rating {fmtRating(s.rating)} · {pctTxt(s.pct)} of points</> : <>{pctTxt(s.pct)} of points possible</>}
+                {s.provisional && m.rankBy === "rating" && <> <ProvisionalBadge cups={m.rated.cfg.provisional} /></>}
               </Typography>
             </Box>
             <IconButton onClick={onClose} aria-label="Close"><CloseIcon /></IconButton>
@@ -105,6 +129,57 @@ export default function RacerDrawer({ s, m, players, onClose }) {
               Race wins and average race finish count only the {s.rc} races entered race by race.
             </Typography>
           )}
+
+          {s.rating != null && (
+            <Section title="Rating">
+              <Stack direction="row" spacing={2} alignItems="baseline" useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
+                <Typography sx={{ fontFamily: fontData, fontWeight: 800, fontSize: "1.5rem" }}>{fmtRating(s.rating)}</Typography>
+                {s.lastNight && (
+                  <Typography variant="body2" sx={{ color: colors.muted }}>
+                    <RatingDelta delta={s.lastNight.delta} /> on {fmtDate(s.lastNight.date)}
+                  </Typography>
+                )}
+                <Typography variant="body2" sx={{ color: colors.muted }}>season high {fmtRating(s.ratingHigh)} · started at {fmtRating(s.ratingStart)}</Typography>
+              </Stack>
+              <RatingChart s={s} />
+            </Section>
+          )}
+
+          <Section title="How they race">
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 1.5 }}>
+              {[
+                ["Consistency", s.consistency != null ? `±${s.consistency.toFixed(1)}` : "–", "Spread of cup points (lower is steadier)"],
+                ["Over/under", s.overUnder != null ? signed(s.overUnder, 1) : "–", "Average points margin per opponent above or below what the ratings predicted"],
+                ["Form", s.form ? `${Math.round(s.form.pct * 100)}%` : "–", s.form ? `Points % over the last ${s.form.cups} cups (${signed(s.form.vsSeason * 100, 1)} vs the season)` : "Needs 2 cups"],
+                ["Closer", s.closer != null ? signed(s.closer, 1) : "–", "Average points in race 4 minus races 1–3"],
+                ["Comebacks", s.rc ? s.comebacks : "–", "Cups won after trailing a league player after race 2"],
+                ["Top-3 races", s.top3Rate != null ? `${Math.round(s.top3Rate * 100)}%` : "–", "Share of races finished 1st–3rd of all 12 racers"],
+                ["Attendance", `${s.attendance.played}/${s.attendance.held}`, `Cups played of cups held${s.attendance.streak ? ` · ${s.attendance.streak} night${s.attendance.streak === 1 ? "" : "s"} in a row` : ""}`],
+                ["Upsets", s.upsets || 0, "Cups won over a player rated 75+ higher"],
+                ["Last of the humans", s.lastAmongHumans, "Cups finished last among league players"],
+              ].map(([k, v, hint]) => (
+                <Box key={k} title={hint}>
+                  <Typography variant="caption" sx={{ color: colors.muted }}>{k}</Typography>
+                  <Typography sx={{ fontWeight: 800, fontFamily: fontData }}>{v}</Typography>
+                </Box>
+              ))}
+            </Box>
+            {(rivals.nemesis || rivals.favourite) && (
+              <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                {rivals.nemesis && (
+                  <Typography variant="body2">
+                    <b>Nemesis:</b> {nameOf(rivals.nemesis.id)}, {rivals.nemesis.w}–{rivals.nemesis.l}{rivals.nemesis.t ? `–${rivals.nemesis.t}` : ""}
+                  </Typography>
+                )}
+                {rivals.favourite && (
+                  <Typography variant="body2">
+                    <b>Favourite opponent:</b> {nameOf(rivals.favourite.id)}, {rivals.favourite.w}–{rivals.favourite.l}{rivals.favourite.t ? `–${rivals.favourite.t}` : ""}
+                  </Typography>
+                )}
+              </Stack>
+            )}
+          </Section>
+
 
           <Section title="Cup by cup">
             <Trend log={s.log} />

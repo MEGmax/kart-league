@@ -56,3 +56,40 @@ export function mapTally(rows) {
     track: r.track, votes: Number(r.votes) || 0, voters: r.voters || [], mine: !!r.mine,
   }));
 }
+
+// The league's track table from compute()'s output: every track raced in a finished cup, with how often,
+// when last, and (from race-by-race cups) the average winning points among league players and the chaos
+// index: how far finishes there stray from each racer's usual place (average |place − their average place|).
+//   returns { tracks: [{ track, times, last, races, avgWin|null, chaos|null }], coverage: { raced, total, unraced } }
+export function leagueTracks(m) {
+  const rows = m.ranked.concat(m.unranked);
+  const usual = new Map(rows.filter((s) => s.avgRace != null).map((s) => [s.player.id, s.avgRace]));
+  const by = {};
+  const t = (track) => by[track] || (by[track] = { track, times: 0, last: "", races: {}, dev: 0, devN: 0 });
+  m.cups.forEach((c) => {
+    (c.maps || []).forEach((track) => {
+      if (!track) return;
+      const x = t(track);
+      x.times++;
+      if ((c.date || "") > x.last) x.last = c.date || "";
+    });
+  });
+  rows.forEach((s) => s.log.forEach((l) => (l.races || []).forEach((r) => {
+    const track = (l.cup.maps || [])[r.race - 1];
+    if (!track) return;
+    const x = t(track);
+    const k = l.cup.id + "|" + r.race;
+    x.races[k] = Math.max(x.races[k] == null ? -1 : x.races[k], r.points);
+    if (usual.has(s.player.id)) { x.dev += Math.abs(r.position - usual.get(s.player.id)); x.devN++; }
+  })));
+  const tracks = Object.values(by).map((x) => {
+    const wins = Object.values(x.races);
+    return {
+      track: x.track, times: x.times, last: x.last, races: wins.length,
+      avgWin: wins.length ? wins.reduce((a, b) => a + b, 0) / wins.length : null,
+      chaos: x.devN ? x.dev / x.devN : null,
+    };
+  }).sort((a, b) => b.times - a.times || b.last.localeCompare(a.last) || a.track.localeCompare(b.track));
+  const raced = new Set(tracks.map((x) => x.track));
+  return { tracks, coverage: { raced: TRACKS.filter((x) => raced.has(x)).length, total: TRACKS.length, unraced: TRACKS.filter((x) => !raced.has(x)) } };
+}

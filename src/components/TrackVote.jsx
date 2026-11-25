@@ -66,7 +66,7 @@ export default function TrackVote({ event }) {
   const me = state && user ? state.players.find((p) => p.userId === user.id) : null;
   const strengths = useMemo(() => {
     if (!me || !state || !state.cups.length) return [];
-    const s = compute(state).byId.get(me.id);
+    const s = compute(state, { season: "all" }).byId.get(me.id);
     return s ? bestTracks(s.log) : [];
   }, [me, state]);
 

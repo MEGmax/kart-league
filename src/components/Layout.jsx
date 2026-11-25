@@ -29,6 +29,8 @@ import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettin
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
+import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import MilitaryTechOutlinedIcon from "@mui/icons-material/MilitaryTechOutlined";
 import PullToRefresh from "./PullToRefresh";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
@@ -43,6 +45,8 @@ const TABS = [
   { value: "/join", label: "Join", icon: <SportsScoreOutlinedIcon /> },
   { value: "/history", label: "History", icon: <EmojiEventsOutlinedIcon /> },
   { value: "/stats", label: "Stats", icon: <InsightsOutlinedIcon /> },
+  { value: "/rivals", label: "Rivals", icon: <CompareArrowsIcon /> },
+  { value: "/records", label: "Records", icon: <MilitaryTechOutlinedIcon /> },
   { value: "/unclaimed", label: "Unclaimed", icon: <HelpOutlineIcon /> },
   { value: "/playoffs", label: "Playoffs", icon: <AccountTreeOutlinedIcon /> },
   { value: "/rules", label: "Rules", icon: <MenuBookOutlinedIcon /> },
@@ -65,7 +69,7 @@ export default function Layout() {
   const [moreAt, setMoreAt] = useState(null);
 
   const live = state ? liveCups(state).length : 0;
-  const unclaimed = useMemo(() => (state && state.cups.length ? compute(state).unclaimed.length : 0), [state]);
+  const unclaimed = useMemo(() => (state && state.cups.length ? compute(state, { season: "all" }).unclaimed.length : 0), [state]);
   const section = sectionOf(location.pathname);
   const tabs = isAdmin ? TABS.concat({ value: "/admin", label: "Admin", icon: <AdminPanelSettingsOutlinedIcon /> }) : TABS;
   // Pages that aren't tabs (Account, Add, Build…) select no tab at all.
@@ -206,7 +210,7 @@ export default function Layout() {
             <BottomNavigationAction key={t.value} value={t.value} label={t.label} aria-label={tabAria(t)}
               icon={t.value === "/join" && live ? <Badge color="error" variant="dot">{t.icon}</Badge> : t.icon} />
           ))}
-          <BottomNavigationAction value="more" label="More" aria-label={unclaimed ? `More: stats, unclaimed (${unclaimed}), playoffs, rules` : "More: stats, unclaimed, playoffs, rules"} aria-haspopup="menu"
+          <BottomNavigationAction value="more" label="More" aria-label={unclaimed ? `More: stats, rivals, records, unclaimed (${unclaimed}), playoffs, rules` : "More: stats, rivals, records, unclaimed, playoffs, rules"} aria-haspopup="menu"
             icon={<Badge color="warning" variant="dot" invisible={!unclaimed}><MoreHorizIcon /></Badge>} />
         </BottomNavigation>
       </Paper>
