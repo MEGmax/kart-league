@@ -32,6 +32,7 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { CHARACTERS, charSrc, fmtDate, LOGO_SRC, ord, pctTxt, TRACKS } from "../lib/constants";
+import { ProvisionalBadge, RatingChart, RatingDelta, fmtRating, signed } from "../components/RatingBits";
 import { bestTracks, trackCup } from "../lib/tracks";
 import { compute, playerSlug } from "../lib/standings";
 import { getApiKey, setApiKey, MODEL } from "../lib/readPhoto";
@@ -249,7 +250,7 @@ function Stat({ label, value, sub }) {
 }
 
 // The player card: character art, name, colors, and (once linked to a player) the season in numbers.
-function ProfileHero({ profile, player, stats, need, slug, onEdit }) {
+function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEdit }) {
   const color = profile.color || PLAYER_COLORS[0];
   const character = profile.favoriteCharacter || (stats && stats.main && stats.main.name) || "";
   const art = charSrc(character, true);
@@ -287,7 +288,17 @@ function ProfileHero({ profile, player, stats, need, slug, onEdit }) {
         </Stack>
 
         {stats && stats.cp > 0 ? (
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(4, minmax(0,1fr))" }, gap: 2, mt: 3, p: 2, borderRadius: 2, bgcolor: "rgba(7,10,31,.55)", border: "1px solid rgba(255,255,255,.08)" }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "minmax(0,1.6fr) repeat(4, minmax(0,1fr))" }, gap: 2, mt: 3, p: 2, borderRadius: 2, bgcolor: "rgba(7,10,31,.55)", border: "1px solid rgba(255,255,255,.08)", alignItems: "end" }}>
+            {stats.rating != null && (
+              <Box sx={{ gridColumn: { xs: "1 / -1", sm: "auto" }, minWidth: 0 }}>
+                <Stack direction="row" spacing={1} alignItems="baseline">
+                  <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "2rem", sm: "2.4rem" }, lineHeight: 1, transform: "skewX(-7deg)", color: colors.gold }}>{fmtRating(stats.rating)}</Typography>
+                  {stats.lastNight && <RatingDelta delta={stats.lastNight.delta} />}
+                  {stats.provisional && <ProvisionalBadge cups={provisionalCups} />}
+                </Stack>
+                <Typography variant="caption" sx={{ color: colors.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>Skill rating</Typography>
+              </Box>
+            )}
             <Stat label="Rank" value={stats.rank ? `${stats.rank}${ord(stats.rank)}` : "—"} sub={stats.rank ? null : `${plural(Math.max(0, need - stats.cp), "cup")} to qualify`} />
             <Stat label="Points" value={pctTxt(stats.pct)} />
             <Stat label="Cups" value={stats.cp} />
@@ -357,9 +368,38 @@ function FavouriteTracks({ favourites, stats, onEdit }) {
 }
 
 // The last few cups, newest first, as a form guide.
+// Your rating over the season: the chart, the latest night, season high and how you do against expectations.
+function RatingPanel({ stats }) {
+  if (!stats || stats.rating == null || !stats.cp) return null;
+  return (
+    <Panel icon={<TimelineOutlinedIcon fontSize="small" />} title="Skill rating">
+      <Stack direction="row" spacing={2} alignItems="baseline" useFlexGap flexWrap="wrap" sx={{ mb: 1.25 }}>
+        <Typography sx={{ fontFamily: fontData, fontWeight: 800, fontSize: "1.6rem", lineHeight: 1 }}>{fmtRating(stats.rating)}</Typography>
+        {stats.lastNight && (
+          <Typography variant="body2" sx={{ color: colors.muted }}><RatingDelta delta={stats.lastNight.delta} /> on {fmtDate(stats.lastNight.date)}</Typography>
+        )}
+        <Typography variant="body2" sx={{ color: colors.muted }}>
+          high {fmtRating(stats.ratingHigh)} · started {fmtRating(stats.ratingStart)}
+          {stats.overUnder != null ? ` · ${signed(stats.overUnder, 1)} pts a matchup vs expected` : ""}
+        </Typography>
+      </Stack>
+      <RatingChart s={stats} />
+      {stats.provisional && (
+        <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 1 }}>
+          Provisional: your rating moves faster until you've raced a few more cups this season.
+        </Typography>
+      )}
+    </Panel>
+  );
+}
+
 function RecentForm({ stats }) {
   if (!stats || !stats.log.length) return null;
   const recent = stats.log.slice(-5).reverse();
+  const change = (cupId) => {
+    const h = (stats.ratingHistory || []).find((x) => x.cupId === cupId);
+    return h ? h.after - h.before : null;
+  };
   return (
     <Panel icon={<TimelineOutlinedIcon fontSize="small" />} title="Recent form">
       <Stack divider={<Divider />}>
@@ -381,6 +421,7 @@ function RecentForm({ stats }) {
                 <Typography variant="body2" sx={{ fontFamily: fontData, fontWeight: 700 }}>{l.pts}<Box component="span" sx={{ color: colors.muted }}>/{l.max}</Box></Typography>
                 <LinearProgress variant="determinate" value={(100 * l.pts) / l.max} sx={{ width: 64, height: 4, borderRadius: 2, mt: 0.5, bgcolor: colors.line, "& .MuiLinearProgress-bar": { bgcolor: medal || colors.cool } }} />
               </Box>
+              <Box sx={{ width: 44, textAlign: "right" }}><RatingDelta delta={change(l.cup.id)} /></Box>
             </Stack>
           );
         })}
@@ -620,12 +661,13 @@ function SignedInView() {
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2 } }}>
       {savedFlash && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSavedFlash("")}>{savedFlash}</Alert>}
-      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.need : 0} slug={slug} onEdit={() => setEditing(true)} />
+      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.minCups : 0} slug={slug} provisionalCups={m && m.rated ? m.rated.cfg.provisional : 5} onEdit={() => setEditing(true)} />
       {editing && <ProfileEditor open profile={profile} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setSavedFlash("Profile saved"); }} />}
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, gap: 2, mt: 2, alignItems: "start" }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <FavouriteTracks favourites={profile.favoriteTracks || []} stats={stats} onEdit={() => setEditing(true)} />
+          <RatingPanel stats={stats} />
           <RecentForm stats={stats} />
           <MyActivity />
           <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", justifyContent: "space-between" }}>

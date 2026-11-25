@@ -93,8 +93,12 @@ describe("ranking by points percentage or by rating", () => {
   const s1 = (league = {}) => normalize({ ...season1, league: { ...season1.league, ...league } });
   const order = (m) => m.ranked.map((s) => s.player.name);
 
-  it("leaves Season 1 as it was with rankBy pct (the default)", () => {
-    const m = compute(s1());
+  it("ranks by rating unless the league says pct", () => {
+    expect(compute(s1()).rankBy).toBe("rating");
+  });
+
+  it("leaves Season 1 as it was with rankBy pct", () => {
+    const m = compute(s1({ rankBy: "pct" }));
     expect(m.rankBy).toBe("pct");
     expect(m.need).toBe(2);
     expect(order(m)).toEqual(["gsote", "Kieran4145", "Matty G", "licia", "JJ Siwa", "unphyt"]);
@@ -102,7 +106,7 @@ describe("ranking by points percentage or by rating", () => {
   });
 
   it("ranks by rating, needing 5 cups as well as the qualifying %", () => {
-    const m = compute(s1({ rankBy: "rating" }));
+    const m = compute(s1());
     expect(m.minCups).toBe(5);
     expect(order(m)).toEqual(["gsote", "Matty G", "licia", "JJ Siwa"]);
     expect(m.unranked.map((s) => s.player.name)).toEqual(["Kieran4145", "unphyt"]);

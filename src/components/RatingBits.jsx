@@ -48,3 +48,27 @@ export function FormArrow({ form }) {
     </Box>
   );
 }
+
+// Rating after every cup this season, starting from the season's starting rating.
+export function RatingChart({ s }) {
+  const hist = s.ratingHistory || [];
+  if (hist.length < 2) return null;
+  const vals = [s.ratingStart].concat(hist.map((h) => h.after));
+  const W = 320, H = 110, pad = 12;
+  const lo = Math.min(...vals) - 5, hi = Math.max(...vals) + 5;
+  const x = (i) => pad + (i * (W - 2 * pad)) / (vals.length - 1);
+  const y = (v) => H - pad - ((v - lo) / (hi - lo)) * (H - 2 * pad);
+  const mid = s.ratingStart;
+  return (
+    <Box component="svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Rating over the season: from ${fmtRating(s.ratingStart)} to ${fmtRating(s.rating)}`}
+      sx={{ width: "100%", height: "auto", display: "block", bgcolor: colors.bg2, borderRadius: 2, border: `1px solid ${colors.line}` }}>
+      <line x1={pad} x2={W - pad} y1={y(mid)} y2={y(mid)} stroke={colors.line} strokeDasharray="3 4" />
+      <polyline points={vals.map((v, i) => `${x(i)},${y(v)}`).join(" ")} fill="none" stroke={colors.cool} strokeWidth="2.5" />
+      {vals.map((v, i) => (
+        <circle key={i} cx={x(i)} cy={y(v)} r={i === vals.length - 1 ? 4 : 2.5} fill={colors.cool}>
+          <title>{i ? `After cup ${i} of theirs: ${fmtRating(v)}` : `Season start: ${fmtRating(v)}`}</title>
+        </circle>
+      ))}
+    </Box>
+  );
+}

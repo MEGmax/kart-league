@@ -31,7 +31,7 @@ function rules(L, plan) {
 }
 
 // Season 2 on: ranked by skill rating. Rules that changed from Season 1 say so.
-function ratingRules(L, plan) {
+function ratingRules(L, plan, season) {
   const cfg = ratingSettings(L);
   const planned = (Number(L.seasonWeeks) || 5) * (Number(L.cupsPerWeek) || 4);
   const total = plan.total;
@@ -41,7 +41,9 @@ function ratingRules(L, plan) {
     ["Season format", `The regular season runs ${L.seasonWeeks} weeks of ${L.cupsPerWeek} cups (${total} cups${total !== planned ? ", counting a week that ran over" : ""}). Each cup is 4 races. A night that runs over keeps its extra cups in that week.`],
     ["Standard settings", "150cc, CPUs on Hard, items Normal, any character and any kart or bike."],
     ["Characters", "Declare one main character when you join the night. You may switch for a cup, but say so before the cup starts so the photo can be matched. Two humans can't share a character in the same cup.", null, "Changed"],
-    ["Tracks", "Every cup is built in the cup builder before racing, so all 4 tracks are recorded. Each night races 2 of the game's 8 cups, in a rotation that covers all 8 by week 4, plus 2 cups picked by the track vote. No track twice in one night.", null, "New"],
+    ["Tracks", season > 1
+      ? "Every cup is built in the cup builder before racing, so all 4 tracks are recorded. Each night races 2 of the game's 8 cups, in a rotation that covers all 8 by week 4, plus 2 cups picked by the track vote. No track twice in one night."
+      : "Every cup is built in the cup builder before racing, so all 4 tracks are recorded.", null, "New"],
     ["Race scoring", `Every race is scored with the game's 12-racer points table, so the most anyone can score in a cup is ${L.defaultMax} points.`, true],
     ["Entering results and the photo check", "Enter race by race on the Join tab, or record the night afterwards from the results-screen photos. When a cup ends, someone photographs the final results screen before anyone presses a button; that photo is the check. Only finished cups count."],
     ["Ranking stat: skill rating", "Your rank is your rating. After every cup, each pair of league players in it is scored as a mini-match, and your rating goes up or down depending on who you beat, by how much, and how strong they were. See How the rating works below.", null, "Changed"],
@@ -104,7 +106,8 @@ export default function RulesPage() {
   const byWeek = {};
   (state ? state.cups : []).filter((c) => c.status !== "racing" && (c.season || 1) === season).forEach((c) => { byWeek[c.week] = (byWeek[c.week] || 0) + 1; });
   const plan = seasonPlan(L, byWeek);
-  const list = byRating ? ratingRules(L, plan) : rules(L, plan);
+  // New/Changed tags compare with Season 1's rules, so they only mean something from Season 2 on.
+  const list = byRating ? ratingRules(L, plan, season).map((r) => (season > 1 ? r : [r[0], r[1], r[2]])) : rules(L, plan);
   return (
     <Container maxWidth="md" sx={{ pt: 1 }}>
       <PageTitle title="Regular season rules" sub={L.season} />

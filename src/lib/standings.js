@@ -6,13 +6,13 @@ export function currentSeason(league) {
   return Math.max(1, Math.round(Number(league && league.currentSeason) || 1));
 }
 
-// How a season is ranked: "rating" (Season 2 on) or "pct" (points percentage, Season 1). A season that has
+// How a season is ranked: "rating" (skill rating, the default) or "pct" (points percentage). A season that has
 // ended keeps the rule it was played under (seasonRankBy, recorded by Start next season).
 export function rankByFor(league, season) {
   const past = league && league.seasonRankBy && league.seasonRankBy[season];
   if (past) return past;
   if (season < currentSeason(league)) return "pct";
-  return league && league.rankBy === "rating" ? "rating" : "pct";
+  return league && league.rankBy === "pct" ? "pct" : "rating";
 }
 
 // Every season that has cups, plus the current one, oldest first.

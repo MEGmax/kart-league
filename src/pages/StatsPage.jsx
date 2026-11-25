@@ -82,7 +82,7 @@ function MemberCard({ member, num, season, href }) {
               {season.player.name}
             </Box>
             <Box component="span" sx={{ color: colors.muted }}>
-              {" · "}{plural(season.cp, "cup")} · {pctTxt(season.pct)}{season.wins ? ` · ${plural(season.wins, "cup win")}` : ""}
+              {" · "}{season.rating != null ? `rating ${Math.round(season.rating)}` : pctTxt(season.pct)} · {plural(season.cp, "cup")}{season.wins ? ` · ${plural(season.wins, "cup win")}` : ""}
             </Box>
           </Typography>
         ) : (
