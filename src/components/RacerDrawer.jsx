@@ -11,6 +11,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { fmtDate, ord, pctTxt } from "../lib/constants";
 import { colors } from "../theme";
 import CharacterFace from "./CharacterFace";
+import RacerFace from "./RacerFace";
 import CupIcon from "./CupIcon";
 import TrackImage from "./TrackImage";
 import { plural } from "./PageBits";
@@ -68,7 +69,7 @@ export default function RacerDrawer({ s, m, players, onClose }) {
       {s && (
         <Box component="section" aria-label={`${s.player.name}'s season`}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <CharacterFace name={s.main && s.main.name} size={52} />
+            <RacerFace who={s.player} character={s.main && s.main.name} size={52} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography component="h2" noWrap sx={{ fontWeight: 800, fontSize: "1.5rem", lineHeight: 1.2 }}>{s.player.name}</Typography>
               {s.main && <Typography sx={{ fontWeight: 600 }}>{s.main.name}</Typography>}

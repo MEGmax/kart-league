@@ -927,14 +927,16 @@ language sql stable security definer set search_path = public as $$
   order by c.created_at;
 $$;
 
--- Everyone who has signed up (confirmed accounts only), for the Stats page. Signed-in members only, and
--- never emails: just what the profile shows, plus which player each account is (added in v9).
+-- Everyone who has signed up (confirmed accounts only). Signed-in members only, and never emails: just what
+-- the profile shows, plus which player each account is (added in v9) and the path of their profile picture
+-- (v13; the site shows it next to their name everywhere). Changing the columns needs the drop first.
+drop function if exists public.league_members();
 create or replace function public.league_members()
 returns table (display_name text, color text, role text, favorite_character text, favorite_tracks text[],
-               joined_at timestamptz, player_id text, is_me boolean)
+               joined_at timestamptz, player_id text, is_me boolean, user_id uuid, avatar_path text)
 language sql stable security definer set search_path = public as $$
   select p.display_name, p.color, p.role, p.favorite_character, p.favorite_tracks, p.created_at,
-         (select pl.id from players pl where pl.user_id = p.id limit 1), p.id = auth.uid()
+         (select pl.id from players pl where pl.user_id = p.id limit 1), p.id = auth.uid(), p.id, p.avatar_path
   from profiles p join auth.users u on u.id = p.id
   where auth.uid() is not null and u.email_confirmed_at is not null
   order by p.created_at;

@@ -34,11 +34,13 @@ const page = (P) => <Suspense fallback={<Loading />}><P /></Suspense>;
 import { AuthProvider } from "./context/AuthContext";
 import { LeagueDataProvider } from "./context/LeagueDataContext";
 import { FlashProvider } from "./context/FlashContext";
+import { FacesProvider } from "./context/FacesContext";
 
 export default function App() {
   return (
     <AuthProvider>
       <LeagueDataProvider>
+        <FacesProvider>
         <FlashProvider>
           <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
@@ -71,6 +73,7 @@ export default function App() {
             </Routes>
           </HashRouter>
         </FlashProvider>
+        </FacesProvider>
       </LeagueDataProvider>
     </AuthProvider>
   );

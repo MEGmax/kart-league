@@ -14,7 +14,7 @@ import { compute } from "../lib/standings";
 import { DEMO } from "../lib/demo";
 import { pctTxt } from "../lib/constants";
 import { colors } from "../theme";
-import CharacterFace from "../components/CharacterFace";
+import RacerFace from "../components/RacerFace";
 import { fmtRating } from "../components/RatingBits";
 import { Loading, PageTitle, SectionTitle } from "../components/PageBits";
 
@@ -38,7 +38,7 @@ function Slot({ seed, s, note, rankBy }) {
       <Typography sx={{ fontWeight: 800, fontStyle: "italic", width: 20, textAlign: "right" }}>{seed || ""}</Typography>
       {s ? (
         <>
-          <CharacterFace name={s.main && s.main.name} size={24} />
+          <RacerFace who={s.player} character={s.main && s.main.name} size={24} />
           <Typography sx={{ fontWeight: 700, flex: 1, minWidth: 0 }} noWrap>{s.player.name}</Typography>
           <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{rankBy === "rating" ? fmtRating(s.rating) : pctTxt(s.pct)}</Typography>
         </>
@@ -167,7 +167,7 @@ export default function PlayoffsPage() {
               return (
                 <Box key={s.player.id} sx={{ py: 1.25, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", borderBottom: `1px solid ${colors.line}` }}>
                   <Typography sx={{ fontWeight: 800, fontStyle: "italic", fontSize: "1.125rem", width: 24 }}>{s.rank}</Typography>
-                  <CharacterFace name={s.main && s.main.name} size={32} />
+                  <RacerFace who={s.player} character={s.main && s.main.name} size={32} />
                   <Typography sx={{ fontWeight: 700, flex: 1 }}>{s.player.name}</Typography>
                   <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{byRating ? `${fmtRating(s.rating)} · ${gap} rating points` : `${pctTxt(s.pct)} · ${gap.toFixed(1)} percentage points`} behind seed {seeds.length}</Typography>
                 </Box>

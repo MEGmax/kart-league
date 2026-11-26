@@ -26,6 +26,15 @@ describe("league members", () => {
     expect(JSON.stringify(rows)).not.toMatch(/@test\.dev/);
   });
 
+  it("gives each member's profile picture path and account id, so the site can show their picture", async () => {
+    await db.query("update public.profiles set avatar_path = $1 || '/abc.jpg' where id = $1", [ben]);
+    const rows = await members(ada);
+    expect(rows.map((r) => [r.display_name, r.user_id, r.avatar_path])).toEqual([
+      ["Ada", ada, null],
+      ["Ben", ben, `${ben}/abc.jpg`],
+    ]);
+  });
+
   it("is for signed-in members only", async () => {
     await expect(members(null)).rejects.toThrow(/permission denied/);
     expect((await members(ada)).length).toBe(2);

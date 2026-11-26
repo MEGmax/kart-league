@@ -107,3 +107,13 @@ export async function avatarUrl(path) {
   const { data, error } = await store().createSignedUrl(path, 24 * 3600);
   return error ? null : data.signedUrl;
 }
+
+// Signed URLs for several pictures in one request: { path: url } (paths that fail are left out).
+export async function avatarUrls(paths) {
+  if (!paths.length) return {};
+  const { data, error } = await store().createSignedUrls(paths, 24 * 3600);
+  if (error || !data) return {};
+  const out = {};
+  data.forEach((d) => { if (d && d.signedUrl && !d.error) out[d.path] = d.signedUrl; });
+  return out;
+}

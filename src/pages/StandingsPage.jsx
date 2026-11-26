@@ -15,7 +15,7 @@ import { fmtDate, ord, pctTxt } from "../lib/constants";
 import { formatEventWhen, nextEvent } from "../lib/events";
 import { colors } from "../theme";
 import Hero from "../components/Hero";
-import CharacterFace from "../components/CharacterFace";
+import RacerFace from "../components/RacerFace";
 import RacerDrawer from "../components/RacerDrawer";
 import { ProvisionalBadge, RatingDelta, fmtRating } from "../components/RatingBits";
 import { Fact, FactList, Loading, PageTitle, plural } from "../components/PageBits";
@@ -53,7 +53,7 @@ function Podium({ ranked, hrefOf, rankBy }) {
           sx={{ ...linkReset, textAlign: "center", minWidth: 0, borderRadius: 1, "&:hover .nm": { textDecoration: "underline" } }}
         >
           <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <CharacterFace name={s.main && s.main.name} size={s.rank === 1 ? 60 : 48} />
+            <RacerFace who={s.player} character={s.main && s.main.name} size={s.rank === 1 ? 60 : 48} />
           </Box>
           <Typography className="nm" noWrap sx={{ fontWeight: 700, mt: 0.5 }}>{s.player.name}</Typography>
           <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{headline(s, rankBy)}</Typography>
@@ -108,7 +108,7 @@ function BoardRow({ s, rank, href, m }) {
         {rank || "–"}
       </Box>
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-        <CharacterFace name={s.main && s.main.name} size={36} />
+        <RacerFace who={p} character={s.main && s.main.name} size={36} />
         <Box sx={{ minWidth: 0 }}>
           <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
             <Typography noWrap sx={{ fontWeight: 700, fontSize: "1.125rem", lineHeight: 1.25 }}>{p.name}</Typography>

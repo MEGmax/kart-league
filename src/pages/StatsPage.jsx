@@ -17,7 +17,7 @@ import { leaderboard, playerSheet } from "../lib/playerStats";
 import { DEMO } from "../lib/demo";
 import { fmtDate } from "../lib/constants";
 import { colors } from "../theme";
-import CharacterFace from "../components/CharacterFace";
+import RacerFace from "../components/RacerFace";
 import SeasonPicker, { useSeason } from "../components/SeasonPicker";
 import { Loading, PageTitle, plural } from "../components/PageBits";
 
@@ -67,7 +67,7 @@ function Row({ e, b, hero, me, href }) {
     >
       <Box sx={{ fontWeight: 800, fontStyle: "italic", fontSize: hero ? "1.5rem" : "1.125rem", color: e.place === 1 ? colors.gold : colors.ink }}>{e.place}</Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, minWidth: 0 }}>
-        <CharacterFace name={e.s.main && e.s.main.name} size={hero ? 36 : 28} />
+        <RacerFace who={e.s.player} character={e.s.main && e.s.main.name} size={hero ? 36 : 28} />
         <Box sx={{ minWidth: 0 }}>
           <Typography noWrap sx={{ fontWeight: 700, fontSize: hero ? "1.125rem" : "1rem", lineHeight: 1.25 }}>
             {e.s.player.name}{me && <Box component="span" sx={{ color: colors.muted, fontWeight: 500 }}> · you</Box>}

@@ -5,6 +5,7 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Avatar from "@mui/material/Avatar";
 import Alert from "@mui/material/Alert";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
@@ -20,6 +21,7 @@ import { cupLabel, formatEventWhen, isGoing, isHappening, isOpen, isOver } from 
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
+import { useFaces } from "../context/FacesContext";
 import { colors } from "../theme";
 import CupIcon from "./CupIcon";
 import EventDialog from "./EventDialog";
@@ -210,11 +212,21 @@ export function ScheduleRow({ id, date, tone, struck, highlight, children, actio
 }
 
 // Who's in, or who raced: a label and the names.
+// Who's in: names in a line, each with their profile picture in front when they have one.
 export function PeopleLine({ people, label }) {
+  const { faceOf } = useFaces();
   return (
-    <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>
-      {label && <Box component="span" sx={{ fontWeight: 700, color: colors.ink, mr: 1 }}>{label}</Box>}
-      {people.map((g) => g.name).join(", ")}
+    <Typography component="div" sx={{ color: colors.muted, fontSize: "0.9375rem", display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 0.75, rowGap: 0.5 }}>
+      {label && <Box component="span" sx={{ fontWeight: 700, color: colors.ink, mr: 0.25 }}>{label}</Box>}
+      {people.map((g, i) => {
+        const src = faceOf(g);
+        return (
+          <Box key={g.key} component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+            {src && <Avatar src={src} alt="" sx={{ width: 22, height: 22 }} />}
+            {g.name}{i < people.length - 1 ? "," : ""}
+          </Box>
+        );
+      })}
     </Typography>
   );
 }
@@ -278,7 +290,7 @@ export default function EventCard({ event, isNext = false, highlight = false }) 
       {event.notes && <Typography sx={{ mb: 0.75, whiteSpace: "pre-line" }}>{event.notes}</Typography>}
 
       {!cancelled && (n
-        ? <PeopleLine label={`${n} in`} people={event.going.map((g, i) => ({ key: g.userId || `${g.name}-${i}`, name: g.name }))} />
+        ? <PeopleLine label={`${n} in`} people={event.going.map((g, i) => ({ key: g.userId || `${g.name}-${i}`, userId: g.userId, name: g.name }))} />
         : <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{open ? "Nobody's in yet. Be the first." : "Nobody signed up."}</Typography>)}
     </ScheduleRow>
   );

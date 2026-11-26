@@ -54,7 +54,7 @@ function Night({ night, m, st, demo, isAdmin, signedIn, latestId, highlight }) {
 
       {planned && <Typography sx={{ color: colors.muted, mt: 1, fontSize: "0.9375rem" }}>Planned: {planned.join(", ")}</Typography>}
       {!cups.length && ev && ev.going.length > 0 && (
-        <Box sx={{ mt: 1.5 }}><PeopleLine label="Said they were in" people={ev.going.map((g, i) => ({ key: g.userId || i, name: g.name }))} /></Box>
+        <Box sx={{ mt: 1.5 }}><PeopleLine label="Said they were in" people={ev.going.map((g, i) => ({ key: g.userId || i, userId: g.userId, name: g.name }))} /></Box>
       )}
 
       {cups.map((c, i) => (
