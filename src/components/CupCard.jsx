@@ -1,33 +1,28 @@
-import { Fragment, useMemo, useState } from "react";
+// One finished cup on the Schedule: finishing order, tracks, the race-by-race grid, the results photo, and
+// admin edit/reopen/delete. `latest` is the newest cup in the season, shown big with track pictures; older
+// cups are compact, with race by race folded away.
+import { useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
-import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import Collapse from "@mui/material/Collapse";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import Link from "@mui/material/Link";
-import { useLeagueData } from "../context/LeagueDataContext";
-import { useAuth } from "../context/AuthContext";
-import { useFlash } from "../context/FlashContext";
-import { compute, liveCups } from "../lib/standings";
-import { DEMO } from "../lib/demo";
-import { fmtDate } from "../lib/constants";
-import { sb, q, dbErr } from "../lib/supabaseClient";
-import { colors } from "../theme";
-import { PageTitle } from "../components/PageBits";
-import CupIcon from "../components/CupIcon";
-import TrackImage from "../components/TrackImage";
-import CharacterFace from "../components/CharacterFace";
-import PlaceBadge from "../components/PlaceBadge";
-import CupPhoto from "../components/CupPhoto";
-import { deleteCupPhoto } from "../lib/cupPhotos";
 import Chip from "@mui/material/Chip";
 import Tooltip from "@mui/material/Tooltip";
-import SeasonPicker, { useSeason } from "../components/SeasonPicker";
+import Collapse from "@mui/material/Collapse";
+import Link from "@mui/material/Link";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { useLeagueData } from "../context/LeagueDataContext";
+import { useFlash } from "../context/FlashContext";
+import { sb, q, dbErr } from "../lib/supabaseClient";
+import { deleteCupPhoto } from "../lib/cupPhotos";
+import { colors } from "../theme";
+import CupIcon from "./CupIcon";
+import TrackImage from "./TrackImage";
+import CharacterFace from "./CharacterFace";
+import PlaceBadge from "./PlaceBadge";
+import CupPhoto from "./CupPhoto";
 
 // Race-by-race places as a plain table. On a phone each race is just the place (details in the tooltip),
 // so all four races and the total fit without scrolling; wider screens add the character and points.
@@ -103,7 +98,7 @@ function Results({ info, playerById, big }) {
   );
 }
 
-function CupCard({ cup, info, st, demo, isAdmin, signedIn, latest }) {
+export default function CupCard({ cup, info, st, demo, isAdmin, signedIn, latest, first }) {
   const navigate = useNavigate();
   const flash = useFlash();
   const { reload } = useLeagueData();
@@ -142,7 +137,7 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn, latest }) {
   const tracks = cup.maps && cup.maps.length > 0;
   return (
     <Box component="article" aria-label={`Cup ${info.num}: ${cup.cup}`} sx={{
-      py: latest ? 0 : 3, borderTop: latest ? 0 : `1px solid ${colors.line}`,
+      pt: latest || first ? 2 : 3, pb: 3, borderTop: latest || first ? 0 : `1px solid ${colors.line}`,
       display: "grid", columnGap: 4, rowGap: 2,
       gridTemplateColumns: { xs: "minmax(0,1fr)", md: latest ? (cup.hasPhoto && !demo ? "minmax(0,1fr) 260px" : "minmax(0,1fr)") : "minmax(0,1fr) minmax(0,1fr)" },
     }}>
@@ -153,9 +148,11 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn, latest }) {
             <Typography component={latest ? "h2" : "h3"} sx={{ fontWeight: 700, fontSize: latest ? "1.5rem" : "1.125rem", lineHeight: 1.2 }}>
               {cup.cup} <Box component="span" sx={{ color: colors.muted, fontWeight: 500 }}>#{info.num}</Box>
             </Typography>
-            <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>
-              {latest ? "Latest cup · " : ""}{fmtDate(cup.date)}{info.max !== 60 ? ` · max ${info.max} pts` : ""}
-            </Typography>
+            {(latest || info.max !== 60) && (
+              <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>
+                {[latest && "Latest cup", info.max !== 60 && `max ${info.max} pts`].filter(Boolean).join(" · ")}
+              </Typography>
+            )}
           </Box>
           {info.upset && (
             <Tooltip title={`${(playerById(info.upset.winner) || {}).name || "The winner"} won over ${info.upset.over.map((id) => (playerById(id) || {}).name || "?").join(" and ")}, rated 75+ higher going in`}>
@@ -235,78 +232,5 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn, latest }) {
       )}
       {error && <Alert severity="error" sx={{ gridColumn: "1 / -1" }}>{error}</Alert>}
     </Box>
-  );
-}
-
-export default function CupsPage() {
-  const { state, loadError } = useLeagueData();
-  const { user, isAdmin } = useAuth();
-  const demo = state && state.cups.length === 0;
-  const st = demo ? DEMO : state;
-  const { season, seasons, setSeason } = useSeason(st);
-  const m = useMemo(() => (st ? compute(st, { season }) : null), [st, season]);
-
-  if (!state) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 8, textAlign: "center" }}>
-        {loadError ? <Alert severity="error">{loadError}</Alert> : <CircularProgress />}
-      </Container>
-    );
-  }
-
-  const live = liveCups(state);
-  const newestFirst = m.cups.slice().reverse();
-
-  return (
-    <Container maxWidth="lg" sx={{ pt: 1 }}>
-      <PageTitle
-        title="History"
-        sub={`${seasons.length > 1 ? `Season ${season} · ` : ""}${m.total} cup${m.total === 1 ? "" : "s"} finished · newest week first`}
-        action={user && <Button component={RouterLink} to="/add" variant="contained">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
-      />
-
-      {demo && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          <b>Example cups.</b> These made-up results show how the site works. They disappear when the first real cup is added.
-        </Alert>
-      )}
-
-      <SeasonPicker season={season} seasons={seasons} setSeason={setSeason} />
-
-      {live.map((c) => (
-        <Alert
-          key={c.id}
-          severity="success"
-          sx={{ mb: 2 }}
-          action={<Button component={RouterLink} to="/join" color="inherit" size="small">Join</Button>}
-        >
-          <b>{c.cup}</b> is being raced now. Join it and enter your results.
-        </Alert>
-      ))}
-
-      {!m.cups.length ? (
-        <Typography sx={{ fontWeight: 700 }}>No cups yet.</Typography>
-      ) : (
-        <>
-          <CupCard cup={newestFirst[0]} info={m.cupInfo.get(newestFirst[0].id)} st={st} demo={demo} isAdmin={isAdmin} signedIn={!!user} latest />
-          {newestFirst.slice(1).map((c, i, rest) => {
-            const prev = i === 0 ? newestFirst[0] : rest[i - 1];
-            const newWeek = prev.week !== c.week || i === 0;
-            const n = m.byWeek[c.week] || 0;
-            return (
-              <Fragment key={c.id}>
-                {newWeek && (
-                  <Stack direction="row" alignItems="baseline" spacing={1.25} sx={{ mt: 6, pb: 1, borderBottom: `2px solid ${colors.rule}` }}>
-                    <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.25rem" }}>Week {c.week}</Typography>
-                    <Typography sx={{ color: colors.muted }}>{n} cup{n === 1 ? "" : "s"}</Typography>
-                  </Stack>
-                )}
-                <CupCard cup={c} info={m.cupInfo.get(c.id)} st={st} demo={demo} isAdmin={isAdmin} signedIn={!!user} />
-              </Fragment>
-            );
-          })}
-        </>
-      )}
-    </Container>
   );
 }

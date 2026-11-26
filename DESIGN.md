@@ -98,8 +98,8 @@ A row on a phone (375px):
 | Page | Hero | Stepped down |
 |---|---|---|
 | Home | The standings table | Podium (compact, above it); "This week" notes as plain sentences (beside on desktop, below on phone) |
-| History | The latest cup: track pictures, full results, race grid | Older cups as compact result lists, with race grids folded away |
-| Stats | League totals as a sentence plus the track table | Characters, members |
+| Schedule | The season strip (cups as pips grouped by night, sticky) and the latest cup: track pictures, full results, race grid | Upcoming nights as rows; older cups as compact result lists under their night, with race grids folded away |
+| Stats | The two headline leaderboards, Cup wins and Points a cup (bigger rows, top 5) | Seven smaller leaderboards (top 3), three across on desktop |
 | Join | The live cup (or "no cup tonight" plus the next night) | Track vote |
 | Rules | The numbered rules | How the rating works |
 

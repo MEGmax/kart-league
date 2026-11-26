@@ -1,4 +1,4 @@
-// Season picker for History, Stats, Rivals and Records. Kept in the address (?season=1) so a past
+// Season picker for Schedule and Stats. Kept in the address (?season=1) so a past
 // season's page can be shared. Hidden while the league has only one season.
 import { useSearchParams } from "react-router-dom";
 import ToggleButton from "@mui/material/ToggleButton";

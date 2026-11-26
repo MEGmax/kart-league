@@ -4,12 +4,9 @@ import { useEffect } from "react";
 
 const PAGES = {
   "/standings": ["Home", "Live standings: ratings, cup wins and characters for every racer."],
-  "/schedule": ["Schedule", "The season schedule: when each cup night is, which cups, who's in, and how past nights went."],
+  "/schedule": ["Schedule", "The season night by night: upcoming cup nights, who's in, and every cup's results."],
   "/join": ["Join", "Join the cup being raced and enter your finishing place after each race of tonight's cup."],
-  "/history": ["History", "Every finished cup: results, race-by-race places and tracks."],
-  "/stats": ["Stats", "The league in numbers, and everyone who has signed up."],
-  "/rivals": ["Rivals", "Head to head: every pair's record, the rivalry of the season and upsets."],
-  "/records": ["Records", "League records and the season's awards."],
+  "/stats": ["Stats", "Every racer's season in numbers: cups, wins, top 3s, last places, best and worst head-to-head records."],
   "/unclaimed": ["Unclaimed points", "Results from the photos nobody has claimed yet. Was one of them you?"],
   "/playoffs": ["Playoffs", "The playoff picture: seeds, the bracket and who's on the bubble."],
   "/rules": ["Rules", "How the league works: scoring, qualifying, tiebreakers and playoffs."],

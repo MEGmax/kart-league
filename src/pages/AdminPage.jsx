@@ -327,7 +327,7 @@ function StartSeason({ league }) {
         <DialogTitle>Start Season {now + 1}?</DialogTitle>
         <DialogContent sx={{ display: "grid", gap: 2 }}>
           <Typography variant="body2">
-            New cups go into Season {now + 1} and the standings start empty. Season {now}'s cups, standings and records stay on History and Stats under its season.
+            New cups go into Season {now + 1} and the standings start empty. Season {now}'s cups, standings and records stay on Schedule and Stats under its season.
             {" "}Ratings carry over: everyone starts {Math.round((1 - (Number(league.carryOver ?? RATING_DEFAULTS.carryOver))) * 100)}% of the way back to {league.ratingStart || RATING_DEFAULTS.ratingStart}.
           </Typography>
           <TextField select size="small" label={`Rank Season ${now + 1} by`} value={rankBy} onChange={(e) => setRankBy(e.target.value)}>

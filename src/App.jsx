@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { HashRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import Layout from "./components/Layout";
 import StandingsPage from "./pages/StandingsPage";
 import { Loading } from "./components/PageBits";
@@ -12,19 +12,23 @@ const UnclaimedPage = lazy(() => import("./pages/UnclaimedPage"));
 const PlayoffsPage = lazy(() => import("./pages/PlayoffsPage"));
 const RulesPage = lazy(() => import("./pages/RulesPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
-const CupsPage = lazy(() => import("./pages/CupsPage"));
 const RaceNightPage = lazy(() => import("./pages/RaceNightPage"));
-const EventsPage = lazy(() => import("./pages/EventsPage"));
+const SchedulePage = lazy(() => import("./pages/SchedulePage"));
 const UnsubscribePage = lazy(() => import("./pages/UnsubscribePage"));
 const StatsPage = lazy(() => import("./pages/StatsPage"));
 const UploadPage = lazy(() => import("./pages/UploadPage"));
-const RivalsPage = lazy(() => import("./pages/RivalsPage"));
-const RecordsPage = lazy(() => import("./pages/RecordsPage"));
 
-// Old links (and cup night emails already sent) used #/events, #/race and #/cups.
+// Old links (and cup night emails already sent) used #/events, #/race and #/cups. History is now part of
+// Schedule, and Rivals and Records are part of Stats.
 function ScheduleRedirect() {
   const { id } = useParams();
   return <Navigate to={`/schedule/${id}`} replace />;
+}
+
+// Keeps ?season=N.
+function Moved({ to }) {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
 }
 
 const page = (P) => <Suspense fallback={<Loading />}><P /></Suspense>;
@@ -44,14 +48,14 @@ export default function App() {
                 <Route path="standings" element={<StandingsPage />} />
                 <Route path="standings/:player" element={<StandingsPage />} />
                 <Route path="join" element={page(RaceNightPage)} />
-                <Route path="history" element={page(CupsPage)} />
+                <Route path="schedule" element={page(SchedulePage)} />
+                <Route path="schedule/:id" element={page(SchedulePage)} />
                 <Route path="stats" element={page(StatsPage)} />
-                <Route path="rivals" element={page(RivalsPage)} />
-                <Route path="records" element={page(RecordsPage)} />
-                <Route path="schedule" element={page(EventsPage)} />
-                <Route path="schedule/:id" element={page(EventsPage)} />
+                <Route path="history" element={<Moved to="/schedule" />} />
+                <Route path="rivals" element={<Moved to="/stats" />} />
+                <Route path="records" element={<Moved to="/stats" />} />
                 <Route path="race" element={<Navigate to="/join" replace />} />
-                <Route path="cups" element={<Navigate to="/history" replace />} />
+                <Route path="cups" element={<Navigate to="/schedule" replace />} />
                 <Route path="events" element={<Navigate to="/schedule" replace />} />
                 <Route path="events/:id" element={<ScheduleRedirect />} />
                 <Route path="unsubscribe/:token" element={page(UnsubscribePage)} />

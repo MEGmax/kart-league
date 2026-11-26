@@ -19,7 +19,6 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import SportsScoreOutlinedIcon from "@mui/icons-material/SportsScoreOutlined";
-import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
@@ -28,8 +27,6 @@ import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettin
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
-import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
-import MilitaryTechOutlinedIcon from "@mui/icons-material/MilitaryTechOutlined";
 import PullToRefresh from "./PullToRefresh";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
@@ -42,10 +39,7 @@ const TABS = [
   { value: "/standings", label: "Home", icon: <HomeOutlinedIcon /> },
   { value: "/schedule", label: "Schedule", icon: <EventOutlinedIcon /> },
   { value: "/join", label: "Join", icon: <SportsScoreOutlinedIcon /> },
-  { value: "/history", label: "History", icon: <EmojiEventsOutlinedIcon /> },
   { value: "/stats", label: "Stats", icon: <InsightsOutlinedIcon /> },
-  { value: "/rivals", label: "Rivals", icon: <CompareArrowsIcon /> },
-  { value: "/records", label: "Records", icon: <MilitaryTechOutlinedIcon /> },
   { value: "/unclaimed", label: "Unclaimed", icon: <HelpOutlineIcon /> },
   { value: "/playoffs", label: "Playoffs", icon: <AccountTreeOutlinedIcon /> },
   { value: "/rules", label: "Rules", icon: <MenuBookOutlinedIcon /> },

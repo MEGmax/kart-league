@@ -261,9 +261,9 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
       // The photo goes up after the results are final, re-encoded without EXIF (GPS).
       let photoFailed = false;
       if (photo) await saveCupPhoto(cup.id, photo).catch(() => { photoFailed = true; });
-      flash(photoFailed ? `${cup.cup} is final, but its photo didn't upload. Add it with Edit results on the History page.` : `${cup.cup} is final. Standings updated.`);
+      flash(photoFailed ? `${cup.cup} is final, but its photo didn't upload. Add it with Edit results on the Schedule page.` : `${cup.cup} is final. Standings updated.`);
       reload();
-      navigate("/history");
+      navigate("/schedule");
     } catch (e) {
       setError(dbErr(e));
       setSaving(false);
