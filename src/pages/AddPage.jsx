@@ -368,7 +368,7 @@ export default function AddPage() {
             <Button variant="contained" size="large" disabled={saving || !n} onClick={save}>{saveLabel}</Button>
             <Typography variant="body2" sx={{ color: colors.muted, flex: 1 }}>
               {n} cup{n === 1 ? "" : "s"} · {night.racers.length} racer{night.racers.length === 1 ? "" : "s"} · {totalResults} result{totalResults === 1 ? "" : "s"} entered.{" "}
-              {night.mode === "submit" ? "You can withdraw it from your Account page while it's pending." : "Unclaimed results show on the Unclaimed page for people to request."}
+              {night.mode === "submit" ? "You can withdraw it from your Account page while it's pending." : "Unclaimed results show on everyone's profile under \"Is this you?\" for people to request."}
             </Typography>
             <Button onClick={() => navigate(night.mode === "review" ? "/admin" : night.mode === "submit" ? "/account" : "/schedule")} disabled={saving}>Cancel</Button>
           </Stack>

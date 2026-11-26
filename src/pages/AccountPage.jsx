@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -32,6 +32,10 @@ import { groupBatches, useMyData } from "../lib/accountData";
 import { PLAYER_COLORS, colors, fontDisplay } from "../theme";
 import { plural } from "../components/PageBits";
 import CharacterFace from "../components/CharacterFace";
+import ProfileAvatar from "../components/ProfileAvatar";
+import UnclaimedResults from "../components/UnclaimedResults";
+import { useUnclaimed } from "../lib/unclaimed";
+import { clearAvatar, removeAllAvatars, setAvatar } from "../lib/avatars";
 import CupIcon from "../components/CupIcon";
 import TrackImage from "../components/TrackImage";
 
@@ -133,7 +137,36 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [picBusy, setPicBusy] = useState(false);
+  const fileRef = useRef(null);
   const { user, refreshProfile } = useAuth();
+
+  // The picture saves straight away (it isn't part of Save profile).
+  async function pickPicture(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setPicBusy(true); setError("");
+    try {
+      await setAvatar(user.id, file, profile.avatarPath);
+      await refreshProfile();
+    } catch (err) {
+      setError(err.message || dbErr(err));
+    } finally {
+      setPicBusy(false);
+    }
+  }
+  async function removePicture() {
+    setPicBusy(true); setError("");
+    try {
+      await clearAvatar(user.id, profile.avatarPath);
+      await refreshProfile();
+    } catch (err) {
+      setError(dbErr(err));
+    } finally {
+      setPicBusy(false);
+    }
+  }
 
   async function save() {
     const name = draft.displayName.trim();
@@ -162,11 +195,17 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
     <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ fontFamily: "inherit", fontWeight: 800 }}>Edit profile</DialogTitle>
       <DialogContent>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5, mt: 0.5 }}>
-          <CharacterFace name={draft.favoriteCharacter} size={56} />
+        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5, mt: 0.5 }}>
+          <ProfileAvatar name={draft.displayName.trim() || profile.displayName} src={profile.avatarUrl} size={72} />
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 800 }} noWrap>{draft.displayName.trim() || "Your name"}</Typography>
-            <Typography variant="body2" sx={{ color: colors.muted }} noWrap>{[draft.favoriteCharacter, draft.favoriteVehicle.trim()].filter(Boolean).join(" · ") || "Pick a character"}</Typography>
+            <Typography sx={{ fontWeight: 700, mb: 0.75 }}>Profile picture</Typography>
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPicture} />
+            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+              <Button size="small" variant="outlined" color="inherit" sx={{ borderColor: colors.rule }} disabled={picBusy} onClick={() => fileRef.current && fileRef.current.click()}>
+                {picBusy ? "Saving…" : profile.avatarPath ? "Change" : "Upload"}
+              </Button>
+              {profile.avatarPath && <Button size="small" color="inherit" disabled={picBusy} onClick={removePicture}>Use initials</Button>}
+            </Stack>
           </Box>
         </Stack>
         <Stack spacing={2}>
@@ -239,7 +278,7 @@ function Stat({ label, value, sub }) {
 }
 
 // The player card: character art, name and (once linked to a player) the season in numbers.
-function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEdit }) {
+function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEdit, waiting }) {
   const character = profile.favoriteCharacter || (stats && stats.main && stats.main.name) || "";
   const art = charSrc(character, true);
   const chip = { borderColor: colors.rule };
@@ -253,7 +292,14 @@ function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEd
 
       <Box sx={{ position: "relative", pr: { sm: 30 } }}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <CharacterFace name={character} size={72} />
+          <Box
+            component={waiting ? "a" : "div"} href={waiting ? "#unclaimed" : undefined}
+            onClick={waiting ? (e) => { e.preventDefault(); const el = document.getElementById("unclaimed"); if (el) el.scrollIntoView({ behavior: "smooth" }); } : undefined}
+            sx={{ display: "block", flexShrink: 0, borderRadius: "50%", "&:focus-visible": { outline: `2px solid ${colors.gold}`, outlineOffset: 2 } }}
+          >
+            <ProfileAvatar name={profile.displayName} src={profile.avatarUrl} size={72} badge={waiting}
+              badgeLabel={waiting ? `${plural(waiting, "unclaimed result")} might be yours` : undefined} />
+          </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography component="h1" sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.375rem", sm: "1.75rem" }, lineHeight: 1.15, overflowWrap: "anywhere" }}>
               {profile.displayName || "Racer"}
@@ -291,14 +337,13 @@ function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEd
           <Typography sx={{ color: colors.muted, mt: 2.5, maxWidth: "46ch" }}>
             {player
               ? "Race your first cup and your season shows up here."
-              : "Your results link up once an admin connects you to your player, or claim them on the Unclaimed page."}
+              : "Your results link up once an admin connects you to your player, or claim any that were you under “Is this you?” below."}
           </Typography>
         )}
 
         <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 2.5 }}>
           <Button variant="contained" startIcon={<EditOutlinedIcon />} onClick={onEdit}>Edit profile</Button>
           {stats && stats.cp > 0 && slug && <Button variant="outlined" color="inherit" component={RouterLink} to={`/standings/${encodeURIComponent(slug)}`}>Full season</Button>}
-          {!player && <Button variant="outlined" color="inherit" component={RouterLink} to="/unclaimed">Unclaimed results</Button>}
         </Stack>
       </Box>
     </Box>
@@ -540,7 +585,7 @@ function MyActivity() {
 }
 
 function DangerZone() {
-  const { isOwner, hasOwner, refreshProfile, signOut } = useAuth();
+  const { user, isOwner, hasOwner, refreshProfile, signOut } = useAuth();
   const flash = useFlash();
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -561,6 +606,7 @@ function DangerZone() {
   async function del() {
     setBusy(true); setError("");
     try {
+      await removeAllAvatars(user.id).catch(() => {}); // Storage files aren't removed by the SQL delete
       await q(sb.rpc("delete_my_account"));
       await signOut();
       flash("Your account was deleted");
@@ -603,6 +649,7 @@ function SignedInView() {
   const { user, profile, isAdmin, signOut, updatePassword } = useAuth();
   const { state } = useLeagueData();
   const m = useMemo(() => (state && state.cups.length ? compute(state) : null), [state]);
+  const { waiting } = useUnclaimed();
   const [editing, setEditing] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
   const [pw, setPw] = useState("");
@@ -641,7 +688,8 @@ function SignedInView() {
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2 } }}>
       {savedFlash && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSavedFlash("")}>{savedFlash}</Alert>}
-      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.minCups : 0} slug={slug} provisionalCups={m && m.rated ? m.rated.cfg.provisional : 5} onEdit={() => setEditing(true)} />
+      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.minCups : 0} slug={slug} provisionalCups={m && m.rated ? m.rated.cfg.provisional : 5} onEdit={() => setEditing(true)} waiting={waiting} />
+      <UnclaimedResults />
       {editing && <ProfileEditor open profile={profile} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setSavedFlash("Profile saved"); }} />}
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, columnGap: 6, rowGap: 5, mt: 5, alignItems: "start" }}>

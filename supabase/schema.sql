@@ -174,6 +174,12 @@ alter table public.profiles add column if not exists favorite_tracks text[] not 
 -- "Email me about cup nights". Off until the person turns it on.
 alter table public.profiles add column if not exists email_cup_nights boolean not null default false;
 
+-- A profile picture (v11): the path of the person's own picture in the "avatars" Storage bucket
+-- (<user id>/<version>.jpg). Null shows their initials.
+alter table public.profiles add column if not exists avatar_path text check (avatar_path is null or char_length(avatar_path) <= 200);
+alter table public.profiles drop constraint if exists profiles_avatar_own;
+alter table public.profiles add constraint profiles_avatar_own check (avatar_path is null or avatar_path like id::text || '/%');
+
 -- Each person's secret for unsubscribe links. Not readable through the API.
 create table if not exists public.email_tokens (
   user_id uuid primary key references auth.users on delete cascade,
@@ -355,7 +361,7 @@ drop policy if exists "update own" on public.profiles;
 create policy "read own or admin" on public.profiles for select to authenticated using (id = auth.uid() or public.is_admin());
 create policy "update own" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 revoke insert, update, delete on public.profiles from anon, authenticated;
-grant update (display_name, color, favorite_character, favorite_vehicle, favorite_tracks, email_cup_nights, updated_at) on public.profiles to authenticated;
+grant update (display_name, color, favorite_character, favorite_vehicle, favorite_tracks, email_cup_nights, avatar_path, updated_at) on public.profiles to authenticated;
 
 -- Submissions: members create and see their own; admins see and review all.
 drop policy if exists "read own or admin" on public.submissions;
@@ -1071,6 +1077,20 @@ create policy "cup photos: members read" on storage.objects for select to authen
 drop policy if exists "cup photos: admins write" on storage.objects;
 create policy "cup photos: admins write" on storage.objects for all to authenticated
   using (bucket_id = 'cup-photos' and public.is_admin()) with check (bucket_id = 'cup-photos' and public.is_admin());
+
+-- ============ v11: profile pictures in Storage ============
+-- A profile picture lives in the private "avatars" bucket as <user id>/<version>.jpg (a 256px square the
+-- site re-encodes in the browser, so no EXIF); profiles.avatar_path points at it. Signed-in members can
+-- read pictures; each person writes and deletes only in their own folder.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('avatars', 'avatars', false, 524288, array['image/jpeg'])
+  on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+drop policy if exists "avatars: members read" on storage.objects;
+create policy "avatars: members read" on storage.objects for select to authenticated using (bucket_id = 'avatars');
+drop policy if exists "avatars: own folder" on storage.objects;
+create policy "avatars: own folder" on storage.objects for all to authenticated
+  using (bucket_id = 'avatars' and split_part(name, '/', 1) = auth.uid()::text)
+  with check (bucket_id = 'avatars' and split_part(name, '/', 1) = auth.uid()::text);
 
 -- ============ what signed-out visitors can see ============
 -- Exactly what the public pages show: no account ids, no emails, no RSVPs, no photos, and never a write.

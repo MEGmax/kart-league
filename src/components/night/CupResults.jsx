@@ -196,7 +196,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
                 </Stack>
               ))}
               <Typography variant="caption" sx={{ color: colors.muted }}>
-                Or give that character to the right racer above and press Read again. Unclaimed results can be requested on the Unclaimed page.
+                Or give that character to the right racer above and press Read again. Unclaimed results show up on everyone's profile under "Is this you?" to request.
               </Typography>
             </Stack>
           )}

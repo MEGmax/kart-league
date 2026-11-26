@@ -83,7 +83,7 @@ function Results({ info, playerById, big }) {
                 {p ? (
                   <Typography noWrap sx={{ fontWeight: 700, lineHeight: 1.25 }}>{p.name}</Typography>
                 ) : (
-                  <Link component={RouterLink} to="/unclaimed" sx={{ fontWeight: 700, fontStyle: "italic", color: colors.link }}>Unclaimed</Link>
+                  <Link component={RouterLink} to="/account" sx={{ fontWeight: 700, fontStyle: "italic", color: colors.link }}>Unclaimed</Link>
                 )}
                 {r.character && <Typography noWrap sx={{ color: colors.muted, fontSize: "0.875rem", lineHeight: 1.25 }}>{r.character}</Typography>}
               </Box>

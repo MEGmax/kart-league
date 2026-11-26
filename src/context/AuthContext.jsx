@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { sb, q, siteUrl, authErr } from "../lib/supabaseClient";
+import { avatarUrl } from "../lib/avatars";
 
 const AuthContext = createContext(null);
 
@@ -9,6 +10,8 @@ function mapProfile(u) {
     color: u.color, favoriteCharacter: u.favorite_character, favoriteVehicle: u.favorite_vehicle,
     favoriteTracks: u.favorite_tracks || [],
     emailCupNights: !!u.email_cup_nights,
+    avatarPath: u.avatar_path || null,
+    avatarUrl: null, // a signed URL, filled in by loadProfile
   };
 }
 
@@ -23,7 +26,9 @@ export function AuthProvider({ children }) {
 
   async function loadProfile(uid) {
     const p = await q(sb.from("profiles").select("*").eq("id", uid).maybeSingle());
-    if (userRef.current && userRef.current.id === uid) setProfile(p ? mapProfile(p) : null);
+    const next = p ? mapProfile(p) : null;
+    if (next && next.avatarPath) next.avatarUrl = await avatarUrl(next.avatarPath);
+    if (userRef.current && userRef.current.id === uid) setProfile(next);
   }
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -20,7 +20,6 @@ import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import SportsScoreOutlinedIcon from "@mui/icons-material/SportsScoreOutlined";
 import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
@@ -30,7 +29,9 @@ import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined";
 import PullToRefresh from "./PullToRefresh";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
-import { compute, liveCups } from "../lib/standings";
+import { liveCups } from "../lib/standings";
+import { useUnclaimed } from "../lib/unclaimed";
+import ProfileAvatar from "./ProfileAvatar";
 import { LOGO_SRC } from "../lib/constants";
 import { usePageTitle } from "../lib/pageMeta";
 import { colors, brandStripe, fontDisplay } from "../theme";
@@ -40,7 +41,6 @@ const TABS = [
   { value: "/schedule", label: "Schedule", icon: <EventOutlinedIcon /> },
   { value: "/join", label: "Join", icon: <SportsScoreOutlinedIcon /> },
   { value: "/stats", label: "Stats", icon: <InsightsOutlinedIcon /> },
-  { value: "/unclaimed", label: "Unclaimed", icon: <HelpOutlineIcon /> },
   { value: "/playoffs", label: "Playoffs", icon: <AccountTreeOutlinedIcon /> },
   { value: "/rules", label: "Rules", icon: <MenuBookOutlinedIcon /> },
 ];
@@ -57,12 +57,13 @@ function sectionOf(pathname) {
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin, myName, ready } = useAuth();
+  const { user, profile, isAdmin, myName, ready } = useAuth();
   const { state } = useLeagueData();
   const [moreAt, setMoreAt] = useState(null);
 
   const live = state ? liveCups(state).length : 0;
-  const unclaimed = useMemo(() => (state && state.cups.length ? compute(state, { season: "all" }).unclaimed.length : 0), [state]);
+  // Results nobody has claimed that might be yours: the badge on your profile picture.
+  const { waiting } = useUnclaimed();
   const section = sectionOf(location.pathname);
   const tabs = isAdmin ? TABS.concat({ value: "/admin", label: "Admin", icon: <AdminPanelSettingsOutlinedIcon /> }) : TABS;
   // Pages that aren't tabs (Account, Add, Build…) select no tab at all.
@@ -78,14 +79,10 @@ export default function Layout() {
   }, [location.pathname, section]);
 
   const tabLabel = (t) => {
-    if (t.value === "/unclaimed" && unclaimed) {
-      return <Badge color="warning" badgeContent={unclaimed} max={99} sx={{ mr: 1.5, "& .MuiBadge-badge": { right: -12 } }}><span>{t.label}</span></Badge>;
-    }
     if (t.value === "/join" && live) return <Badge color="error" variant="dot"><span>{t.label}</span></Badge>;
     return t.label;
   };
-  const tabAria = (t) => (t.value === "/unclaimed" && unclaimed ? `Unclaimed, ${unclaimed} results waiting`
-    : t.value === "/join" && live ? "Join, a cup is being raced" : t.label);
+  const tabAria = (t) => (t.value === "/join" && live ? "Join, a cup is being raced" : t.label);
 
   const more = tabs.slice(PRIMARY);
   const moreActive = more.some((t) => t.value === section) || section === "/account";
@@ -142,13 +139,14 @@ export default function Layout() {
             )}
             {user ? (
               <Button
-                size="small" variant="outlined" color="inherit"
+                color="inherit"
                 onClick={() => navigate("/account")}
-                aria-label={`Your account (${myName})`}
+                aria-label={`Your account (${myName})${waiting ? `, ${waiting} unclaimed result${waiting === 1 ? "" : "s"} might be yours` : ""}`}
                 aria-current={location.pathname === "/account" ? "page" : undefined}
-                sx={{ maxWidth: { xs: 140, sm: 220 }, minHeight: 40, borderColor: colors.rule, bgcolor: location.pathname === "/account" ? colors.raised : "transparent" }}
+                sx={{ minWidth: 0, minHeight: 48, px: { xs: 0.5, sm: 1 }, gap: 1, borderRadius: 99, maxWidth: { xs: 64, sm: 240 } }}
               >
-                <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{myName}</Box>
+                <ProfileAvatar name={myName} src={profile && profile.avatarUrl} size={36} badge={waiting} />
+                <Box component="span" sx={{ display: { xs: "none", sm: "block" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600 }}>{myName}</Box>
               </Button>
             ) : ready ? (
               <Button size="small" variant="outlined" color="inherit" onClick={() => navigate("/account")} sx={{ whiteSpace: "nowrap", minHeight: 40, borderColor: colors.rule }}>Sign in</Button>
@@ -203,15 +201,15 @@ export default function Layout() {
             <BottomNavigationAction key={t.value} value={t.value} label={t.label} aria-label={tabAria(t)}
               icon={t.value === "/join" && live ? <Badge color="error" variant="dot">{t.icon}</Badge> : t.icon} />
           ))}
-          <BottomNavigationAction value="more" label="More" aria-label={unclaimed ? `More: stats, rivals, records, unclaimed (${unclaimed}), playoffs, rules` : "More: stats, rivals, records, unclaimed, playoffs, rules"} aria-haspopup="menu"
-            icon={<Badge color="warning" variant="dot" invisible={!unclaimed}><MoreHorizIcon /></Badge>} />
+          <BottomNavigationAction value="more" label="More" aria-label="More: playoffs, rules and your account" aria-haspopup="menu"
+            icon={<MoreHorizIcon />} />
         </BottomNavigation>
       </Paper>
       <Menu anchorEl={moreAt} open={!!moreAt} onClose={() => setMoreAt(null)} anchorOrigin={{ vertical: "top", horizontal: "right" }} transformOrigin={{ vertical: "bottom", horizontal: "right" }}>
         {more.map((t) => (
           <MenuItem key={t.value} selected={section === t.value} onClick={() => { setMoreAt(null); navigate(t.value); }}>
             <ListItemIcon>{t.icon}</ListItemIcon>
-            {t.label}{t.value === "/unclaimed" && unclaimed ? ` (${unclaimed})` : ""}
+            {t.label}
           </MenuItem>
         ))}
         {user && (
@@ -220,7 +218,7 @@ export default function Layout() {
           </MenuItem>
         )}
         <MenuItem selected={section === "/account"} onClick={() => { setMoreAt(null); navigate("/account"); }}>
-          <ListItemIcon><PersonOutlineIcon /></ListItemIcon>{user ? "Your account" : "Sign in"}
+          <ListItemIcon><PersonOutlineIcon /></ListItemIcon>{user ? "Your account" : "Sign in"}{waiting ? ` (${waiting} to check)` : ""}
         </MenuItem>
       </Menu>
     </Box>

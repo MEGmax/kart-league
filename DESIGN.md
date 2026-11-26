@@ -38,7 +38,7 @@ Space Grotesk and JetBrains Mono are dropped.
 | `ink` | `#F4F5FB` | Text. | 16.6:1 |
 | `muted` | `#B3BADD` | Secondary text, at 14px or larger only. | 9.5:1 |
 | `gold` | `#FFD23F` | The leader / 1st place, and the primary action button. | 12.5:1 |
-| `red` | `#EF3B32` | The playoff line (and the logo's red in the brand stripe). | 4.6:1 (line) |
+| `red` | `#EF3B32` | The playoff line (and the logo's red in the brand stripe), and the count badge on your profile picture (results that might be yours), with navy text. | 4.6:1 (line) |
 | `redText` | `#FF6B62` | Text in red: the "Playoff line" label, errors. | 6.5:1 |
 | `up` / `down` | `#3DDC84` / `#FF6B72` | A rating that went up or down, always next to an ▲ or ▼ so colour isn't the only signal. | 10.1 / 6.6:1 |
 | `link` | `#7FD8FF` | Text links (underlined). | 11.4:1 |

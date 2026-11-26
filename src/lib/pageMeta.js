@@ -7,7 +7,6 @@ const PAGES = {
   "/schedule": ["Schedule", "The season night by night: upcoming cup nights, who's in, and every cup's results."],
   "/join": ["Join", "Join the cup being raced and enter your finishing place after each race of tonight's cup."],
   "/stats": ["Stats", "Every racer's season in numbers: cups, wins, top 3s, last places, best and worst head-to-head records."],
-  "/unclaimed": ["Unclaimed points", "Results from the photos nobody has claimed yet. Was one of them you?"],
   "/playoffs": ["Playoffs", "The playoff picture: seeds, the bracket and who's on the bubble."],
   "/rules": ["Rules", "How the league works: scoring, qualifying, tiebreakers and playoffs."],
   "/add": ["Add results", "Record a cup night's results."],

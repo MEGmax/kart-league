@@ -8,7 +8,6 @@ import { Loading } from "./components/PageBits";
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const AddPage = lazy(() => import("./pages/AddPage"));
 const BuildPage = lazy(() => import("./pages/BuildPage"));
-const UnclaimedPage = lazy(() => import("./pages/UnclaimedPage"));
 const PlayoffsPage = lazy(() => import("./pages/PlayoffsPage"));
 const RulesPage = lazy(() => import("./pages/RulesPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
@@ -19,7 +18,7 @@ const StatsPage = lazy(() => import("./pages/StatsPage"));
 const UploadPage = lazy(() => import("./pages/UploadPage"));
 
 // Old links (and cup night emails already sent) used #/events, #/race and #/cups. History is now part of
-// Schedule, and Rivals and Records are part of Stats.
+// Schedule, Rivals and Records are part of Stats, and Unclaimed is the "Is this you?" notification on your profile.
 function ScheduleRedirect() {
   const { id } = useParams();
   return <Navigate to={`/schedule/${id}`} replace />;
@@ -59,7 +58,7 @@ export default function App() {
                 <Route path="events" element={<Navigate to="/schedule" replace />} />
                 <Route path="events/:id" element={<ScheduleRedirect />} />
                 <Route path="unsubscribe/:token" element={page(UnsubscribePage)} />
-                <Route path="unclaimed" element={page(UnclaimedPage)} />
+                <Route path="unclaimed" element={<Navigate to="/account" replace />} />
                 <Route path="playoffs" element={page(PlayoffsPage)} />
                 <Route path="rules" element={page(RulesPage)} />
                 <Route path="add" element={page(AddPage)} />
