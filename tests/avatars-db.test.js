@@ -27,6 +27,14 @@ describe("profile pictures", () => {
     await expect(setPath(ben, `${ada}/a1.jpg`)).rejects.toThrow(/profiles_avatar_own/);
   });
 
+  it("keeps how the picture was cut, from your own original only", async () => {
+    const crop = (who, source) => as(db, who, "update public.profiles set avatar_crop = $1 where id = auth.uid()", [{ source, cx: 0.4, cy: 0.5, zoom: 1.5 }]);
+    await crop(ben, `${ben}/a1-orig.jpg`);
+    const { rows } = await db.query("select avatar_crop from public.profiles where id = $1", [ben]);
+    expect(rows[0].avatar_crop).toMatchObject({ cx: 0.4, zoom: 1.5 });
+    await expect(crop(ben, `${ada}/a1-orig.jpg`)).rejects.toThrow(/profiles_avatar_crop_own/);
+  });
+
   it("is readable by signed-in members only, and only the owner can delete it", async () => {
     await put(ben, `${ben}/a1.jpg`);
     expect((await as(db, ada, "select name from storage.objects where bucket_id = 'avatars'")).rows).toHaveLength(1);

@@ -7,10 +7,10 @@ const AuthContext = createContext(null);
 function mapProfile(u) {
   return {
     id: u.id, displayName: u.display_name, email: u.email, role: u.role,
-    color: u.color, favoriteCharacter: u.favorite_character, favoriteVehicle: u.favorite_vehicle,
-    favoriteTracks: u.favorite_tracks || [],
+    color: u.color, favoriteCharacter: u.favorite_character,
     emailCupNights: !!u.email_cup_nights,
     avatarPath: u.avatar_path || null,
+    avatarCrop: u.avatar_crop || null, // { source, cx, cy, zoom }: how the picture was cut (see src/lib/avatarCrop.js)
     avatarUrl: null, // a signed URL, filled in by loadProfile
   };
 }

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -12,8 +12,8 @@ import CircularProgress from "@mui/material/CircularProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import Autocomplete from "@mui/material/Autocomplete";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -23,7 +23,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { CHARACTERS, charSrc, fmtDate, LOGO_SRC, ord, pctTxt, TRACKS } from "../lib/constants";
+import { CHARACTERS, charSrc, fmtDate, LOGO_SRC, ord, pctTxt } from "../lib/constants";
 import { ProvisionalBadge, RatingChart, RatingDelta, fmtRating, signed } from "../components/RatingBits";
 import { bestTracks, trackCup } from "../lib/tracks";
 import { compute, playerSlug } from "../lib/standings";
@@ -35,7 +35,8 @@ import CharacterFace from "../components/CharacterFace";
 import ProfileAvatar from "../components/ProfileAvatar";
 import UnclaimedResults from "../components/UnclaimedResults";
 import { useUnclaimed } from "../lib/unclaimed";
-import { clearAvatar, removeAllAvatars, setAvatar } from "../lib/avatars";
+import { removeAllAvatars } from "../lib/avatars";
+import AvatarEditor from "../components/AvatarEditor";
 import CupIcon from "../components/CupIcon";
 import TrackImage from "../components/TrackImage";
 
@@ -132,60 +133,23 @@ function AuthForm() {
 function ProfileEditor({ profile, open, onClose, onSaved }) {
   const [draft, setDraft] = useState({
     displayName: profile.displayName || "", color: profile.color || PLAYER_COLORS[0],
-    favoriteCharacter: profile.favoriteCharacter || "", favoriteVehicle: profile.favoriteVehicle || "",
-    favoriteTracks: profile.favoriteTracks || [],
+    favoriteCharacter: profile.favoriteCharacter || "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [picBusy, setPicBusy] = useState(false);
-  const fileRef = useRef(null);
   const { user, refreshProfile } = useAuth();
-
-  // The picture saves straight away (it isn't part of Save profile).
-  async function pickPicture(e) {
-    const file = e.target.files && e.target.files[0];
-    e.target.value = "";
-    if (!file) return;
-    setPicBusy(true); setError("");
-    try {
-      await setAvatar(user.id, file, profile.avatarPath);
-      await refreshProfile();
-    } catch (err) {
-      setError(err.message || dbErr(err));
-    } finally {
-      setPicBusy(false);
-    }
-  }
-  async function removePicture() {
-    setPicBusy(true); setError("");
-    try {
-      await clearAvatar(user.id, profile.avatarPath);
-      await refreshProfile();
-    } catch (err) {
-      setError(dbErr(err));
-    } finally {
-      setPicBusy(false);
-    }
-  }
 
   async function save() {
     const name = draft.displayName.trim();
     if (!name) { setError("Enter a display name."); return; }
     setBusy(true); setError("");
     try {
-      const row = {
-        display_name: name, color: draft.color, favorite_character: draft.favoriteCharacter || "",
-        favorite_vehicle: draft.favoriteVehicle.trim(), updated_at: new Date().toISOString(),
-      };
-      // Only sent when changed, so the rest of the profile still saves before the v8 schema is run.
-      if (draft.favoriteTracks.join("|") !== (profile.favoriteTracks || []).join("|")) row.favorite_tracks = draft.favoriteTracks;
+      const row = { display_name: name, color: draft.color, favorite_character: draft.favoriteCharacter || "", updated_at: new Date().toISOString() };
       await q(sb.from("profiles").update(row).eq("id", user.id));
       await refreshProfile();
       onSaved();
     } catch (err) {
-      setError(/favorite_tracks/.test((err && err.message) || "")
-        ? "Favourite tracks need the latest database update (run supabase/schema.sql). The rest saves if you clear them."
-        : dbErr(err));
+      setError(dbErr(err));
     } finally {
       setBusy(false);
     }
@@ -195,17 +159,11 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
     <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ fontFamily: "inherit", fontWeight: 800 }}>Edit profile</DialogTitle>
       <DialogContent>
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5, mt: 0.5 }}>
-          <ProfileAvatar name={draft.displayName.trim() || profile.displayName} src={profile.avatarUrl} size={72} />
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5, mt: 0.5 }}>
+          <ProfileAvatar name={draft.displayName.trim() || profile.displayName} src={profile.avatarUrl} size={56} />
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 700, mb: 0.75 }}>Profile picture</Typography>
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickPicture} />
-            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-              <Button size="small" variant="outlined" color="inherit" sx={{ borderColor: colors.rule }} disabled={picBusy} onClick={() => fileRef.current && fileRef.current.click()}>
-                {picBusy ? "Saving…" : profile.avatarPath ? "Change" : "Upload"}
-              </Button>
-              {profile.avatarPath && <Button size="small" color="inherit" disabled={picBusy} onClick={removePicture}>Use initials</Button>}
-            </Stack>
+            <Typography sx={{ fontWeight: 800 }} noWrap>{draft.displayName.trim() || "Your name"}</Typography>
+            <Typography sx={{ color: colors.muted }} noWrap>{draft.favoriteCharacter || "Pick a character"}</Typography>
           </Box>
         </Stack>
         <Stack spacing={2}>
@@ -218,18 +176,6 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
               </MenuItem>
             ))}
           </TextField>
-          <TextField label="Favorite kart or bike" placeholder="e.g. Flame Runner" value={draft.favoriteVehicle} onChange={(e) => setDraft({ ...draft, favoriteVehicle: e.target.value })} inputProps={{ maxLength: 40 }} />
-          <Autocomplete
-            multiple disableCloseOnSelect options={TRACKS} value={draft.favoriteTracks}
-            onChange={(_, v) => setDraft({ ...draft, favoriteTracks: v.slice(0, 3) })}
-            getOptionDisabled={(t) => draft.favoriteTracks.length >= 3 && draft.favoriteTracks.indexOf(t) < 0}
-            groupBy={(t) => (TRACKS.indexOf(t) < 16 ? "Nitro" : "Retro")}
-            renderOption={(props, t) => {
-              const { key, ...rest } = props;
-              return <Box component="li" key={key} {...rest} sx={{ gap: 1.25 }}><TrackImage track={t} width={56} radius={0.75} />{t}</Box>;
-            }}
-            renderInput={(params) => <TextField {...params} label="Favourite tracks" helperText="Up to 3" />}
-          />
           <Box>
             <Typography variant="caption" sx={{ color: colors.muted, display: "block", mb: 1 }}>Color</Typography>
             <Box role="radiogroup" aria-label="Color" sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -278,7 +224,7 @@ function Stat({ label, value, sub }) {
 }
 
 // The player card: character art, name and (once linked to a player) the season in numbers.
-function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEdit, waiting }) {
+function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEdit, onPicture, waiting }) {
   const character = profile.favoriteCharacter || (stats && stats.main && stats.main.name) || "";
   const art = charSrc(character, true);
   const chip = { borderColor: colors.rule };
@@ -292,20 +238,30 @@ function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEd
 
       <Box sx={{ position: "relative", pr: { sm: 30 } }}>
         <Stack direction="row" spacing={2} alignItems="center">
+          {/* Tap your picture to change it. */}
           <Box
-            component={waiting ? "a" : "div"} href={waiting ? "#unclaimed" : undefined}
-            onClick={waiting ? (e) => { e.preventDefault(); const el = document.getElementById("unclaimed"); if (el) el.scrollIntoView({ behavior: "smooth" }); } : undefined}
-            sx={{ display: "block", flexShrink: 0, borderRadius: "50%", "&:focus-visible": { outline: `2px solid ${colors.gold}`, outlineOffset: 2 } }}
+            component="button" type="button" onClick={onPicture} aria-label="Change your profile picture"
+            sx={{
+              position: "relative", flexShrink: 0, p: 0, border: 0, bgcolor: "transparent", color: "inherit", cursor: "pointer", borderRadius: "50%",
+              "&:focus-visible": { outline: `2px solid ${colors.gold}`, outlineOffset: 3 },
+              "&:hover .cam": { bgcolor: colors.ink, color: colors.bg },
+            }}
           >
             <ProfileAvatar name={profile.displayName} src={profile.avatarUrl} size={72} badge={waiting}
               badgeLabel={waiting ? `${plural(waiting, "unclaimed result")} might be yours` : undefined} />
+            <Box className="cam" aria-hidden sx={{
+              position: "absolute", right: -2, bottom: -2, width: 28, height: 28, borderRadius: "50%", display: "grid", placeItems: "center",
+              bgcolor: colors.raised, color: colors.ink, border: `2px solid ${colors.bg}`,
+            }}>
+              <PhotoCameraOutlinedIcon sx={{ fontSize: 16 }} />
+            </Box>
           </Box>
           <Box sx={{ minWidth: 0 }}>
             <Typography component="h1" sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.375rem", sm: "1.75rem" }, lineHeight: 1.15, overflowWrap: "anywhere" }}>
               {profile.displayName || "Racer"}
             </Typography>
             <Typography sx={{ color: colors.muted, mt: 0.5 }}>
-              {[roleLabel(profile.role), character, profile.favoriteVehicle, player && player.registeredAt ? `joined ${fmtDate(String(player.registeredAt).slice(0, 10))}` : null].filter(Boolean).join(" · ")}
+              {[roleLabel(profile.role), character, player && player.registeredAt ? `joined ${fmtDate(String(player.registeredAt).slice(0, 10))}` : null].filter(Boolean).join(" · ")}
             </Typography>
           </Box>
         </Stack>
@@ -350,45 +306,51 @@ function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEd
   );
 }
 
-// Favourite tracks (picked in Edit profile), each with how you do on it, then where you actually score best.
-function FavouriteTracks({ favourites, stats, onEdit }) {
-  const all = useMemo(() => (stats ? bestTracks(stats.log) : []), [stats]);
-  const statOf = (t) => all.find((x) => x.track === t);
-  const best = all.filter((x) => favourites.indexOf(x.track) < 0).slice(0, 3);
-  const line = (st) => st
-    ? `${st.avgPts.toFixed(1)} pts avg${st.avgPos != null ? ` · ${st.avgPos.toFixed(1)} place` : ""} · ${plural(st.races, "race")}`
-    : "Not raced yet";
-  const grid = { display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(3, minmax(0,1fr))" } };
+// Your favourite track: always your best one, worked out from every cup you've raced (all seasons), by
+// points a race (tracks raced twice or more first). Then the next two best.
+function FavouriteTrack({ stats }) {
+  const list = useMemo(() => {
+    if (!stats) return [];
+    const twice = bestTracks(stats.log, { minRaces: 2 });
+    return twice.length ? twice : bestTracks(stats.log);
+  }, [stats]);
+  const [top, ...rest] = list;
+  const line = (st) => `${st.avgPts.toFixed(1)} pts a race${st.avgPos != null ? ` · ${st.avgPos.toFixed(1)} avg place` : ""} · ${plural(st.races, "race")}`;
 
   return (
-    <Panel title="Favourite tracks">
-      <Box sx={grid}>
-        {favourites.map((t) => (
-          <Box key={t} sx={{ minWidth: 0 }}>
-            <TrackImage track={t} label caption={trackCup(t) || "Custom"} />
-            <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }} noWrap>{line(statOf(t))}</Typography>
-          </Box>
-        ))}
-        {Array.from({ length: 3 - favourites.length }, (_, i) => (
-          <Box key={`empty-${i}`} component="button" type="button" onClick={onEdit}
-            sx={{ aspectRatio: "16 / 9", borderRadius: 1, border: `1px dashed ${colors.rule}`, bgcolor: "transparent", color: colors.muted, cursor: "pointer", font: "inherit", fontSize: "0.9375rem", fontWeight: 600, "&:hover": { borderColor: colors.ink, color: colors.ink } }}>
-            + Pick a favourite
-          </Box>
-        ))}
-      </Box>
-
-      {best.length > 0 && (
+    <Panel title="Favourite track">
+      {top ? (
         <>
-          <Typography component="h3" sx={{ fontWeight: 700, mt: 3, mb: 1 }}>Where you score best</Typography>
-          <Box sx={grid}>
-            {best.map((st) => (
-              <Box key={st.track} sx={{ minWidth: 0 }}>
-                <TrackImage track={st.track} label caption={st.wins ? plural(st.wins, "race win") : trackCup(st.track) || "Custom"} />
-                <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }} noWrap>{line(st)}</Typography>
-              </Box>
-            ))}
+          <Box sx={{ display: "grid", gap: 2, alignItems: "center", gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "minmax(0,3fr) minmax(0,2fr)" } }}>
+            <TrackImage track={top.track} label caption={trackCup(top.track) || "Custom"} />
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: "2rem", lineHeight: 1.1 }}>
+                {top.avgPts.toFixed(1)} <Box component="span" sx={{ fontSize: "1rem", fontWeight: 600, color: colors.muted }}>pts a race</Box>
+              </Typography>
+              <Typography sx={{ color: colors.muted, mt: 0.5 }}>
+                {[top.avgPos != null ? `${top.avgPos.toFixed(1)} avg place` : null, plural(top.races, "race"), top.wins ? plural(top.wins, "race win") : null].filter(Boolean).join(" · ")}
+              </Typography>
+              <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 1 }}>Your best track, from every cup you've raced. It changes as you race.</Typography>
+            </Box>
           </Box>
+          {rest.length > 0 && (
+            <>
+              <Typography component="h3" sx={{ fontWeight: 700, mt: 3, mb: 1 }}>Next best</Typography>
+              <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
+                {rest.slice(0, 2).map((st) => (
+                  <Box key={st.track} sx={{ minWidth: 0 }}>
+                    <TrackImage track={st.track} label caption={trackCup(st.track) || "Custom"} />
+                    <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }} noWrap>{line(st)}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </>
+          )}
         </>
+      ) : (
+        <Typography sx={{ color: colors.muted }}>
+          Your favourite track is your best one, worked out from your results. It shows up here after your first cup with its tracks recorded.
+        </Typography>
       )}
     </Panel>
   );
@@ -649,8 +611,10 @@ function SignedInView() {
   const { user, profile, isAdmin, signOut, updatePassword } = useAuth();
   const { state } = useLeagueData();
   const m = useMemo(() => (state && state.cups.length ? compute(state) : null), [state]);
+  const mAll = useMemo(() => (state && state.cups.length ? compute(state, { season: "all" }) : null), [state]);
   const { waiting } = useUnclaimed();
   const [editing, setEditing] = useState(false);
+  const [picture, setPicture] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -688,13 +652,14 @@ function SignedInView() {
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2 } }}>
       {savedFlash && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSavedFlash("")}>{savedFlash}</Alert>}
-      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.minCups : 0} slug={slug} provisionalCups={m && m.rated ? m.rated.cfg.provisional : 5} onEdit={() => setEditing(true)} waiting={waiting} />
+      <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.minCups : 0} slug={slug} provisionalCups={m && m.rated ? m.rated.cfg.provisional : 5} onEdit={() => setEditing(true)} onPicture={() => setPicture(true)} waiting={waiting} />
+      <AvatarEditor open={picture} onClose={() => setPicture(false)} />
       <UnclaimedResults />
       {editing && <ProfileEditor open profile={profile} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setSavedFlash("Profile saved"); }} />}
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, columnGap: 6, rowGap: 5, mt: 5, alignItems: "start" }}>
         <Stack spacing={5} sx={{ minWidth: 0 }}>
-          <FavouriteTracks favourites={profile.favoriteTracks || []} stats={stats} onEdit={() => setEditing(true)} />
+          <FavouriteTrack stats={player && mAll ? mAll.byId.get(player.id) : null} />
           <RatingPanel stats={stats} />
           <RecentForm stats={stats} />
           <MyActivity />

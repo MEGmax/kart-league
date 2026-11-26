@@ -179,6 +179,11 @@ alter table public.profiles add column if not exists email_cup_nights boolean no
 alter table public.profiles add column if not exists avatar_path text check (avatar_path is null or char_length(avatar_path) <= 200);
 alter table public.profiles drop constraint if exists profiles_avatar_own;
 alter table public.profiles add constraint profiles_avatar_own check (avatar_path is null or avatar_path like id::text || '/%');
+-- How the picture was cut from the original (v12): { source: '<user id>/<version>-orig.jpg', cx, cy, zoom }, so
+-- it can be re-centred later. cx/cy are the crop's centre as fractions of the original; zoom 1 fills the square.
+alter table public.profiles add column if not exists avatar_crop jsonb check (avatar_crop is null or pg_column_size(avatar_crop) <= 500);
+alter table public.profiles drop constraint if exists profiles_avatar_crop_own;
+alter table public.profiles add constraint profiles_avatar_crop_own check (avatar_crop is null or (avatar_crop->>'source') like id::text || '/%');
 
 -- Each person's secret for unsubscribe links. Not readable through the API.
 create table if not exists public.email_tokens (
@@ -361,7 +366,7 @@ drop policy if exists "update own" on public.profiles;
 create policy "read own or admin" on public.profiles for select to authenticated using (id = auth.uid() or public.is_admin());
 create policy "update own" on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 revoke insert, update, delete on public.profiles from anon, authenticated;
-grant update (display_name, color, favorite_character, favorite_vehicle, favorite_tracks, email_cup_nights, avatar_path, updated_at) on public.profiles to authenticated;
+grant update (display_name, color, favorite_character, favorite_vehicle, favorite_tracks, email_cup_nights, avatar_path, avatar_crop, updated_at) on public.profiles to authenticated;
 
 -- Submissions: members create and see their own; admins see and review all.
 drop policy if exists "read own or admin" on public.submissions;
@@ -1080,7 +1085,8 @@ create policy "cup photos: admins write" on storage.objects for all to authentic
 
 -- ============ v11: profile pictures in Storage ============
 -- A profile picture lives in the private "avatars" bucket as <user id>/<version>.jpg (a 256px square the
--- site re-encodes in the browser, so no EXIF); profiles.avatar_path points at it. Signed-in members can
+-- site re-encodes in the browser, so no EXIF), next to the original it was cut from (<version>-orig.jpg, at
+-- most 1024px, also re-encoded); profiles.avatar_path points at the square, avatar_crop at the original. Signed-in members can
 -- read pictures; each person writes and deletes only in their own folder.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   values ('avatars', 'avatars', false, 524288, array['image/jpeg'])
