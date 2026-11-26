@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
@@ -12,7 +11,7 @@ import { compute, playerSlug } from "../lib/standings";
 import { headToHead, rivalry } from "../lib/rivals";
 import { DEMO } from "../lib/demo";
 import { fmtDate } from "../lib/constants";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import CharacterFace from "../components/CharacterFace";
 import SeasonPicker, { useSeason } from "../components/SeasonPicker";
 import { Loading, PageTitle, SectionTitle, plural } from "../components/PageBits";
@@ -43,37 +42,37 @@ export default function RivalsPage() {
       <SeasonPicker season={season} seasons={seasons} setSeason={setSeason} />
 
       {rival ? (
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 1, borderLeft: `3px solid ${colors.hot}` }}>
-          <Typography variant="overline" sx={{ color: colors.muted, lineHeight: 1.4 }}>Rivalry of the season</Typography>
-          <Stack direction="row" spacing={1.5} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.5 }}>
+        <Box component="section" aria-label="Rivalry of the season">
+          <Typography sx={{ color: colors.muted }}>Rivalry of the season</Typography>
+          <Stack direction="row" spacing={1.5} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 1 }}>
             {[rival.a, rival.b].map((id, i) => {
               const s = m.byId.get(id);
               return (
                 <Stack key={id} direction="row" spacing={1} alignItems="center">
-                  {i === 1 && <Typography sx={{ color: colors.muted, fontWeight: 700, mr: 1 }}>vs</Typography>}
-                  <CharacterFace name={s && s.main && s.main.name} ring={s && s.player.color} size={36} />
-                  <Typography component={RouterLink} to={href(id)} sx={{ fontWeight: 800, fontSize: "1.15rem", color: "inherit", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}>{name(id)}</Typography>
+                  {i === 1 && <Typography sx={{ color: colors.muted, fontWeight: 600, mr: 1 }}>vs</Typography>}
+                  <CharacterFace name={s && s.main && s.main.name} size={48} />
+                  <Typography component={RouterLink} to={href(id)} sx={{ fontWeight: 800, fontSize: { xs: "1.375rem", sm: "1.75rem" }, color: "inherit", textDecoration: "none", "&:hover": { textDecoration: "underline" } }}>{name(id)}</Typography>
                 </Stack>
               );
             })}
           </Stack>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            {record(rival)} in {plural(rival.n, "cup")} together, {rival.diff ? `${name(rival.a)} +${rival.diff} points` : "dead level on points"}.
+          <Typography sx={{ mt: 1.25, fontSize: "1.125rem" }}>
+            <b>{record(rival)}</b> in {plural(rival.n, "cup")} together, {rival.diff ? `${name(rival.a)} +${rival.diff} points` : "dead level on points"}.
           </Typography>
-        </Paper>
+        </Box>
       ) : (
-        <Typography variant="body2" sx={{ color: colors.muted }}>The rivalry of the season appears once a pair has met in 6 cups.</Typography>
+        <Typography sx={{ color: colors.muted }}>The rivalry of the season appears once a pair has met in 6 cups.</Typography>
       )}
 
       {rows.length > 1 && (
         <>
           <SectionTitle title="Head-to-head grid" count="row player's record vs the column" />
-          <Paper sx={{ p: 1, overflowX: "auto" }}>
-            <Box component="table" sx={{ borderCollapse: "collapse", minWidth: "100%", "& th, & td": { p: 1, textAlign: "center", borderBottom: `1px solid ${colors.line}`, whiteSpace: "nowrap" }, "& tbody tr:last-of-type td, & tbody tr:last-of-type th": { borderBottom: "none" } }}>
+          <Box sx={{ overflowX: "auto" }}>
+            <Box component="table" sx={{ borderCollapse: "collapse", minWidth: "100%", "& th, & td": { p: 1, textAlign: "center", borderBottom: `1px solid ${colors.line}`, whiteSpace: "nowrap" }, "& thead th": { borderBottom: `2px solid ${colors.rule}` } }}>
               <thead>
                 <tr>
                   <th aria-label="Player" />
-                  {rows.map((c) => <Box component="th" key={c.player.id} scope="col" sx={{ fontSize: "0.8rem", color: colors.muted, fontWeight: 700 }}>{c.player.name}</Box>)}
+                  {rows.map((c) => <Box component="th" key={c.player.id} scope="col" sx={{ fontSize: "0.875rem", color: colors.muted, fontWeight: 600 }}>{c.player.name}</Box>)}
                 </tr>
               </thead>
               <tbody>
@@ -85,10 +84,9 @@ export default function RivalsPage() {
                       const x = h.get(r.player.id, c.player.id);
                       if (!x) return <Box component="td" key={c.player.id} sx={{ color: colors.muted }}>·</Box>;
                       return (
-                        <Box component="td" key={c.player.id} title={`${r.player.name} vs ${c.player.name}: ${record(x)}, ${x.diff > 0 ? "+" : ""}${x.diff} points over ${plural(x.n, "cup")}`}
-                          sx={{ bgcolor: x.w > x.l ? `${colors.good}22` : x.w < x.l ? `${colors.bad}22` : "transparent" }}>
-                          <Typography variant="body2" sx={{ fontFamily: fontData, fontWeight: 700 }}>{record(x)}</Typography>
-                          <Typography variant="caption" sx={{ fontFamily: fontData, color: x.diff >= 0 ? colors.good : colors.bad }}>{x.diff > 0 ? "+" : ""}{x.diff}</Typography>
+                        <Box component="td" key={c.player.id} title={`${r.player.name} vs ${c.player.name}: ${record(x)}, ${x.diff > 0 ? "+" : ""}${x.diff} points over ${plural(x.n, "cup")}`}>
+                          <Typography sx={{ fontWeight: x.w > x.l ? 800 : 500, color: x.w >= x.l ? colors.ink : colors.muted }}>{record(x)}</Typography>
+                          <Typography sx={{ fontSize: "0.875rem", color: colors.muted }}>{x.diff > 0 ? "+" : ""}{x.diff}</Typography>
                         </Box>
                       );
                     })}
@@ -96,27 +94,27 @@ export default function RivalsPage() {
                 ))}
               </tbody>
             </Box>
-          </Paper>
-          <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>Won–lost–tied on points in each cup both raced, and the points difference.</Typography>
+          </Box>
+          <Typography sx={{ color: colors.muted, mt: 1.5, fontSize: "0.9375rem" }}>Won–lost–tied on points in each cup both raced, and the points difference.</Typography>
         </>
       )}
 
       <SectionTitle title="Upsets" count={m.rated ? plural(m.upsets.length, "upset") : null} />
       {!m.upsets.length ? (
-        <Typography variant="body2" sx={{ color: colors.muted }}>No upsets yet: an upset is a cup won outright over a league player rated 75+ points higher going in.</Typography>
+        <Typography sx={{ color: colors.muted }}>No upsets yet: an upset is a cup won outright over a league player rated 75+ points higher going in.</Typography>
       ) : (
-        <Stack spacing={1}>
+        <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0, borderTop: `1px solid ${colors.line}` }}>
           {m.upsets.slice().reverse().map((u) => {
             const c = m.cups.find((x) => x.id === u.cupId);
             return (
-              <Paper key={u.cupId} sx={{ p: 1.5 }}>
-                <Typography variant="body2">
+              <Box component="li" key={u.cupId} sx={{ py: 1.25, borderBottom: `1px solid ${colors.line}` }}>
+                <Typography>
                   <b>{name(u.winner)}</b> won #{cupNum(u.cupId)} {c.cup} ({fmtDate(c.date)}) over {u.over.map(name).join(" and ")}.
                 </Typography>
-              </Paper>
+              </Box>
             );
           })}
-        </Stack>
+        </Box>
       )}
     </Container>
   );

@@ -1,12 +1,11 @@
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { DEFAULT_LEAGUE, RACE_POINTS, ord } from "../lib/constants";
 import { currentSeason, rankByFor, seasonPlan } from "../lib/standings";
 import { ratingSettings } from "../lib/rating";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import { PageTitle, SectionTitle } from "../components/PageBits";
 
 function rules(L, plan) {
@@ -68,32 +67,32 @@ function HowRatingWorks({ L }) {
     ["Margin cap", `${cfg.cap} points`, `Winning a cup by ${cfg.cap}+ counts as a full win`],
     ["Season carry-over", `${Math.round(cfg.carry * 100)}%`, `A season starts ${Math.round(cfg.carry * 100)}% of the way from ${cfg.start} to last season's rating`],
   ];
-  const code = { fontFamily: fontData, fontSize: "0.85rem", bgcolor: colors.bg2, border: `1px solid ${colors.line}`, borderRadius: 1.5, px: 1.5, py: 1, overflowX: "auto", whiteSpace: "pre" };
+  const code = { fontSize: "0.9375rem", fontWeight: 500, bgcolor: colors.raised, borderRadius: 1, px: 1.5, py: 1, overflowX: "auto", whiteSpace: "pre", minWidth: 0 };
   return (
     <>
       <SectionTitle title="How the rating works" />
-      <Paper sx={{ p: { xs: 2, sm: 3 }, display: "grid", gap: 1.5 }}>
-        <Typography variant="body2">
+      <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 1.5 }}>
+        <Typography>
           Each cup is scored as a set of head-to-head matches between the league players in it. With 4 humans, that's 3 matches each per cup. CPUs don't count.
         </Typography>
-        <Typography variant="body2">
+        <Typography>
           For each opponent, your <b>result</b> blends who finished ahead with the margin, so a 43–42 cup is close to a draw and a 60–24 cup is a full win.
           W is 1 for more points, ½ for a tie, 0 for fewer:
         </Typography>
         <Box sx={code}>{`S = ½·W + ½·clamp(½ + (your pts − their pts) / ${2 * cfg.cap}, 0, 1)`}</Box>
-        <Typography variant="body2">
+        <Typography>
           Your <b>expected</b> result comes from the rating gap, and your rating moves by the difference, averaged over your opponents:
         </Typography>
         <Box sx={code}>{"E  = 1 / (1 + 10^((their rating − your rating) / 400))\nΔR = K / (players − 1) × Σ (S − E)"}</Box>
-        <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", "& td, & th": { textAlign: "left", py: 0.75, pr: 1.5, borderBottom: `1px solid ${colors.line}`, fontSize: "0.875rem", verticalAlign: "top" }, "& th": { color: colors.muted, fontWeight: 600 } }}>
+        <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", "& td, & th": { textAlign: "left", py: 1, pr: 1.5, borderBottom: `1px solid ${colors.line}`, fontSize: "0.9375rem", verticalAlign: "top" }, "& th": { color: colors.muted, fontWeight: 600, borderBottom: `2px solid ${colors.rule}` } }}>
           <thead><tr><th>Setting</th><th>Value</th><th>Effect</th></tr></thead>
           <tbody>
             {rows.map(([k, v, e]) => (
-              <tr key={k}><td>{k}</td><td style={{ fontFamily: fontData, whiteSpace: "nowrap" }}>{v}</td><td style={{ color: colors.muted }}>{e}</td></tr>
+              <tr key={k}><td>{k}</td><td style={{ whiteSpace: "nowrap" }}>{v}</td><td style={{ color: colors.muted }}>{e}</td></tr>
             ))}
           </tbody>
         </Box>
-      </Paper>
+      </Box>
     </>
   );
 }
@@ -111,29 +110,30 @@ export default function RulesPage() {
   return (
     <Container maxWidth="md" sx={{ pt: 1 }}>
       <PageTitle title="Regular season rules" sub={L.season} />
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
-        <Box component="ol" sx={{ m: 0, pl: 3, display: "grid", gap: 2.5 }}>
-          {list.map(([h, p, table, tag]) => (
-            <li key={h}>
-              <Typography sx={{ fontWeight: 800 }}>
+      <Box component="ol" sx={{ m: 0, p: 0, listStyle: "none" }}>
+        {list.map(([h, p, table, tag], i) => (
+          <Box component="li" key={h} sx={{ display: "grid", gridTemplateColumns: "36px minmax(0,1fr)", columnGap: 1, py: 2, borderTop: i ? `1px solid ${colors.line}` : 0 }}>
+            <Box aria-hidden sx={{ fontWeight: 800, fontStyle: "italic", fontSize: "1.375rem", lineHeight: 1.1 }}>{i + 1}</Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>
                 {h}
-                {tag && <Box component="span" sx={{ ml: 1, px: 0.75, py: 0.1, borderRadius: 1, fontSize: "0.7rem", fontWeight: 800, verticalAlign: "middle", bgcolor: tag === "New" ? colors.cool : colors.gold, color: "#14100A" }}>{tag}</Box>}
+                {tag && <Box component="span" sx={{ ml: 1, px: 0.75, borderRadius: 0.5, border: `1px solid ${colors.rule}`, fontSize: "0.8125rem", fontWeight: 600, verticalAlign: "2px", color: colors.muted }}>{tag}</Box>}
               </Typography>
-              <Typography variant="body2" sx={{ color: colors.muted, mt: 0.5 }}>{p}</Typography>
+              <Typography sx={{ mt: 0.5 }}>{p}</Typography>
               {table && (
-                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))", gap: 0.75, mt: 1.5 }}>
-                  {RACE_POINTS.map((pts, i) => (
-                    <Box key={i} sx={{ textAlign: "center", border: `1px solid ${colors.line}`, borderRadius: 1.5, py: 0.75, bgcolor: colors.bg2 }}>
-                      <Typography sx={{ fontFamily: fontData, fontWeight: 800 }}>{pts}</Typography>
-                      <Typography variant="caption" sx={{ color: colors.muted }}>{i + 1}{ord(i + 1)}</Typography>
+                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(48px, 1fr))", mt: 1.5, borderTop: `1px solid ${colors.line}` }}>
+                  {RACE_POINTS.map((pts, k) => (
+                    <Box key={k} sx={{ textAlign: "center", py: 0.75, borderBottom: `1px solid ${colors.line}` }}>
+                      <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }}>{k + 1}{ord(k + 1)}</Typography>
+                      <Typography sx={{ fontWeight: 700 }}>{pts}</Typography>
                     </Box>
                   ))}
                 </Box>
               )}
-            </li>
-          ))}
-        </Box>
-      </Paper>
+            </Box>
+          </Box>
+        ))}
+      </Box>
       {byRating && <HowRatingWorks L={L} />}
     </Container>
   );

@@ -160,13 +160,13 @@ export default function AddPage() {
     return (
       <Container maxWidth="md">
         <PageTitle title="Record a cup night" />
-        <Paper sx={{ p: 3, display: "grid", gap: 1.5, justifyItems: "start" }}>
+        <Box sx={{ display: "grid", gap: 1.5, justifyItems: "start" }}>
           <Typography sx={{ fontWeight: 700 }}>Sign in to add results.</Typography>
           <Typography variant="body2" sx={{ color: colors.muted }}>
             Members submit a night's results for an admin to check; admins save them straight to the standings.
           </Typography>
           <Button component={RouterLink} to="/account" variant="contained">Sign in</Button>
-        </Paper>
+        </Box>
       </Container>
     );
   }
@@ -286,7 +286,7 @@ export default function AddPage() {
       />
       {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice("")}>{notice}</Alert>}
       {night.mode === "add" && isPristine(night) && (
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2.5, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", borderLeft: `3px solid ${colors.accent}` }}>
+        <Box sx={{ py: 1.5, borderBottom: `1px solid ${colors.line}`, mb: 2.5, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
           <Box sx={{ flex: 1, minWidth: 220 }}>
             <Typography sx={{ fontWeight: 800 }}>Quickest: upload the photos</Typography>
             <Typography variant="body2" sx={{ color: colors.muted }}>
@@ -294,12 +294,12 @@ export default function AddPage() {
             </Typography>
           </Box>
           <PhotoPickButton variant="contained" />
-        </Paper>
+        </Box>
       )}
 
       <Stack spacing={2.5}>
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>
-          <Typography variant="overline" sx={{ color: colors.accent, lineHeight: 1.4 }}>The night</Typography>
+        <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2 }}>
+          <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>The night</Typography>
           {(night.mode === "add" || night.mode === "submit") && pastNights.length > 0 && (
             <TextField select size="small" label="Start from a scheduled cup night (optional)" value="" onChange={(e) => startFromEvent(e.target.value)} sx={{ maxWidth: 460 }}>
               {pastNights.map((e) => {
@@ -343,23 +343,23 @@ export default function AddPage() {
           </Box>
           <TextField size="small" label="Notes (optional)" value={night.notes} onChange={(e) => set({ notes: e.target.value })} inputProps={{ maxLength: 500 }}
             placeholder="Anything worth remembering about tonight" multiline minRows={1} />
-        </Paper>
+        </Box>
 
         <CupsPicker night={night} setNight={setNight} templates={templates} singleCup={singleCup} />
         <LineupEditor night={night} setNight={setNight} players={players} />
 
         {night.cups.length > 0 && night.racers.some((r) => r.assign) ? (
           <Stack spacing={2}>
-            <Typography variant="overline" sx={{ color: colors.accent }}>3 · Results</Typography>
+            <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>3 · Results</Typography>
             {night.cups.map((c, i) => (
               <CupResults key={c.key} night={night} cup={c} index={i} setNight={setNight} players={players} clashes={clashes} />
             ))}
           </Stack>
         ) : (
-          <Paper sx={{ p: 2.5, border: `1px dashed ${colors.line}` }}>
-            <Typography variant="overline" sx={{ color: colors.muted }}>3 · Results</Typography>
+          <Box>
+            <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem", color: colors.muted }}>3 · Results</Typography>
             <Typography variant="body2" sx={{ color: colors.muted }}>Add the cups and racers above, then enter everyone's points here.</Typography>
-          </Paper>
+          </Box>
         )}
 
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 1.5, position: { md: "sticky" }, bottom: { md: 12 }, zIndex: 2 }}>

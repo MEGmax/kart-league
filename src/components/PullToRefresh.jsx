@@ -87,7 +87,7 @@ export default function PullToRefresh({ top = 56 }) {
         position: "fixed", left: "50%", top, zIndex: (t) => t.zIndex.appBar - 1, pointerEvents: "none",
         width: 40, height: 40, ml: "-20px", borderRadius: "50%",
         display: "flex", alignItems: "center", justifyContent: "center",
-        bgcolor: colors.panel2, border: `1px solid ${ready || busy ? colors.accent : colors.line}`,
+        bgcolor: colors.raised, border: `1px solid ${ready || busy ? colors.gold : colors.line}`,
         boxShadow: "0 6px 18px rgba(0,0,0,.45)",
         opacity: shown ? Math.min(1, pull / 40 + (busy ? 1 : 0)) : 0,
         transform: `translateY(${shown ? pull - 28 : -60}px)`,
@@ -95,9 +95,9 @@ export default function PullToRefresh({ top = 56 }) {
       }}
     >
       {busy ? (
-        <CircularProgress size={20} thickness={5} sx={{ color: colors.accent }} />
+        <CircularProgress size={20} thickness={5} sx={{ color: colors.gold }} />
       ) : (
-        <RefreshIcon sx={{ fontSize: 22, color: ready ? colors.accent : colors.muted, transform: `rotate(${(pull / TRIGGER) * 270}deg)` }} />
+        <RefreshIcon sx={{ fontSize: 22, color: ready ? colors.gold : colors.muted, transform: `rotate(${(pull / TRIGGER) * 270}deg)` }} />
       )}
     </Box>
   );

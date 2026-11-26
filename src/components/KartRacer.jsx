@@ -64,7 +64,7 @@ export default function KartRacer({ bottom = 0 }) {
         <circle className="puff puff2" cx="4" cy="44" r="3" fill="rgba(255,255,255,.45)" />
         <g className="body">
           {/* Shadow under the driver, then the driver: Mario's face in a helmet ring. */}
-          <circle cx="52" cy="22" r="19" fill={colors.red} />
+          <circle cx="52" cy="22" r="19" fill={colors.brandRed} />
           {face
             ? <image href={face} x="35" y="5" width="34" height="34" clipPath="url(#kart-face)" preserveAspectRatio="xMidYMid slice" />
             : <circle cx="52" cy="22" r="17" fill="#f2c9a0" />}
@@ -72,14 +72,14 @@ export default function KartRacer({ bottom = 0 }) {
           <line x1="70" y1="32" x2="78" y2="42" stroke="#15151c" strokeWidth="3" strokeLinecap="round" />
           <ellipse cx="70" cy="31" rx="2.5" ry="6" fill="#15151c" transform="rotate(-30 70 31)" />
           {/* Chassis: a low red body with a white racing stripe and a navy nose. */}
-          <path d="M6 46 Q8 38 22 38 L40 38 Q46 44 58 44 L86 42 Q106 42 114 50 L112 56 L10 56 Q5 54 6 46 Z" fill={colors.red} />
+          <path d="M6 46 Q8 38 22 38 L40 38 Q46 44 58 44 L86 42 Q106 42 114 50 L112 56 L10 56 Q5 54 6 46 Z" fill={colors.brandRed} />
           <path d="M22 45 L104 46" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
           <path d="M100 43 Q110 44 114 50 L112 56 L100 56 Z" fill={colors.navy} />
           {/* Exhaust pipe and spoiler. */}
           <rect x="2" y="43" width="10" height="5" rx="2" fill="#9aa3b5" />
           <path d="M8 38 L20 30 L24 30 L20 38 Z" fill={colors.navy} />
           <circle cx="58" cy="50" r="5" fill="#fff" />
-          <text x="58" y="52.6" textAnchor="middle" fontSize="7" fontWeight="900" fill={colors.red} fontFamily="Arial Black, sans-serif">M</text>
+          <text x="58" y="52.6" textAnchor="middle" fontSize="7" fontWeight="900" fill={colors.brandRed} fontFamily="Arial Black, sans-serif">M</text>
         </g>
         <Wheel cx={28} cy={58} r={12} />
         <Wheel cx={98} cy={60} r={10} />

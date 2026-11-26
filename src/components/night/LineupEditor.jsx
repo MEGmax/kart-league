@@ -51,9 +51,9 @@ export default function LineupEditor({ night, setNight, players, locked, title =
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 } }}>
+    <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}` }}>
       <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.5, gap: 1, flexWrap: "wrap" }}>
-        <Typography variant="overline" sx={{ color: colors.accent }}>{title}</Typography>
+        <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>{title}</Typography>
         <Typography variant="body2" sx={{ color: colors.muted }}>{night.racers.length} racer{night.racers.length === 1 ? "" : "s"}</Typography>
       </Stack>
       <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
@@ -64,7 +64,6 @@ export default function LineupEditor({ night, setNight, players, locked, title =
       <Stack spacing={1.5}>
         {night.racers.map((r, i) => {
           const results = night.cups.filter((c) => hasResult(cellOf(c, r.key), night.entry)).length;
-          const ring = r.assign && r.assign !== "new" && r.assign !== "unclaimed" ? (players.find((p) => p.id === r.assign) || {}).color : undefined;
           return (
             <Box
               key={r.key}
@@ -73,7 +72,7 @@ export default function LineupEditor({ night, setNight, players, locked, title =
                 gridTemplateColumns: { xs: "44px minmax(0,1fr) 36px", sm: "44px minmax(0,1.2fr) minmax(0,1fr) 36px" },
               }}
             >
-              <CharacterFace name={r.character} ring={ring} size={44} />
+              <CharacterFace name={r.character} size={44} />
               <Box sx={{ display: "grid", gap: 1, minWidth: 0 }}>
                 <TextField
                   select size="small" label={`Racer ${i + 1}`} value={r.assign} disabled={locked}
@@ -130,7 +129,7 @@ export default function LineupEditor({ night, setNight, players, locked, title =
           {players.length > 0 && <Button size="small" onClick={addEveryone}>Add every league player</Button>}
         </Stack>
       )}
-    </Paper>
+    </Box>
   );
 }
 

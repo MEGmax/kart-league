@@ -68,7 +68,7 @@ export function buildIcs(event, opts) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Kart Night League//Cup Nights//EN",
+    "PRODID:-//Night Kart League//Cup Nights//EN",
     "CALSCALE:GREGORIAN",
     `METHOD:${method}`,
     "BEGIN:VEVENT",
@@ -82,7 +82,7 @@ export function buildIcs(event, opts) {
     opts.url ? `URL:${opts.url}` : null,
     `STATUS:${method === "CANCEL" ? "CANCELLED" : "CONFIRMED"}`,
     opts.organizer && opts.organizer.email
-      ? `ORGANIZER;CN=${param(opts.organizer.name || "Kart Night League")}:${mailto(opts.organizer.email)}` : null,
+      ? `ORGANIZER;CN=${param(opts.organizer.name || "Night Kart League")}:${mailto(opts.organizer.email)}` : null,
     opts.attendee && opts.attendee.email
       ? `ATTENDEE;CN=${param(opts.attendee.name || opts.attendee.email)};RSVP=FALSE:${mailto(opts.attendee.email)}` : null,
     "TRANSP:OPAQUE",

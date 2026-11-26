@@ -2,20 +2,18 @@ import Box from "@mui/material/Box";
 import { charSrc, hashHue, initials } from "../lib/constants";
 import { colors } from "../theme";
 
-// A round character portrait; `ring` is a player color for the outline.
-export default function CharacterFace({ name, size = 36, ring, full = false }) {
+// A round character portrait on a neutral disc.
+export default function CharacterFace({ name, size = 36, full = false }) {
   const src = charSrc(name, full);
   const sx = {
-    width: size, height: size, borderRadius: "50%", flexShrink: 0,
-    border: `2px solid ${ring || colors.line}`, overflow: "hidden",
+    width: size, height: size, borderRadius: "50%", flexShrink: 0, overflow: "hidden",
     display: "flex", alignItems: "center", justifyContent: "center",
-    bgcolor: colors.panel2, fontFamily: "inherit", fontWeight: 700,
-    fontSize: size * 0.34, color: colors.ink,
+    bgcolor: colors.raised, fontWeight: 700, fontSize: size * 0.34, color: colors.ink,
   };
   if (!src) {
     return (
       <Box sx={sx} title={name || "No character"}>
-        <Box sx={{ color: `hsl(${hashHue(name)} 70% 70%)` }}>{name ? initials(name) : "?"}</Box>
+        <Box sx={{ color: `hsl(${hashHue(name)} 70% 75%)` }}>{name ? initials(name) : "?"}</Box>
       </Box>
     );
   }

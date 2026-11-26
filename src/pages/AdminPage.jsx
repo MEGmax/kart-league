@@ -31,7 +31,7 @@ import { groupBatches, useAdminData } from "../lib/accountData";
 import { uid } from "../lib/night";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { legacyPhotoIds, moveLegacyPhoto } from "../lib/cupPhotos";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import CupIcon from "../components/CupIcon";
 import CharacterChip from "../components/CharacterChip";
 import { Loading, PageTitle, SectionTitle, PlayerDot, plural } from "../components/PageBits";
@@ -85,7 +85,7 @@ function ClaimCard({ c, state, m, users, claims }) {
   const pl = state.players.find((p) => p.userId === c.userId);
   const others = claims.filter((x) => x.id !== c.id && x.cupId === c.cupId && x.rid === c.rid).length;
   return (
-    <Paper sx={{ p: 2, display: "grid", gap: 1 }}>
+    <Box sx={{ py: 1.5, borderBottom: `1px solid ${colors.line}`, display: "grid", gap: 1 }}>
       <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
         <Typography sx={{ fontWeight: 800 }}>{who ? who.displayName || who.email : "A member"}</Typography>
         <Typography variant="body2" sx={{ color: colors.muted }}>asks for</Typography>
@@ -115,7 +115,7 @@ function ClaimCard({ c, state, m, users, claims }) {
           <Button size="small" onClick={() => setRejecting(true)}>Decline</Button>
         </Stack>
       )}
-    </Paper>
+    </Box>
   );
 }
 
@@ -135,7 +135,7 @@ function BatchCard({ subs, state }) {
   }
 
   return (
-    <Paper sx={{ p: 2, display: "grid", gap: 1.5 }}>
+    <Box sx={{ py: 1.5, borderBottom: `1px solid ${colors.line}`, display: "grid", gap: 1.5 }}>
       <Stack direction="row" spacing={1} alignItems="baseline" useFlexGap flexWrap="wrap">
         <Typography sx={{ fontWeight: 800 }}>{plural(subs.length, "cup")} from {first.submitterName || "a member"}</Typography>
         <Typography variant="body2" sx={{ color: colors.muted }}>
@@ -166,7 +166,7 @@ function BatchCard({ subs, state }) {
           <Button size="small" onClick={() => setRejecting(true)}>Reject</Button>
         </Stack>
       )}
-    </Paper>
+    </Box>
   );
 }
 
@@ -198,7 +198,7 @@ function PlayersEditor({ state, m, admin }) {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>
+    <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2 }}>
       <Typography variant="body2" sx={{ color: colors.muted, maxWidth: "75ch" }}>
         Add people before they sign up. Put their email on the player: when they create an account with that email and confirm it, it links automatically and their registration date shows as a badge. You can also link an existing account by hand.
       </Typography>
@@ -241,7 +241,7 @@ function PlayersEditor({ state, m, admin }) {
                         : p.email ? <Chip size="small" variant="outlined" label="Invited" />
                         : <Chip size="small" variant="outlined" label="No account" sx={{ color: colors.muted }} />}
                     </TableCell>
-                    <TableCell align="right" sx={{ fontFamily: fontData }}>{cups}</TableCell>
+                    <TableCell align="right">{cups}</TableCell>
                     <TableCell>
                       {!racing && <Button size="small" onClick={() => patch(i, { remove: !p.remove })}>{p.remove ? "Undo" : "Remove"}</Button>}
                     </TableCell>
@@ -258,7 +258,7 @@ function PlayersEditor({ state, m, admin }) {
         <Button size="small" variant="contained" disabled={busy || !draft} onClick={save}>{busy ? "Saving…" : "Save players"}</Button>
         {draft && <Button size="small" onClick={() => { setDraft(null); setError(""); }}>Discard changes</Button>}
       </Stack>
-    </Paper>
+    </Box>
   );
 }
 
@@ -361,7 +361,7 @@ function SettingsEditor({ league }) {
 
   const num = (label, k, step = 1) => <TextField size="small" type="number" label={label} value={cur[k]} onChange={set(k)} inputProps={{ min: 0, step }} />;
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>
+    <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2 }}>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, minmax(0,1fr))" } }}>
         <TextField size="small" label="League name" value={cur.name} onChange={set("name")} inputProps={{ maxLength: 60 }} />
         <TextField size="small" label="Season" value={cur.season} onChange={set("season")} inputProps={{ maxLength: 40 }} />
@@ -378,7 +378,7 @@ function SettingsEditor({ league }) {
         </TextField>
         {num("Playoff cups per round", "playoffCupsPerRound")}
       </Box>
-      <Typography variant="overline" sx={{ color: colors.muted, lineHeight: 1.4 }}>Ranking and rating (season {cur.currentSeason})</Typography>
+      <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem", color: colors.muted }}>Ranking and rating (season {cur.currentSeason})</Typography>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, minmax(0,1fr))" } }}>
         <TextField select size="small" label="Rank this season by" value={cur.rankBy} onChange={set("rankBy")}>
           <MenuItem value="pct">Points percentage</MenuItem>
@@ -398,7 +398,7 @@ function SettingsEditor({ league }) {
         <Box sx={{ flex: 1 }} />
         {!s && <StartSeason league={league} />}
       </Stack>
-    </Paper>
+    </Box>
   );
 }
 
@@ -445,7 +445,7 @@ function PhotoMover({ cups }) {
   return (
     <>
       <SectionTitle title="Results photos" count={`${ids.length} to move`} />
-      <Paper sx={{ p: 2.5, display: "grid", gap: 1.5 }}>
+      <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 1.5 }}>
         <Typography variant="body2">
           {ids.length} photo{ids.length === 1 ? " is" : "s are"} still stored the old way, with the phone's metadata, including GPS location for
           some. Moving them strips that, makes thumbnails, and puts them in Storage, where only signed-in members can see them.
@@ -456,7 +456,7 @@ function PhotoMover({ cups }) {
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Button variant="contained" size="small" disabled={busy} onClick={move}>{busy ? `Moving… ${done}/${ids.length}` : `Move ${ids.length} photo${ids.length === 1 ? "" : "s"}`}</Button>
         </Stack>
-      </Paper>
+      </Box>
     </>
   );
 }

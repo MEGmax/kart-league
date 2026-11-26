@@ -34,7 +34,7 @@ import { alreadySaved, nightFromPhotos } from "../lib/upload";
 import { allTemplates, cellOf, cellPoints, racerName, today, uid, validateNight } from "../lib/night";
 import { saveNightAsAdmin } from "../lib/saveNight";
 import { BUILTIN_CUPS, UNKNOWN_CUP, ord } from "../lib/constants";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import { Loading, PageTitle } from "../components/PageBits";
 import CharacterFace from "../components/CharacterFace";
 import TrackImage from "../components/TrackImage";
@@ -66,16 +66,16 @@ function PhotoTile({ item, onRemove }) {
   const st = item.status;
   return (
     <Box sx={{ position: "relative", width: 104, flexShrink: 0 }}>
-      <Box sx={{ width: 104, height: 78, borderRadius: 1.5, overflow: "hidden", bgcolor: colors.panel2, border: `1px solid ${st === "error" ? colors.bad : colors.line}` }}>
+      <Box sx={{ width: 104, height: 78, borderRadius: 1.5, overflow: "hidden", bgcolor: colors.raised, border: `1px solid ${st === "error" ? colors.bad : colors.line}` }}>
         {item.b64 && <img src={`data:image/jpeg;base64,${item.b64}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: st === "done" ? 1 : 0.55 }} />}
       </Box>
       <Box sx={{ position: "absolute", inset: 0, height: 78, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-        {(st === "preparing" || st === "reading") && <CircularProgress size={26} sx={{ color: colors.accent }} />}
+        {(st === "preparing" || st === "reading") && <CircularProgress size={26} sx={{ color: colors.gold }} />}
         {st === "done" && <CheckCircleIcon sx={{ color: colors.good, position: "absolute", top: 4, right: 4, fontSize: 20, filter: "drop-shadow(0 1px 2px #000)" }} />}
         {st === "error" && <ErrorOutlineIcon sx={{ color: colors.bad, fontSize: 28 }} />}
       </Box>
       <IconButton size="small" aria-label="Remove this photo" onClick={onRemove}
-        sx={{ position: "absolute", top: -8, left: -8, bgcolor: colors.panel2, border: `1px solid ${colors.line}`, p: 0.25, "&:hover": { bgcolor: colors.panel } }}>
+        sx={{ position: "absolute", top: -8, left: -8, bgcolor: colors.raised, border: `1px solid ${colors.line}`, p: 0.25, "&:hover": { bgcolor: colors.raised } }}>
         <CloseIcon sx={{ fontSize: 14 }} />
       </IconButton>
       <Typography variant="caption" sx={{ display: "block", mt: 0.5, lineHeight: 1.25, color: st === "error" ? colors.bad : colors.muted }}>
@@ -131,7 +131,7 @@ function CupCard({ cup, index, night, setNight, players, templates }) {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>
+    <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2 }}>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "200px minmax(0,1fr)" }, alignItems: "start" }}>
         {cup.photo && (
           <Box sx={{ position: "relative" }}>
@@ -140,13 +140,13 @@ function CupCard({ cup, index, night, setNight, players, templates }) {
                 sx={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 1.5, border: `1px solid ${colors.line}`, bgcolor: "#000", display: "block" }} />
             </Box>
             <IconButton size="small" aria-label="Turn the photo" title="Turn the photo (it's saved as the cup's record)" onClick={turn} disabled={turning}
-              sx={{ position: "absolute", right: 6, bottom: 6, bgcolor: "rgba(7,10,31,.8)", "&:hover": { bgcolor: colors.panel2 } }}>
+              sx={{ position: "absolute", right: 6, bottom: 6, bgcolor: "rgba(7,10,31,.8)", "&:hover": { bgcolor: colors.raised } }}>
               <RotateRightIcon fontSize="small" />
             </IconButton>
           </Box>
         )}
         <Box sx={{ display: "grid", gap: 1.5, minWidth: 0 }}>
-          <Typography variant="overline" sx={{ color: colors.accent, lineHeight: 1.4 }}>Cup {index + 1}</Typography>
+          <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>Cup {index + 1}</Typography>
           <TextField select size="small" label="Which cup" value={choice} onChange={(e) => pickCup(e.target.value)}
             SelectProps={{ renderValue: (v) => (v === OWN ? "The 4 tracks we picked" : <Stack direction="row" spacing={1} alignItems="center"><CupIcon cup={v} size={20} /><span>{v === UNKNOWN_CUP ? "Unknown cup (no tracks)" : v}</span></Stack>) }}>
             <MenuItem value={OWN}>The 4 tracks we picked…</MenuItem>
@@ -183,7 +183,7 @@ function CupCard({ cup, index, night, setNight, players, templates }) {
       <Box sx={{ display: "grid", gap: 1 }}>
         {racers.map(({ r, pts }, i) => (
           <Box key={r.key} sx={{ display: "grid", gridTemplateColumns: "28px 34px minmax(0,1fr) 92px", gap: 1.25, alignItems: "center" }}>
-            <Typography sx={{ fontFamily: fontData, color: colors.muted, fontSize: "0.85rem" }}>{i + 1}{ord(i + 1)}</Typography>
+            <Typography sx={{ color: colors.muted, fontSize: "0.85rem" }}>{i + 1}{ord(i + 1)}</Typography>
             <CharacterFace name={cellOf(cup, r.key).character || r.character} size={34} />
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontWeight: 700, color: r.assign === "unclaimed" ? colors.muted : colors.ink }} noWrap>{racerName(r, players)}</Typography>
@@ -195,7 +195,7 @@ function CupCard({ cup, index, night, setNight, players, templates }) {
           </Box>
         ))}
       </Box>
-    </Paper>
+    </Box>
   );
 }
 
@@ -345,10 +345,10 @@ export default function UploadPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 2.5 }}>
+      <Box sx={{ mb: 2.5 }}>
         {!items.length ? (
           <Box sx={{ display: "grid", justifyItems: "center", gap: 1.5, py: { xs: 2, sm: 3 }, textAlign: "center" }}>
-            <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 48, color: colors.accent }} />
+            <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 48, color: colors.muted }} />
             <Typography sx={{ fontWeight: 800 }}>Choose the night's photos</Typography>
             <Typography variant="body2" sx={{ color: colors.muted, maxWidth: "56ch" }}>
               One photo of each cup's final standings (the "You got Nth place!" screen), all at once. Race screens work too.
@@ -378,7 +378,7 @@ export default function UploadPage() {
             </Stack>
           </Stack>
         )}
-      </Paper>
+      </Box>
 
       {buildError && <Alert severity="error" sx={{ mb: 2 }}>{buildError}</Alert>}
 
@@ -395,7 +395,7 @@ export default function UploadPage() {
           )}
           {skipped > 0 && <Alert severity="info">{skipped} photo{skipped === 1 ? " wasn't a results screen and was" : "s weren't results screens and were"} left out.</Alert>}
 
-          <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr 1fr", sm: "200px 200px 1fr" }, alignItems: "center" }}>
+          <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr 1fr", sm: "200px 200px 1fr" }, alignItems: "center" }}>
             <TextField size="small" type="date" label="Date raced" value={night.date} onChange={(e) => setNight((x) => ({ ...x, date: e.target.value }))} InputLabelProps={{ shrink: true }} />
             <TextField select size="small" label="Season week" value={night.week} onChange={(e) => setNight((x) => ({ ...x, week: Number(e.target.value) }))}>
               {weeks.map((w) => <MenuItem key={w} value={w}>Week {w}</MenuItem>)}
@@ -403,7 +403,7 @@ export default function UploadPage() {
             <Typography variant="body2" sx={{ color: colors.muted, gridColumn: { xs: "1 / -1", sm: "auto" } }}>
               {n} cup{n === 1 ? "" : "s"} · {night.racers.length} racer{night.racers.length === 1 ? "" : "s"} · out of {night.max} points per cup
             </Typography>
-          </Paper>
+          </Box>
 
           <LineupEditor
             night={night} setNight={setNight} players={state.players} title="Who's who"

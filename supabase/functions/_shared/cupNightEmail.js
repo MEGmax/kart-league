@@ -3,7 +3,7 @@
 import { buildIcs, cupsLabel } from "./ics.js";
 
 export const DEFAULT_SITE_URL = "https://megmax.github.io/kart-league/";
-export const DEFAULT_FROM = "Kart Night League <cup-nights@example.com>";
+export const DEFAULT_FROM = "Night Kart League <cup-nights@example.com>";
 
 // Reads the function's environment (Deno.env / process.env) into one config object.
 // Emails are only really sent with EMAIL_MODE=send and an API key; anything else logs them.
@@ -16,7 +16,7 @@ export function emailConfig(env) {
     from: get("EMAIL_FROM") || DEFAULT_FROM,
     siteUrl: withSlash(get("SITE_URL") || DEFAULT_SITE_URL),
     functionsUrl: get("SUPABASE_URL") ? get("SUPABASE_URL").replace(/\/$/, "") + "/functions/v1" : "",
-    leagueName: get("LEAGUE_NAME") || "Kart Night League",
+    leagueName: get("LEAGUE_NAME") || "Night Kart League",
   };
 }
 
@@ -24,7 +24,7 @@ function withSlash(u) {
   return u.endsWith("/") ? u : u + "/";
 }
 
-// "Kart Night League <a@b.c>" -> { name, email }
+// "Night Kart League <a@b.c>" -> { name, email }
 export function parseAddress(s) {
   const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(s || "");
   return m ? { name: m[1].replace(/^"|"$/g, ""), email: m[2] } : { name: "", email: String(s || "").trim() };

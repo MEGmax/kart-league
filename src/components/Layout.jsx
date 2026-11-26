@@ -8,7 +8,6 @@ import Badge from "@mui/material/Badge";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 import Button from "@mui/material/Button";
-import Chip from "@mui/material/Chip";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
@@ -64,7 +63,7 @@ function sectionOf(pathname) {
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, isAdmin, myName, ready } = useAuth();
+  const { user, isAdmin, myName, ready } = useAuth();
   const { state } = useLeagueData();
   const [moreAt, setMoreAt] = useState(null);
 
@@ -74,7 +73,7 @@ export default function Layout() {
   const tabs = isAdmin ? TABS.concat({ value: "/admin", label: "Admin", icon: <AdminPanelSettingsOutlinedIcon /> }) : TABS;
   // Pages that aren't tabs (Account, Add, Build…) select no tab at all.
   const current = tabs.some((t) => t.value === section) ? section : false;
-  const league = state ? state.league : { name: "Kart Night League", season: "" };
+  const league = state ? state.league : { name: "Night Kart League", season: "" };
   usePageTitle(location.pathname, league.name);
 
   // A new page starts at the top. Opening or closing a racer's drawer (/standings ⇄ /standings/x) doesn't.
@@ -107,12 +106,12 @@ export default function Layout() {
               component={RouterLink}
               to="/standings"
               aria-label={`${league.name}: home`}
-              sx={{ display: "flex", flexShrink: 0, mr: { xs: 0, sm: 1 }, transition: "transform .15s", "&:hover": { transform: "translateY(-1px) rotate(-3deg)" } }}
+              sx={{ display: "flex", flexShrink: 0, mr: { xs: 0.5, sm: 1.5 }, borderRadius: 1, "&:focus-visible": { outline: `2px solid ${colors.gold}`, outlineOffset: 2 } }}
             >
               <Box component="img" src={LOGO_SRC} alt="NKL" sx={{ height: 40, width: "auto", display: "block" }} />
             </Box>
             {/* Phones: the page name here, the tabs in the bottom bar. */}
-            <Typography sx={{ display: { xs: "block", md: "none" }, flex: 1, minWidth: 0, fontFamily: fontDisplay, fontSize: "0.8rem", letterSpacing: "0.04em", textTransform: "uppercase" }} noWrap>
+            <Typography sx={{ display: { xs: "block", md: "none" }, flex: 1, minWidth: 0, fontFamily: fontDisplay, fontSize: "0.875rem" }} noWrap>
               {(tabs.find((t) => t.value === section) || {}).label || ""}
             </Typography>
             <Tabs
@@ -124,7 +123,7 @@ export default function Layout() {
               sx={{
                 display: { xs: "none", md: "flex" },
                 flex: 1, minHeight: BAR_H, alignSelf: "stretch",
-                "& .MuiTabs-indicator": { height: 3, borderRadius: "3px 3px 0 0", bgcolor: colors.hot },
+                "& .MuiTabs-indicator": { height: 2, bgcolor: colors.ink },
               }}
             >
               {tabs.map((t) => (
@@ -134,8 +133,8 @@ export default function Layout() {
                   label={tabLabel(t)}
                   aria-label={tabAria(t)}
                   sx={{
-                    minHeight: BAR_H, minWidth: 0, px: 2, fontFamily: "inherit", fontWeight: 700,
-                    fontSize: "0.88rem", textTransform: "none", color: colors.muted,
+                    minHeight: BAR_H, minWidth: 0, px: 1.5, fontWeight: 600,
+                    fontSize: "0.9375rem", textTransform: "none", color: colors.muted,
                     "&:hover": { color: colors.ink },
                     "&.Mui-selected": { color: colors.ink },
                   }}
@@ -148,16 +147,17 @@ export default function Layout() {
               </Button>
             )}
             {user ? (
-              <Chip
+              <Button
+                size="small" variant="outlined" color="inherit"
                 onClick={() => navigate("/account")}
-                variant={location.pathname === "/account" ? "filled" : "outlined"}
-                avatar={<Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: (profile && profile.color) || colors.muted, ml: 0.5 }} />}
-                label={myName}
                 aria-label={`Your account (${myName})`}
-                sx={{ fontWeight: 700, maxWidth: { xs: 130, sm: "none" } }}
-              />
+                aria-current={location.pathname === "/account" ? "page" : undefined}
+                sx={{ maxWidth: { xs: 140, sm: 220 }, minHeight: 40, borderColor: colors.rule, bgcolor: location.pathname === "/account" ? colors.raised : "transparent" }}
+              >
+                <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{myName}</Box>
+              </Button>
             ) : ready ? (
-              <Button size="small" variant="outlined" onClick={() => navigate("/account")} sx={{ whiteSpace: "nowrap" }}>Sign in</Button>
+              <Button size="small" variant="outlined" color="inherit" onClick={() => navigate("/account")} sx={{ whiteSpace: "nowrap", minHeight: 40, borderColor: colors.rule }}>Sign in</Button>
             ) : null}
           </Toolbar>
         </Container>
@@ -169,20 +169,19 @@ export default function Layout() {
         <Outlet />
       </Box>
 
-      <Box component="footer" sx={{ borderTop: `1px solid ${colors.line}`, bgcolor: colors.bg2, py: 3.5, mb: { xs: "64px", md: 0 } }}>
+      <Box component="footer" sx={{ borderTop: `1px solid ${colors.line}`, py: 3, mt: 3, mb: { xs: "64px", md: 0 } }}>
         <Container maxWidth="lg" sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <Box component="img" src={LOGO_SRC} alt="" sx={{ height: 48, width: "auto", display: "block" }} />
+            <Box component="img" src={LOGO_SRC} alt="" sx={{ height: 40, width: "auto", display: "block" }} />
             <div>
-              <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.85rem", letterSpacing: "0.03em", textTransform: "uppercase" }}>{league.name}</Typography>
-              {league.season && <Typography variant="body2" sx={{ color: colors.muted }}>{league.season}</Typography>}
+              <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.875rem" }}>{league.name}</Typography>
+              {league.season && <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{league.season}</Typography>}
             </div>
           </Stack>
           <Typography
             component={RouterLink}
             to="/account"
-            variant="body2"
-            sx={{ color: colors.cool, textDecoration: "none", fontWeight: 600, "&:hover": { textDecoration: "underline" } }}
+            sx={{ color: colors.link, fontWeight: 600, py: 1.25 }}
           >
             {user ? "Your account" : "Sign in or create an account"}
           </Typography>
@@ -192,18 +191,18 @@ export default function Layout() {
       {/* Phones: a bottom tab bar instead of a row of tabs that doesn't fit. */}
       <Paper
         component="nav" aria-label="Sections" elevation={0}
-        sx={{ display: { xs: "block", md: "none" }, position: "fixed", left: 0, right: 0, bottom: 0, zIndex: (t) => t.zIndex.appBar, borderTop: `1px solid ${colors.line}`, borderRadius: 0, pb: "env(safe-area-inset-bottom)" }}
+        sx={{ display: { xs: "block", md: "none" }, position: "fixed", left: 0, right: 0, bottom: 0, zIndex: (t) => t.zIndex.appBar, bgcolor: colors.bg, borderTop: `1px solid ${colors.line}`, borderRadius: 0, pb: "env(safe-area-inset-bottom)" }}
       >
         <BottomNavigation
           showLabels
           value={moreActive ? "more" : current || ""}
           onChange={(e, v) => { if (v === "more") setMoreAt(e.currentTarget); else navigate(v); }}
           sx={{
-            bgcolor: "rgba(7,10,31,.96)", height: 64,
-            "& .MuiBottomNavigationAction-root": { color: colors.muted, minWidth: 0, px: 0.25 },
-            "& .MuiBottomNavigationAction-root.Mui-selected": { color: colors.ink },
+            bgcolor: colors.bg, height: 64,
+            "& .MuiBottomNavigationAction-root": { color: colors.muted, minWidth: 0, px: 0.25, borderTop: "2px solid transparent", mt: "-1px" },
+            "& .MuiBottomNavigationAction-root.Mui-selected": { color: colors.ink, borderTopColor: colors.ink },
             // Same label size selected or not, so a label never wraps.
-            "& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected": { fontSize: "0.7rem", whiteSpace: "nowrap", fontWeight: 600 },
+            "& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected": { fontSize: "0.75rem", whiteSpace: "nowrap", fontWeight: 600 },
           }}
         >
           {tabs.slice(0, PRIMARY).map((t) => (

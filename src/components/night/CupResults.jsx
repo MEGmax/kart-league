@@ -22,7 +22,7 @@ import { cellCharacter, cellOf, cellPoints, emptyCell, matchPhotoRows, newRacer,
 import { prepImage, PHOTO_FORMAT_ERROR } from "../../lib/photos";
 import { getApiKey, readResultsPhoto, ReadError } from "../../lib/readPhoto";
 import { useAuth } from "../../context/AuthContext";
-import { colors, fontData } from "../../theme";
+import { colors } from "../../theme";
 import CupIcon from "../CupIcon";
 import CharacterFace from "../CharacterFace";
 
@@ -143,7 +143,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
   const showPhotoCol = Object.keys(read.byRacer).length > 0;
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2, gridTemplateColumns: "minmax(0,1fr)" }}>
+    <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2, gridTemplateColumns: "minmax(0,1fr)" }}>
       <Stack direction="row" spacing={1.5} alignItems="center">
         <CupIcon cup={cup.name} size={44} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -203,7 +203,7 @@ export default function CupResults({ night, cup, index, setNight, players, clash
         </Box>
       </Stack>
 
-      <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: colors.bg2 }}>
+      <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: colors.raised }}>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -233,14 +233,14 @@ export default function CupResults({ night, cup, index, setNight, players, clash
                 <TableRow key={r.key}>
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 150 }}>
-                      <CharacterFace name={cellCharacter(cell, r)} ring={p && p.color} size={28} />
+                      <CharacterFace name={cellCharacter(cell, r)} size={28} />
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{racerName(r, players)}</Typography>
                         <TextField
                           select variant="standard" value={cell.character || ""} onChange={(e) => setCell(r.key, { character: e.target.value })}
                           SelectProps={{ native: true }} InputProps={{ disableUnderline: true }}
                           inputProps={{ "aria-label": `${racerName(r, players)}'s character in this cup`, title: "Character in this cup" }}
-                          sx={{ "& select": { fontSize: "0.75rem", py: 0, color: cell.character ? colors.accent : colors.muted } }}
+                          sx={{ "& select": { fontSize: "0.75rem", py: 0, color: cell.character ? colors.gold : colors.muted } }}
                         >
                           <option value="">{r.character || "No character"}</option>
                           {CHARACTERS.filter((ch) => ch !== r.character).map((ch) => <option key={ch} value={ch}>{ch} (this cup)</option>)}
@@ -276,12 +276,12 @@ export default function CupResults({ night, cup, index, setNight, players, clash
                     </TableCell>
                   )}
                   {races && (
-                    <TableCell align="right" sx={{ fontFamily: fontData, fontWeight: 700, color: differs ? colors.bad : undefined }}>
+                    <TableCell align="right" sx={{ fontWeight: 700, color: differs ? colors.bad : undefined }}>
                       {pts === null ? "–" : pts}
                     </TableCell>
                   )}
                   {showPhotoCol && (
-                    <TableCell align="right" sx={{ fontFamily: fontData, color: differs ? colors.bad : colors.muted }} title={differs ? "The photo shows a different total" : ""}>
+                    <TableCell align="right" sx={{ color: differs ? colors.bad : colors.muted }} title={differs ? "The photo shows a different total" : ""}>
                       {photoPts == null ? "–" : photoPts}
                     </TableCell>
                   )}
@@ -300,6 +300,6 @@ export default function CupResults({ night, cup, index, setNight, players, clash
       }) && (
         <Alert severity="warning">Some entered totals don't match the photo (in red). Fix whichever is wrong before saving.</Alert>
       )}
-    </Paper>
+    </Box>
   );
 }

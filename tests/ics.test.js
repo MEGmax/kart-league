@@ -5,7 +5,7 @@ import { localDb, addUser, as } from "../scripts/lib/localdb.js";
 
 const EVENT = { id: "6f1c1a52-7a43-4b58-9f3e-1c2d3e4f5a6b", starts_at: "2030-01-16T01:00:00Z", cups: [], notes: "", sequence: 0 };
 const NOW = new Date("2030-01-01T12:00:00Z");
-const ORG = { name: "Kart Night League", email: "cup-nights@example.com" };
+const ORG = { name: "Night Kart League", email: "cup-nights@example.com" };
 
 function field(ics, name) {
   const unfolded = ics.replace(/\r\n /g, "");
@@ -27,7 +27,7 @@ describe("buildIcs", () => {
     expect(field(ics, "DTSTAMP")).toBe("20300101T120000Z");
     expect(field(ics, "SUMMARY")).toBe("Cup night: Cup TBD");
     expect(field(ics, "STATUS")).toBe("CONFIRMED");
-    expect(ics).toContain('ORGANIZER;CN="Kart Night League":mailto:cup-nights@example.com');
+    expect(ics).toContain('ORGANIZER;CN="Night Kart League":mailto:cup-nights@example.com');
   });
 
   it("keeps the UID and raises SEQUENCE across updates and cancellation", () => {
@@ -57,7 +57,7 @@ describe(".ics attached to the real email flow", () => {
   it("has a stable UID and rising SEQUENCE from invite to update to cancellation", async () => {
     const db = await localDb();
     const admin = await addUser(db, { email: "ada@test.dev", name: "Ada", role: "admin", optIn: true });
-    const cfg = { mode: "log", from: "Kart Night League <cup-nights@example.com>", siteUrl: "https://site/", functionsUrl: "", leagueName: "KNL" };
+    const cfg = { mode: "log", from: "Night Kart League <cup-nights@example.com>", siteUrl: "https://site/", functionsUrl: "", leagueName: "NKL" };
     const send = async () => {
       const { rows } = await as(db, "service", "select * from public.claim_emails()");
       for (const r of rows) await as(db, "service", "select public.complete_email($1, true, null, true)", [r.id]);

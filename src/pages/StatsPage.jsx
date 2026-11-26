@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Chip from "@mui/material/Chip";
@@ -18,8 +17,7 @@ import { useMembers } from "../lib/members";
 import { fmtDate, fmtDay, pctTxt } from "../lib/constants";
 import { leagueTracks } from "../lib/tracks";
 import SeasonPicker, { useSeason } from "../components/SeasonPicker";
-import CharacterChip from "../components/CharacterChip";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import CharacterFace from "../components/CharacterFace";
 import TrackImage from "../components/TrackImage";
 import { Loading, PageTitle, PlayerDot, SectionTitle, plural } from "../components/PageBits";
@@ -40,63 +38,49 @@ export function leagueTotals(m) {
   return { cups: m.cups.length, races, nights: dates.size, racers: m.ranked.length + m.unranked.length, tracks: topTracks };
 }
 
-function Tile({ label, value }) {
+// The league in one sentence, with the numbers in bold.
+function Totals({ t, accounts }) {
+  const B = ({ children }) => <Box component="b" sx={{ fontWeight: 800, color: colors.ink }}>{children}</Box>;
   return (
-    <Paper sx={{ p: 2, borderLeft: `3px solid ${colors.hot}`, minWidth: 0 }}>
-      <Typography variant="overline" sx={{ color: colors.muted, lineHeight: 1.4, display: "block" }} noWrap>{label}</Typography>
-      <Typography sx={{ fontFamily: fontData, fontWeight: 600, fontSize: "1.7rem", lineHeight: 1.2, mt: 0.25 }}>
-        {value == null ? <Skeleton width={40} /> : value}
-      </Typography>
-    </Paper>
+    <Typography sx={{ fontSize: { xs: "1.25rem", md: "1.5rem" }, lineHeight: 1.4, color: colors.muted, maxWidth: 760 }}>
+      <B>{plural(t.cups, "cup")}</B> over <B>{plural(t.nights, "night")}</B>: <B>{plural(t.races, "race")}</B> on <B>{plural(t.tracks.length, "track")}</B>,
+      by <B>{plural(t.racers, "racer")}</B>.{accounts != null ? <> <B>{plural(accounts, "account")}</B> signed up.</> : null}
+    </Typography>
   );
 }
 
-const ROLE = { owner: ["Owner", colors.gold], admin: ["Admin", colors.cool] };
+const ROLE = { owner: "Owner", admin: "Admin" };
 
-function MemberCard({ member, num, season, href }) {
+function MemberRow({ member, num, season, href }) {
   const role = ROLE[member.role];
+  const chip = { height: 22, borderColor: colors.rule };
   return (
-    <Paper
-      sx={{
-        p: 1.75, display: "flex", gap: 1.5, alignItems: "center", minWidth: 0,
-        borderLeft: `3px solid ${member.color || colors.line}`,
-        ...(member.me ? { boxShadow: `inset 0 0 0 1px ${colors.accent}55` } : null),
-      }}
-    >
+    <Box component="li" sx={{ py: 1.5, display: "flex", gap: 1.5, alignItems: "center", minWidth: 0, borderBottom: `1px solid ${colors.line}` }}>
       {member.character
-        ? <CharacterFace name={member.character} size={48} ring={member.color} />
-        : <PlayerDot name={member.name} color={member.color} size={48} />}
+        ? <CharacterFace name={member.character} size={40} />
+        : <PlayerDot name={member.name} size={40} />}
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Stack direction="row" alignItems="center" spacing={0.75} sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontWeight: 800, minWidth: 0 }} noWrap>{member.name}</Typography>
-          {member.me && <Chip size="small" label="You" sx={{ height: 20, fontWeight: 700, bgcolor: colors.accent, color: colors.accentInk }} />}
-          {role && <Chip size="small" variant="outlined" label={role[0]} sx={{ height: 20, fontWeight: 700, color: role[1], borderColor: role[1] }} />}
+          <Typography sx={{ fontWeight: 700, minWidth: 0 }} noWrap>{member.name}</Typography>
+          {member.me && <Chip size="small" variant="outlined" label="You" sx={chip} />}
+          {role && <Chip size="small" variant="outlined" label={role} sx={chip} />}
         </Stack>
-        <Typography variant="body2" sx={{ color: colors.muted }} noWrap>
-          Joined {fmtDay(member.joinedAt)} · <Box component="span" sx={{ fontFamily: fontData }}>#{num}</Box>
-        </Typography>
         {season && season.cp > 0 ? (
-          <Typography variant="body2" sx={{ mt: 0.25 }} noWrap>
+          <Typography sx={{ fontSize: "0.9375rem", color: colors.muted }} noWrap>
             Racing as{" "}
-            <Box component={RouterLink} to={href} sx={{ color: colors.cool, fontWeight: 700, textDecoration: "none", "&:hover": { textDecoration: "underline" } }}>
-              {season.player.name}
-            </Box>
-            <Box component="span" sx={{ color: colors.muted }}>
-              {" · "}{season.rating != null ? `rating ${Math.round(season.rating)}` : pctTxt(season.pct)} · {plural(season.cp, "cup")}{season.wins ? ` · ${plural(season.wins, "cup win")}` : ""}
-            </Box>
+            <Box component={RouterLink} to={href} sx={{ color: colors.link, fontWeight: 600 }}>{season.player.name}</Box>
+            {" · "}{plural(season.cp, "cup")}
           </Typography>
         ) : (
-          <Typography variant="body2" sx={{ mt: 0.25, color: colors.muted }} noWrap>
+          <Typography sx={{ fontSize: "0.9375rem", color: colors.muted }} noWrap>
             {season ? `Racing as ${season.player.name} · no cups yet` : "Hasn't raced yet"}
           </Typography>
         )}
-        {member.tracks.length > 0 && (
-          <Typography variant="caption" sx={{ color: colors.muted, display: "block" }} noWrap>
-            Loves {member.tracks.join(", ")}
-          </Typography>
-        )}
+        <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }} noWrap>
+          #{num} · joined {fmtDay(member.joinedAt)}{member.tracks.length > 0 ? ` · loves ${member.tracks.join(", ")}` : ""}
+        </Typography>
       </Box>
-    </Paper>
+    </Box>
   );
 }
 
@@ -105,11 +89,11 @@ function Members({ m, players, members, error, missing }) {
 
   if (!user) {
     return (
-      <Paper sx={{ p: 3 }}>
+      <Box>
         <Typography sx={{ fontWeight: 700 }}>Sign in to see who's signed up.</Typography>
-        <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>The member list is for league members only.</Typography>
+        <Typography sx={{ color: colors.muted, mb: 2 }}>The member list is for league members only.</Typography>
         {ready && <Button variant="contained" component={RouterLink} to="/account">Sign in</Button>}
-      </Paper>
+      </Box>
     );
   }
   if (missing) {
@@ -120,19 +104,19 @@ function Members({ m, players, members, error, missing }) {
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!members) {
     return (
-      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
-        {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={84} />)}
+      <Box sx={{ display: "grid", gap: 1 }}>
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={64} />)}
       </Box>
     );
   }
   // Newest first, numbered in the order people joined.
   const list = members.map((x, i) => ({ ...x, num: i + 1 })).reverse();
   return (
-    <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
+    <Box component="ul" sx={{ listStyle: "none", m: 0, p: 0, display: "grid", columnGap: 4, gridTemplateColumns: { xs: "minmax(0,1fr)", md: "1fr 1fr" } }}>
       {list.map((x) => {
         const season = x.playerId ? m.byId.get(x.playerId) : null;
         const href = season ? `/standings/${encodeURIComponent(playerSlug(players, season.player))}` : null;
-        return <MemberCard key={x.num} member={x} num={x.num} season={season} href={href} />;
+        return <MemberRow key={x.num} member={x} num={x.num} season={season} href={href} />;
       })}
     </Box>
   );
@@ -140,18 +124,18 @@ function Members({ m, players, members, error, missing }) {
 
 // A compact table: header row plus rows, scrolling sideways on a phone if it must.
 function Table({ cols, head, rows, label }) {
-  const cell = { py: 0.9, px: 1, borderBottom: `1px solid ${colors.line}`, minWidth: 0, display: "flex", alignItems: "center" };
+  const cell = { py: 1, pr: 1, minHeight: 48, borderBottom: `1px solid ${colors.line}`, minWidth: 0, display: "flex", alignItems: "center" };
   return (
-    <Paper sx={{ px: 1, py: 0.5, overflowX: "auto" }} role="table" aria-label={label}>
+    <Box sx={{ overflowX: "auto" }} role="table" aria-label={label}>
       <Box sx={{ display: "grid", gridTemplateColumns: cols, minWidth: 480 }}>
         {head.map((h, i) => (
-          <Box key={"h" + i} role="columnheader" sx={{ ...cell, color: colors.muted, fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", justifyContent: i ? "flex-end" : "flex-start" }}>{h}</Box>
+          <Box key={"h" + i} role="columnheader" sx={{ ...cell, minHeight: 0, color: colors.muted, fontSize: "0.875rem", fontWeight: 600, borderBottom: `2px solid ${colors.rule}`, justifyContent: i ? "flex-end" : "flex-start" }}>{h}</Box>
         ))}
         {rows.map((r, k) => r.map((v, i) => (
-          <Box key={k + "-" + i} role="cell" sx={{ ...cell, justifyContent: i ? "flex-end" : "flex-start", fontFamily: i ? fontData : "inherit", fontSize: "0.875rem", borderBottom: k === rows.length - 1 ? "none" : cell.borderBottom }}>{v}</Box>
+          <Box key={k + "-" + i} role="cell" sx={{ ...cell, justifyContent: i ? "flex-end" : "flex-start" }}>{v}</Box>
         )))}
       </Box>
-    </Paper>
+    </Box>
   );
 }
 
@@ -169,8 +153,8 @@ function TrackSection({ m }) {
         head={["Track", "Cups", "Avg win", "Chaos", "Last raced"]}
         rows={lt.tracks.map((x) => [
           <Stack key="t" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-            <TrackImage track={x.track} width={40} radius={0.75} />
-            <Typography variant="body2" noWrap>{x.track}</Typography>
+            <TrackImage track={x.track} width={48} radius={0.5} />
+            <Typography noWrap sx={{ fontWeight: 600 }}>{x.track}</Typography>
           </Stack>,
           x.times,
           x.avgWin != null ? x.avgWin.toFixed(1) : "–",
@@ -178,12 +162,12 @@ function TrackSection({ m }) {
           fmtDate(x.last),
         ])}
       />
-      <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
+      <Typography sx={{ color: colors.muted, mt: 1.5, fontSize: "0.9375rem" }}>
         Avg win: the best league player's points per race there. Chaos: how many places finishes there stray from each racer's usual place
         {chaotic ? ` (most chaotic so far: ${chaotic.track})` : ""}. Both need races entered race by race.
       </Typography>
       {coverage.unraced.length > 0 && (
-        <Typography variant="body2" sx={{ mt: 1 }}>
+        <Typography sx={{ mt: 1, fontSize: "0.9375rem" }}>
           <b>Not raced yet:</b> {coverage.unraced.join(", ")}.
         </Typography>
       )}
@@ -202,7 +186,7 @@ function CharacterSection({ m }) {
         label="Character win rates"
         cols="minmax(160px,2fr) repeat(3, minmax(72px,1fr))"
         head={["Character", "Cups", "Cup wins", "Points %"]}
-        rows={list.map((c) => [<CharacterChip key="c" name={c.name} />, Math.round(c.picks / 4), c.cupWins, pctTxt(c.max ? c.pts / c.max : 0)])}
+        rows={list.map((c) => [<Stack key="c" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}><CharacterFace name={c.name} size={28} /><Typography noWrap sx={{ fontWeight: 600 }}>{c.name}</Typography></Stack>, Math.round(c.picks / 4), c.cupWins, pctTxt(c.max ? c.pts / c.max : 0)])}
       />
     </>
   );
@@ -222,22 +206,12 @@ export default function StatsPage() {
     <Container maxWidth="lg">
       <PageTitle title="Stats" sub="The league in numbers, and everyone who's signed up." />
       <SeasonPicker season={season} seasons={seasons} setSeason={setSeason} />
-      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", md: "repeat(6, 1fr)" } }}>
-        <Tile label="Accounts" value={members ? members.length : user && !missing && !error ? null : "—"} />
-        <Tile label="Racers" value={t.racers} />
-        <Tile label="Cup nights" value={t.nights} />
-        <Tile label="Cups raced" value={t.cups} />
-        <Tile label="Races" value={t.races} />
-        <Tile label="Tracks raced" value={t.tracks.length} />
-      </Box>
-
-      <SectionTitle title="Signed up" count={user && members ? plural(members.length, "account") : null} />
-      <Members m={m} players={state.players} members={members} error={error} missing={missing} />
+      <Totals t={t} accounts={members ? members.length : null} />
 
       {t.tracks.length > 0 && (
         <>
           <SectionTitle title="Most raced tracks" count={`of ${plural(t.cups, "cup")}`} />
-          <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", md: "repeat(6, 1fr)" } }}>
+          <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", md: "repeat(6, 1fr)" } }}>
             {t.tracks.slice(0, 6).map((x) => (
               <TrackImage key={x.track} track={x.track} label caption={plural(x.n, "time")} />
             ))}
@@ -246,6 +220,9 @@ export default function StatsPage() {
       )}
       <TrackSection m={m} />
       <CharacterSection m={m} />
+
+      <SectionTitle title="Signed up" count={user && members ? plural(members.length, "account") : null} />
+      <Members m={m} players={state.players} members={members} error={error} missing={missing} />
     </Container>
   );
 }

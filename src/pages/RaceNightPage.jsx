@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
@@ -10,7 +9,6 @@ import Alert from "@mui/material/Alert";
 import Chip from "@mui/material/Chip";
 import TextField from "@mui/material/TextField";
 import MenuItem from "@mui/material/MenuItem";
-import Avatar from "@mui/material/Avatar";
 import CircularProgress from "@mui/material/CircularProgress";
 import Table from "@mui/material/Table";
 import TableHead from "@mui/material/TableHead";
@@ -22,7 +20,7 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { useFlash } from "../context/FlashContext";
 import { liveCups } from "../lib/standings";
-import { CHARACTERS, RACE_POINTS, fmtDate, initials, ord } from "../lib/constants";
+import { CHARACTERS, RACE_POINTS, fmtDate, ord } from "../lib/constants";
 import { sb, q, dbErr } from "../lib/supabaseClient";
 import { prepImage, PHOTO_FORMAT_ERROR } from "../lib/photos";
 import { getApiKey, readResultsPhoto, ReadError } from "../lib/readPhoto";
@@ -32,8 +30,8 @@ import { saveCupPhoto } from "../lib/cupPhotos";
 import { cupLabel, formatEventWhen, nextEvent } from "../lib/events";
 import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import { colors, fontData } from "../theme";
-import { PageTitle } from "../components/PageBits";
+import { colors } from "../theme";
+import { PageTitle, PlayerDot } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import PlaceBadge from "../components/PlaceBadge";
@@ -58,15 +56,7 @@ function lastCharFor(races, pid) {
   return rs[0] ? rs[0].character : "";
 }
 
-function PlayerDot({ player, size = 24 }) {
-  return (
-    <Avatar sx={{ width: size, height: size, fontSize: size * 0.42, fontWeight: 700, bgcolor: player ? player.color : colors.muted, color: "#fff" }}>
-      {initials(player ? player.name : "?")}
-    </Avatar>
-  );
-}
-
-function RaceCard({ cup, n, forId, forOther, ringColor, existing, defaultChar }) {
+function RaceCard({ cup, n, forId, forOther, existing, defaultChar }) {
   const flash = useFlash();
   const { reload } = useLeagueData();
   const [draft, setDraft] = useState(null);
@@ -104,10 +94,10 @@ function RaceCard({ cup, n, forId, forOther, ringColor, existing, defaultChar })
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, bgcolor: colors.bg2, display: "grid", gap: 1.5, alignContent: "start" }}>
+    <Box sx={{ display: "grid", gap: 1.5, alignContent: "start" }}>
       <TrackImage track={cup.maps[n - 1] || `Track ${n}`} label caption={`Race ${n}`} />
       <Box sx={{ display: "flex", justifyContent: "center" }}>
-        <CharacterFace name={ch} ring={ringColor} size={64} />
+        <CharacterFace name={ch} size={64} />
       </Box>
       <TextField select size="small" label="Finish" value={pos} onChange={(e) => edit({ pos: e.target.value })}>
         <MenuItem value="">—</MenuItem>
@@ -123,7 +113,7 @@ function RaceCard({ cup, n, forId, forOther, ringColor, existing, defaultChar })
         <Button size="small" variant="contained" disabled={busy} onClick={save}>{existing ? "Update" : "Save"}</Button>
         {existing && (
           <>
-            <Typography variant="body2" sx={{ color: colors.good, fontFamily: fontData }}>
+            <Typography variant="body2" sx={{ color: colors.good }}>
               {existing.position}{ord(existing.position)} · {existing.points} pts
             </Typography>
             <Button size="small" disabled={busy} onClick={clear}>Clear</Button>
@@ -131,7 +121,7 @@ function RaceCard({ cup, n, forId, forOther, ringColor, existing, defaultChar })
         )}
       </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-    </Paper>
+    </Box>
   );
 }
 
@@ -143,14 +133,15 @@ function LiveTotals({ cup, rows, playerById }) {
 
   return (
     <Box>
-      <Typography variant="overline" sx={{ color: colors.muted }}>
-        Live totals · {rows.length} racer{rows.length === 1 ? "" : "s"} entered
-      </Typography>
+      <Stack direction="row" alignItems="baseline" spacing={1.25} sx={{ mb: 0.5 }}>
+        <Typography component="h3" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>Live totals</Typography>
+        <Typography sx={{ color: colors.muted }}>{rows.length} racer{rows.length === 1 ? "" : "s"} entered</Typography>
+      </Stack>
       {!rows.length ? (
         <Typography variant="body2" sx={{ color: colors.muted }}>Nobody has entered a result yet.</Typography>
       ) : (
         <>
-          <TableContainer component={Paper} variant="outlined" sx={{ bgcolor: colors.bg2 }}>
+          <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
@@ -183,7 +174,7 @@ function LiveTotals({ cup, rows, playerById }) {
                           </TableCell>
                         );
                       })}
-                      <TableCell align="right" sx={{ fontFamily: fontData, fontWeight: 700 }}>{row.total}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700 }}>{row.total}</TableCell>
                     </TableRow>
                   );
                 })}
@@ -280,13 +271,13 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, bgcolor: colors.bg2, display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 2 }}>
-      <Typography variant="overline" sx={{ color: colors.accent }}>Finish {cup.cup}</Typography>
+    <Box sx={{ pt: 2.5, borderTop: `2px solid ${colors.rule}`, display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 2 }}>
+      <Typography component="h3" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>Finish {cup.cup}</Typography>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "flex-start" }}>
         {photo && (
           <Box component="img" src={`data:image/jpeg;base64,${photo}`} alt="Results screen photo"
-            sx={{ width: { xs: "100%", sm: 240 }, borderRadius: 2, border: `1px solid ${colors.line}` }} />
+            sx={{ width: { xs: "100%", sm: 240 }, borderRadius: 1 }} />
         )}
         <Box sx={{ display: "grid", gap: 1 }}>
           <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
@@ -304,7 +295,7 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
         </Box>
       </Stack>
 
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer>
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -325,9 +316,9 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
                   <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center"><PlayerDot player={p} /><span>{p ? p.name : "?"}</span></Stack>
                   </TableCell>
-                  <TableCell align="center" sx={{ fontFamily: fontData }}>{r.races.length}/4</TableCell>
-                  <TableCell align="right" sx={{ fontFamily: fontData, fontWeight: 700 }}>{r.total}</TableCell>
-                  {read && <TableCell align="right" sx={{ fontFamily: fontData, color: off ? colors.bad : colors.muted }}>{ph == null ? "–" : ph}</TableCell>}
+                  <TableCell align="center">{r.races.length}/4</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>{r.total}</TableCell>
+                  {read && <TableCell align="right" sx={{ color: off ? colors.bad : colors.muted }}>{ph == null ? "–" : ph}</TableCell>}
                   <TableCell>
                     {r.missing.length
                       ? <Typography variant="body2" sx={{ color: colors.bad }}>Missing race {r.missing.join(", ")}</Typography>
@@ -367,7 +358,7 @@ function FinishPanel({ cup, rows, playerById, players, onCancel }) {
           Finalizing puts these totals in the standings; an admin can reopen it later.
         </Typography>
       </Stack>
-    </Paper>
+    </Box>
   );
 }
 
@@ -385,7 +376,6 @@ function LiveCup({ cup, state }) {
   const mine = user ? state.players.find((p) => p.userId === user.id) : null;
   const forOther = isAdmin && entryFor !== "me";
   const forId = forOther ? entryFor : mine ? mine.id : null;
-  const ringColor = forOther ? (playerById(forId) || {}).color : profile && profile.color;
   const rs = state.races.filter((r) => r.cupId === cup.id);
   const rows = liveRows(state.races, cup.id);
 
@@ -406,15 +396,15 @@ function LiveCup({ cup, state }) {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 2.5 }}>
+    <Box component="article" aria-label={`${cup.cup}, live`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 3 }}>
       <Stack direction="row" spacing={1.5} alignItems="center">
-        <CupIcon cup={cup.cup} size={54} />
+        <CupIcon cup={cup.cup} size={48} />
         <Box>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Typography sx={{ fontWeight: 800, fontSize: "1.2rem" }}>{cup.cup}</Typography>
-            <Chip label="Live" size="small" sx={{ bgcolor: "rgba(61,220,132,.16)", color: colors.good, fontWeight: 800 }} />
+            <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.5rem" }}>{cup.cup}</Typography>
+            <Chip label="Live" size="small" variant="outlined" sx={{ color: colors.good, borderColor: colors.good }} />
           </Stack>
-          <Typography variant="body2" sx={{ color: colors.muted }}>Week {cup.week} · {fmtDate(cup.date)}</Typography>
+          <Typography sx={{ color: colors.muted }}>Week {cup.week} · {fmtDate(cup.date)}</Typography>
         </Box>
       </Stack>
 
@@ -432,7 +422,7 @@ function LiveCup({ cup, state }) {
       )}
 
       {user ? (
-        <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))" } }}>
+        <Box sx={{ display: "grid", columnGap: 2, rowGap: 4, gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0,1fr))", md: "repeat(4, minmax(0,1fr))" } }}>
           {[1, 2, 3, 4].map((n) => (
             <RaceCard
               key={`${forId}|${n}`}
@@ -440,7 +430,6 @@ function LiveCup({ cup, state }) {
               n={n}
               forId={forId}
               forOther={forOther}
-              ringColor={ringColor}
               existing={forId ? rs.find((r) => r.playerId === forId && r.race === n) : null}
               defaultChar={defaultChar}
             />
@@ -474,7 +463,7 @@ function LiveCup({ cup, state }) {
         </Stack>
       )}
       {error && <Alert severity="error">{error}</Alert>}
-    </Paper>
+    </Box>
   );
 }
 
@@ -500,41 +489,40 @@ export default function RaceNightPage() {
         action={isAdmin && live.length > 0 && <Button component={RouterLink} to="/build" size="small" variant="outlined">+ Build another cup</Button>}
       />
       {isAdmin && (
-        <Paper sx={{ p: { xs: 2, sm: 2.25 }, mb: 2.5, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", borderLeft: `3px solid ${colors.accent}` }}>
+        <Box sx={{ pb: 2.5, mb: 4, borderBottom: `1px solid ${colors.line}`, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
           <Box sx={{ flex: 1, minWidth: 200 }}>
-            <Typography sx={{ fontWeight: 800 }}>Done racing?</Typography>
-            <Typography variant="body2" sx={{ color: colors.muted }}>
+            <Typography sx={{ fontWeight: 700 }}>Done racing?</Typography>
+            <Typography sx={{ color: colors.muted }}>
               Upload every cup's end-of-cup photo at once. The points, players and tracks are read from them, and the standings update live.
             </Typography>
           </Box>
           <PhotoPickButton variant="contained" />
-        </Paper>
+        </Box>
       )}
 
       {!live.length ? (
-        <Paper sx={{ p: { xs: 3, sm: 4 }, display: "grid", justifyItems: "center", gap: 1.5, textAlign: "center" }}>
-          <CupIcon cup="Other" size={60} />
-          <Typography sx={{ fontWeight: 700 }}>No cup is being raced right now.</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted, maxWidth: "52ch" }}>
+        <Box sx={{ display: "grid", justifyItems: "start", gap: 1.5, maxWidth: 640 }}>
+          <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.5rem", lineHeight: 1.25 }}>No cup is being raced right now.</Typography>
+          <Typography sx={{ color: colors.muted }}>
             On a cup night an admin starts each cup in the cup builder. It then shows up here, and everyone enters their
             finishing place after each race.
           </Typography>
           {next ? (
-            <Typography variant="body2">
+            <Typography sx={{ fontSize: "1.0625rem" }}>
               Next cup night: <b>{formatEventWhen(next.startsAt).date}</b>, {formatEventWhen(next.startsAt).time} · {cupLabel(next.cups)}
             </Typography>
           ) : (
-            <Typography variant="body2" sx={{ color: colors.muted }}>No cup night is scheduled yet.</Typography>
+            <Typography sx={{ color: colors.muted }}>No cup night is scheduled yet.</Typography>
           )}
-          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", justifyContent: "center" }}>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 0.5 }}>
             {isAdmin && <Button component={RouterLink} to="/build" variant="contained">Build a cup</Button>}
             {next
-              ? <Button component={RouterLink} to={`/schedule/${next.id}`} variant={isAdmin ? "outlined" : "contained"}>See the next cup night</Button>
-              : <Button component={RouterLink} to="/schedule" variant="outlined">Schedule</Button>}
+              ? <Button component={RouterLink} to={`/schedule/${next.id}`} variant={isAdmin ? "outlined" : "contained"} color={isAdmin ? "inherit" : "primary"}>See the next cup night</Button>
+              : <Button component={RouterLink} to="/schedule" variant="outlined" color="inherit">Schedule</Button>}
           </Stack>
-        </Paper>
+        </Box>
       ) : (
-        <Stack spacing={3}>
+        <Stack spacing={6}>
           {live.map((c) => <LiveCup key={c.id} cup={c} state={state} />)}
         </Stack>
       )}

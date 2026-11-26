@@ -54,7 +54,7 @@ function CupRow({ cup, index, count, setNight, singleCup, templates }) {
   }
 
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, bgcolor: colors.bg2 }}>
+    <Box>
       <Stack direction="row" spacing={1.5} alignItems="center">
         <CupIcon cup={cup.name} size={38} />
         <TextField size="small" label={`Cup ${index + 1}`} value={cup.name} inputProps={{ maxLength: 40 }} sx={{ flex: 1, minWidth: 0 }}
@@ -95,7 +95,7 @@ function CupRow({ cup, index, count, setNight, singleCup, templates }) {
             : <Button size="small" onClick={() => { if (!cup.maps.length) patch({ maps: ["", "", "", ""] }); setEditing(true); }}>{cup.maps.length ? "Change tracks" : "Add tracks"}</Button>}
         </Stack>
       )}
-    </Paper>
+    </Box>
   );
 }
 
@@ -117,9 +117,9 @@ export default function CupsPicker({ night, setNight, templates, singleCup }) {
   }
 
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 } }}>
+    <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}` }}>
       <Stack direction="row" justifyContent="space-between" alignItems="baseline" sx={{ mb: 0.5, gap: 1, flexWrap: "wrap" }}>
-        <Typography variant="overline" sx={{ color: colors.accent }}>1 · {singleCup ? "The cup" : "Cups raced, in order"}</Typography>
+        <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>1 · {singleCup ? "The cup" : "Cups raced, in order"}</Typography>
         {!singleCup && <Typography variant="body2" sx={{ color: colors.muted }}>{night.cups.length} cup{night.cups.length === 1 ? "" : "s"}</Typography>}
       </Stack>
       {!singleCup && (
@@ -154,6 +154,6 @@ export default function CupsPicker({ night, setNight, templates, singleCup }) {
           </MenuItem>
         </TextField>
       )}
-    </Paper>
+    </Box>
   );
 }

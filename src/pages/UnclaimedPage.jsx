@@ -23,7 +23,7 @@ import { CHARACTERS, fmtDate, ord } from "../lib/constants";
 import { useMyData } from "../lib/accountData";
 import { uid } from "../lib/night";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import CupIcon from "../components/CupIcon";
 import CharacterFace from "../components/CharacterFace";
 import { Loading, PageTitle, plural } from "../components/PageBits";
@@ -164,16 +164,16 @@ export default function UnclaimedPage() {
         Human results from a results photo that weren't matched to a league player. The character is the clue.{" "}
         {user
           ? <>If one was you, press <b>That was me</b>: you can take the same character's other results from that night in one go, and fix the character for any cup you switched.</>
-          : <><RouterLink to="/account" style={{ color: colors.cool }}>Sign in</RouterLink>, then press <b>That was me</b> on yours. An admin adds the points to your record.</>}
+          : <><RouterLink to="/account" style={{ color: colors.link }}>Sign in</RouterLink>, then press <b>That was me</b> on yours. An admin adds the points to your record.</>}
       </Typography>
       {demo && <Alert severity="info" sx={{ mb: 2 }}><b>Example results.</b> These disappear when the first real cup is added.</Alert>}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {!m.unclaimed.length ? (
-        <Paper sx={{ p: 3 }}>
+        <Box>
           <Typography sx={{ fontWeight: 700 }}>Nothing unclaimed.</Typography>
           <Typography variant="body2" sx={{ color: colors.muted }}>Every human result is matched to a player.</Typography>
-        </Paper>
+        </Box>
       ) : (
         <Stack spacing={3}>
           {nights.map((n) => (
@@ -184,7 +184,7 @@ export default function UnclaimedPage() {
               </Typography>
               <Stack spacing={1.5}>
                 {n.cups.map((c) => (
-                  <Paper key={c.cup.id} sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Box component="section" key={c.cup.id} sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}` }}>
                     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1 }}>
                       <CupIcon cup={c.cup.cup} size={30} />
                       <Typography sx={{ fontWeight: 800 }}>#{c.num} {c.cup.cup}</Typography>
@@ -195,7 +195,7 @@ export default function UnclaimedPage() {
                           ? m.unclaimed.filter((x) => x !== u && x.cup.date === u.cup.date && x.r.character && x.r.character === u.r.character && claimable(x))
                           : [];
                         return (
-                          <Box key={keyOf(u)} sx={{ bgcolor: colors.bg2, border: `1px solid ${colors.line}`, borderRadius: 2, p: 1.25 }}>
+                          <Box key={keyOf(u)} sx={{ bgcolor: colors.raised, border: `1px solid ${colors.line}`, borderRadius: 2, p: 1.25 }}>
                             <Box sx={{
                               display: "grid", alignItems: "center", columnGap: 1.5, rowGap: 1,
                               gridTemplateColumns: { xs: "auto minmax(0,1fr) auto", sm: "auto minmax(0,1fr) auto auto" },
@@ -206,7 +206,7 @@ export default function UnclaimedPage() {
                                 <Typography sx={{ fontWeight: 700 }} noWrap>{u.r.character || "Unknown character"}</Typography>
                                 <Typography variant="caption" sx={{ color: colors.muted }}>{u.r.rank}{ord(u.r.rank)} of {u.field}</Typography>
                               </Box>
-                              <Typography sx={{ gridArea: "pts", fontFamily: fontData, fontWeight: 700, whiteSpace: "nowrap" }}>
+                              <Typography sx={{ gridArea: "pts", fontWeight: 700, whiteSpace: "nowrap" }}>
                                 {u.r.pts}<span style={{ color: colors.muted, fontWeight: 400 }}>/{u.max}</span>
                               </Typography>
                               <Box sx={{ gridArea: "act", justifySelf: { xs: "start", sm: "end" } }}>{action(u)}</Box>
@@ -216,7 +216,7 @@ export default function UnclaimedPage() {
                         );
                       })}
                     </Stack>
-                  </Paper>
+                  </Box>
                 ))}
               </Stack>
             </Box>

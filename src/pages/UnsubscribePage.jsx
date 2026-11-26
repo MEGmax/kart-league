@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, Link as RouterLink } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Stack from "@mui/material/Stack";
@@ -32,7 +33,7 @@ export default function UnsubscribePage() {
 
   return (
     <Container maxWidth="sm" sx={{ py: 4 }}>
-      <Paper sx={{ p: 3 }}>
+      <Box>
         {status === "working" && (
           <Stack direction="row" spacing={2} alignItems="center"><CircularProgress size={22} /><Typography>Unsubscribing…</Typography></Stack>
         )}
@@ -64,7 +65,7 @@ export default function UnsubscribePage() {
             <Button component={RouterLink} to="/schedule">Schedule</Button>
           </Stack>
         )}
-      </Paper>
+      </Box>
     </Container>
   );
 }

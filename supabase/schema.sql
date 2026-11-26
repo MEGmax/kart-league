@@ -1,4 +1,4 @@
--- Kart Night League database.
+-- Night Kart League database.
 -- Paste this whole file into Supabase › SQL Editor and press Run. Safe to run again after edits.
 --
 -- Roles live in profiles.role: 'member' (everyone who signs up), 'admin', 'owner' (claimed once).

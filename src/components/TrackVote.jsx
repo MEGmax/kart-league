@@ -7,13 +7,11 @@ import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
-import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import CheckIcon from "@mui/icons-material/Check";
 import AddIcon from "@mui/icons-material/Add";
-import HowToVoteOutlinedIcon from "@mui/icons-material/HowToVoteOutlined";
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
@@ -23,7 +21,7 @@ import { formatEventWhen, isGoing, isOpen } from "../lib/events";
 import { TRACKS } from "../lib/constants";
 import { MAX_TRACK_VOTES, bestTracks, trackCup, trackKind } from "../lib/tracks";
 import { useTrackVotes } from "../lib/trackVotes";
-import { colors, fontData, fontDisplay } from "../theme";
+import { colors } from "../theme";
 import TrackImage from "./TrackImage";
 import { SectionTitle, plural } from "./PageBits";
 
@@ -33,8 +31,8 @@ function TrackName({ track, width = 64 }) {
     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
       <TrackImage track={track} width={width} radius={1} />
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{track}</Typography>
-        <Typography variant="caption" sx={{ color: colors.muted, display: "block", lineHeight: 1.3 }} noWrap>
+        <Typography sx={{ fontWeight: 700 }} noWrap>{track}</Typography>
+        <Typography sx={{ color: colors.muted, fontSize: "0.875rem", lineHeight: 1.3 }} noWrap>
           {cup ? `${trackKind(track)} · ${cup}` : "Custom track"}
         </Typography>
       </Box>
@@ -48,7 +46,7 @@ function VoteButton({ mine, disabled, busy, onClick }) {
       Voted
     </Button>
   ) : (
-    <Button size="small" variant="outlined" startIcon={<AddIcon />} disabled={disabled || busy} onClick={onClick} sx={{ minWidth: 92 }}>
+    <Button size="small" variant="outlined" color="inherit" startIcon={<AddIcon />} disabled={disabled || busy} onClick={onClick} sx={{ minWidth: 92 }}>
       Vote
     </Button>
   );
@@ -83,12 +81,12 @@ export default function TrackVote({ event }) {
     return (
       <Box>
         {header}
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
-          <Typography variant="body2" sx={{ color: colors.muted, maxWidth: "52ch" }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap", justifyContent: "space-between" }}>
+          <Typography sx={{ color: colors.muted, maxWidth: "52ch" }}>
             Everyone who's in for the night suggests and votes on the tracks to race. Sign in and say you're in to vote.
           </Typography>
           <Button variant="contained" component={RouterLink} to="/account">Sign in</Button>
-        </Paper>
+        </Box>
       </Box>
     );
   }
@@ -140,34 +138,28 @@ export default function TrackVote({ event }) {
   return (
     <Box>
       {header}
-      <Paper sx={{ overflow: "hidden" }}>
-        {/* Status bar: who's voted, your votes left, or how to start voting. */}
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between"
-          sx={{ px: { xs: 2, sm: 2.5 }, py: 1.75, bgcolor: colors.bg2, borderBottom: `1px solid ${colors.line}` }}>
+      <Box>
+        {/* Status line: who's voted, your votes left, or how to start voting. */}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "flex-start", sm: "baseline" }} justifyContent="space-between"
+          sx={{ pb: 1.5 }}>
           <Stack direction="row" spacing={1.25} alignItems="center">
-            <HowToVoteOutlinedIcon sx={{ color: colors.accent }} />
-            <Typography variant="body2">
+            <Typography>
               {ballot.length
                 ? <><b>{plural(ballot.length, "track")}</b> suggested by {plural(voters, "racer")}. The top 4 make the first cup.</>
                 : "No tracks suggested yet. Start the ballot below."}
             </Typography>
           </Stack>
           {canVote ? (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }} aria-label={`${left} of ${MAX_TRACK_VOTES} votes left`}>
-              {Array.from({ length: MAX_TRACK_VOTES }, (_, i) => (
-                <Box key={i} sx={{ width: 10, height: 10, borderRadius: "2px", transform: "skewX(-14deg)", bgcolor: i < mineCount ? colors.accent : colors.line }} />
-              ))}
-              <Typography variant="caption" sx={{ color: colors.muted, ml: 1 }}>{left} left</Typography>
-            </Box>
+            <Typography sx={{ color: colors.muted, whiteSpace: "nowrap" }}><b>{left}</b> of {MAX_TRACK_VOTES} votes left</Typography>
           ) : open ? (
-            <Typography variant="body2" sx={{ color: colors.muted }}>Say you're in to vote.</Typography>
+            <Typography sx={{ color: colors.muted }}>Say you're in to vote.</Typography>
           ) : (
-            <Typography variant="body2" sx={{ color: colors.muted }}>Voting has closed.</Typography>
+            <Typography sx={{ color: colors.muted }}>Voting has closed.</Typography>
           )}
         </Stack>
 
         {!going && open && (
-          <Alert severity="info" sx={{ m: 2, mb: 0 }} action={
+          <Alert severity="info" sx={{ mb: 2 }} action={
             <Button color="inherit" size="small" disabled={busy === "join"} onClick={() => run("join", sb.rpc("join_event", { p_id: event.id }), "You're in! Now vote on tracks.")}>
               I'm in
             </Button>
@@ -175,37 +167,30 @@ export default function TrackVote({ event }) {
             Only racers who are in for the night can vote.
           </Alert>
         )}
-        {(error || loadErr) && <Alert severity="error" sx={{ m: 2, mb: 0 }}>{error || loadErr}</Alert>}
+        {(error || loadErr) && <Alert severity="error" sx={{ mb: 2 }}>{error || loadErr}</Alert>}
 
         {/* The ballot, most votes first, in groups of 4: the cups the vote would make right now. */}
         {rows === null ? (
-          <Typography variant="body2" sx={{ color: colors.muted, p: 2.5 }}>Loading the vote…</Typography>
+          <Typography sx={{ color: colors.muted, py: 2 }}>Loading the vote…</Typography>
         ) : ballot.length > 0 && (
-          <Box sx={{ px: { xs: 1, sm: 1.5 }, py: 1 }}>
+          <Box>
             {ballot.map((r, i) => {
-              const leader = ballot[0].votes;
               return (
                 <Box key={r.track}>
                   {i % 4 === 0 && (
-                    <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.62rem", letterSpacing: "0.1em", textTransform: "uppercase", color: i === 0 ? colors.accent : colors.muted, px: 1, pt: i ? 2 : 1, pb: 0.5 }}>
+                    <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: colors.muted, pt: i ? 3 : 0.5, pb: 0.75, borderBottom: `2px solid ${colors.rule}` }}>
                       {i === 0 ? "Cup 1 · if the vote ended now" : `Cup ${i / 4 + 1}`}
                     </Typography>
                   )}
                   <Box sx={{
-                    display: "grid", alignItems: "center", columnGap: 1.5, rowGap: 0.5, px: 1, py: 1, borderRadius: 1.5,
+                    display: "grid", alignItems: "center", columnGap: 1.5, rowGap: 0.5, py: 1.25, borderBottom: `1px solid ${colors.line}`,
                     gridTemplateColumns: { xs: "24px minmax(0,1fr) auto", sm: "24px minmax(0,1.3fr) minmax(0,1fr) auto" },
-                    bgcolor: r.mine ? "rgba(61,220,132,.06)" : "transparent",
                   }}>
-                    <Typography sx={{ fontFamily: fontData, fontWeight: 700, color: i < 4 ? colors.accent : colors.muted, textAlign: "center" }}>{i + 1}</Typography>
+                    <Typography sx={{ fontWeight: 800, fontStyle: "italic", fontSize: "1.125rem", textAlign: "center" }}>{i + 1}</Typography>
                     <TrackName track={r.track} />
                     <Box sx={{ gridColumn: { xs: "2 / 3", sm: "auto" }, gridRow: { xs: 2, sm: "auto" }, minWidth: 0 }}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Box sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: colors.line, overflow: "hidden", maxWidth: 160 }}>
-                          <Box sx={{ width: `${(100 * r.votes) / leader}%`, height: "100%", bgcolor: i < 4 ? colors.accent : colors.cool }} />
-                        </Box>
-                        <Typography variant="body2" sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>{plural(r.votes, "vote")}</Typography>
-                      </Stack>
-                      <Typography variant="caption" sx={{ color: colors.muted, display: "block" }} noWrap title={r.voters.map((v) => v.name).join(", ")}>
+                      <Typography sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{plural(r.votes, "vote")}</Typography>
+                      <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }} noWrap title={r.voters.map((v) => v.name).join(", ")}>
                         {r.voters.map((v) => v.name).join(", ")}
                       </Typography>
                     </Box>
@@ -219,7 +204,7 @@ export default function TrackVote({ event }) {
 
         {/* Suggest any track (or a custom one). */}
         {canVote && (
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ px: { xs: 2, sm: 2.5 }, py: 2, borderTop: ballot.length ? `1px solid ${colors.line}` : "none" }}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ pt: 2.5 }}>
             <Autocomplete
               freeSolo size="small" sx={{ flex: 1 }}
               options={TRACKS}
@@ -245,24 +230,24 @@ export default function TrackVote({ event }) {
             </Button>
           </Stack>
         )}
-      </Paper>
+      </Box>
 
       {/* Your strengths: the tracks you score best on, from every cup with known tracks. */}
       {going && (
-        <Paper sx={{ mt: 2, p: { xs: 2, sm: 2.5 } }}>
-          <Typography variant="overline" sx={{ color: colors.muted, display: "block", lineHeight: 1.4 }}>Your best tracks</Typography>
+        <Box sx={{ mt: 4 }}>
+          <Typography component="h3" sx={{ fontWeight: 700, fontSize: "1.125rem" }}>Your best tracks</Typography>
           {top.length ? (
             <>
-              <Typography variant="body2" sx={{ color: colors.muted, mb: 1.5 }}>From your results so far: average points per race (out of 15) on each track.</Typography>
-              <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "minmax(0,1fr)", md: "repeat(2, minmax(0,1fr))" } }}>
+              <Typography sx={{ color: colors.muted, mb: 1 }}>From your results so far: average points per race (out of 15) on each track.</Typography>
+              <Box sx={{ display: "grid", columnGap: 4, gridTemplateColumns: { xs: "minmax(0,1fr)", md: "repeat(2, minmax(0,1fr))" } }}>
                 {top.map((t) => {
                   const r = byTrack.get(t.track);
                   return (
-                    <Box key={t.track} sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 1.25, borderRadius: 1.5, border: `1px solid ${colors.line}`, bgcolor: colors.bg2 }}>
+                    <Box key={t.track} sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 1.25, borderBottom: `1px solid ${colors.line}` }}>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <TrackName track={t.track} width={72} />
-                        <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 0.5 }}>
-                          <Box component="span" sx={{ color: t.vsUsual > 0 ? colors.good : colors.ink, fontWeight: 700 }}>{t.avgPts.toFixed(1)} pts</Box>
+                        <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }}>
+                          <Box component="span" sx={{ color: colors.ink, fontWeight: 700 }}>{t.avgPts.toFixed(1)} pts</Box>
                           {t.avgPos != null ? ` · ${t.avgPos.toFixed(1)} avg place` : ""} · {plural(t.races, "race")}
                           {t.wins ? ` · ${plural(t.wins, "win")}` : ""}
                           {r && !r.mine ? ` · ${plural(r.votes, "vote")}` : ""}
@@ -275,13 +260,13 @@ export default function TrackVote({ event }) {
               </Box>
             </>
           ) : (
-            <Typography variant="body2" sx={{ color: colors.muted, mt: 0.5 }}>
+            <Typography sx={{ color: colors.muted, mt: 0.5 }}>
               {me
                 ? "No track history yet. Once you've raced cups with known tracks, your best ones show up here to vote for."
                 : "Your results aren't linked to your account yet, so there's no track history to suggest from."}
             </Typography>
           )}
-        </Paper>
+        </Box>
       )}
     </Box>
   );

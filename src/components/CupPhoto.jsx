@@ -49,9 +49,9 @@ export default function CupPhoto({ cup, signedIn }) {
 
   if (!signedIn) {
     return (
-      <Typography variant="body2" sx={{ color: colors.muted, display: "flex", alignItems: "center", gap: 0.75, alignSelf: "start" }}>
+      <Typography sx={{ color: colors.muted, display: "flex", alignItems: "center", gap: 0.75, alignSelf: "start" }}>
         <PhotoCameraOutlinedIcon fontSize="small" />
-        <span>Results photo: <RouterLink to="/account" style={{ color: colors.cool }}>sign in</RouterLink> to see it</span>
+        <span>Results photo: <RouterLink to="/account" style={{ color: colors.link }}>sign in</RouterLink> to see it</span>
       </Typography>
     );
   }
@@ -59,7 +59,7 @@ export default function CupPhoto({ cup, signedIn }) {
   return (
     <Box ref={ref} sx={{ alignSelf: "start", width: "100%", maxWidth: { xs: 220, md: 260 } }}>
       {thumb ? (
-        <ButtonBase onClick={show} aria-label={`Open the ${label.toLowerCase()}`} sx={{ display: "block", width: "100%", borderRadius: 2, overflow: "hidden", border: `1px solid ${colors.line}` }}>
+        <ButtonBase onClick={show} aria-label={`Open the ${label.toLowerCase()}`} sx={{ display: "block", width: "100%", borderRadius: 1, overflow: "hidden" }}>
           <Box component="img" src={thumb} alt={label} loading="lazy" sx={{ width: "100%", display: "block" }} />
         </ButtonBase>
       ) : thumb === null ? (

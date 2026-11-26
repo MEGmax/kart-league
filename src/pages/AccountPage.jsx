@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -13,15 +12,8 @@ import CircularProgress from "@mui/material/CircularProgress";
 import MenuItem from "@mui/material/MenuItem";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
-import LinearProgress from "@mui/material/LinearProgress";
 import Autocomplete from "@mui/material/Autocomplete";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import MailOutlineIcon from "@mui/icons-material/MailOutline";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
-import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import TimelineOutlinedIcon from "@mui/icons-material/TimelineOutlined";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -37,7 +29,7 @@ import { bestTracks, trackCup } from "../lib/tracks";
 import { compute, playerSlug } from "../lib/standings";
 import { getApiKey, setApiKey, MODEL } from "../lib/readPhoto";
 import { groupBatches, useMyData } from "../lib/accountData";
-import { PLAYER_COLORS, brandStripe, colors, fontData, fontDisplay } from "../theme";
+import { PLAYER_COLORS, colors, fontDisplay } from "../theme";
 import { plural } from "../components/PageBits";
 import CharacterFace from "../components/CharacterFace";
 import CupIcon from "../components/CupIcon";
@@ -94,13 +86,13 @@ function AuthForm() {
       <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2 }}>
         <Box component="img" src={LOGO_SRC} alt="" sx={{ height: 52, width: "auto" }} />
         <div>
-          <Typography variant="h5" sx={{ fontFamily: "inherit" }}>{up ? "Create an account" : "Sign in"}</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>{up ? "Join the league to enter results and sign up for cup nights." : "Welcome back to the league."}</Typography>
+          <Typography component="h1" sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.375rem", md: "1.75rem" }, lineHeight: 1.15 }}>{up ? "Create an account" : "Sign in"}</Typography>
+          <Typography sx={{ color: colors.muted }}>{up ? "Join the league to enter results and sign up for cup nights." : "Welcome back to the league."}</Typography>
         </div>
       </Stack>
-      <Paper sx={{ p: 3 }}>
+      <Box>
         {up && (
-          <Typography variant="body2" sx={{ color: colors.muted, mb: 2 }}>
+          <Typography sx={{ color: colors.muted, mb: 2 }}>
             If an admin already added you as a player, sign up with the email they used and your results link up automatically once you confirm it.
           </Typography>
         )}
@@ -128,7 +120,7 @@ function AuthForm() {
             </>
           )}
         </Stack>
-      </Paper>
+      </Box>
     </Container>
   );
 }
@@ -171,7 +163,7 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
       <DialogTitle sx={{ fontFamily: "inherit", fontWeight: 800 }}>Edit profile</DialogTitle>
       <DialogContent>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 2.5, mt: 0.5 }}>
-          <CharacterFace name={draft.favoriteCharacter} ring={draft.color} size={56} />
+          <CharacterFace name={draft.favoriteCharacter} size={56} />
           <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontWeight: 800 }} noWrap>{draft.displayName.trim() || "Your name"}</Typography>
             <Typography variant="body2" sx={{ color: colors.muted }} noWrap>{[draft.favoriteCharacter, draft.favoriteVehicle.trim()].filter(Boolean).join(" · ") || "Pick a character"}</Typography>
@@ -226,77 +218,68 @@ function ProfileEditor({ profile, open, onClose, onSaved }) {
   );
 }
 
-// A settings card with a small icon heading.
-function Panel({ icon, title, children, sx }) {
+// A settings section: a plain heading over a hairline, no box.
+function Panel({ title, children, sx }) {
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, ...sx }}>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25, color: colors.muted }}>
-        {icon}
-        <Typography variant="overline" sx={{ lineHeight: 1.4 }}>{title}</Typography>
-      </Stack>
+    <Box component="section" sx={{ pt: 2, borderTop: `1px solid ${colors.line}`, ...sx }}>
+      <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.25rem", mb: 1.5 }}>{title}</Typography>
       {children}
-    </Paper>
+    </Box>
   );
 }
 
 function Stat({ label, value, sub }) {
   return (
     <Box sx={{ minWidth: 0 }}>
-      <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.25rem", sm: "1.55rem" }, lineHeight: 1.1, transform: "skewX(-7deg)" }} noWrap>{value}</Typography>
-      <Typography variant="caption" sx={{ color: colors.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>{label}</Typography>
-      {sub && <Typography variant="caption" sx={{ color: colors.muted, display: "block" }}>{sub}</Typography>}
+      <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }}>{label}</Typography>
+      <Typography sx={{ fontWeight: 800, fontSize: { xs: "1.375rem", sm: "1.625rem" }, lineHeight: 1.15 }} noWrap>{value}</Typography>
+      {sub && <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }}>{sub}</Typography>}
     </Box>
   );
 }
 
-// The player card: character art, name, colors, and (once linked to a player) the season in numbers.
+// The player card: character art, name and (once linked to a player) the season in numbers.
 function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEdit }) {
-  const color = profile.color || PLAYER_COLORS[0];
   const character = profile.favoriteCharacter || (stats && stats.main && stats.main.name) || "";
   const art = charSrc(character, true);
+  const chip = { borderColor: colors.rule };
 
   return (
-    <Paper sx={{ position: "relative", overflow: "hidden", p: 0, border: `1px solid ${colors.line}` }}>
-      <Box aria-hidden sx={{ position: "absolute", inset: 0, background: `linear-gradient(120deg, ${color}66 0%, ${colors.navy} 45%, ${colors.panel} 100%)` }} />
-      <Box aria-hidden sx={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(-62deg, rgba(255,255,255,.04) 0 2px, transparent 2px 24px)" }} />
-      <Box aria-hidden sx={{ position: "absolute", top: 0, bottom: 0, right: { xs: "-30%", sm: "-8%" }, width: { xs: "55%", sm: "38%" }, transform: "skewX(-14deg)", background: `linear-gradient(180deg, ${color} 0%, ${color}22 100%)`, opacity: 0.55 }} />
+    <Box component="section" aria-label="Your profile" sx={{ position: "relative" }}>
       {art && (
         <Box component="img" src={art} alt="" aria-hidden
-          sx={{ position: "absolute", right: { xs: -12, sm: 24 }, bottom: 0, height: { xs: 150, sm: 220 }, width: "auto", opacity: { xs: 0.35, sm: 1 }, filter: "drop-shadow(0 12px 24px rgba(0,0,0,.5))" }} />
+          sx={{ display: { xs: "none", sm: "block" }, position: "absolute", right: 0, top: 0, height: 220, width: "auto" }} />
       )}
 
-      <Box sx={{ position: "relative", p: { xs: 2.5, sm: 3.5 }, pr: { sm: 30 } }}>
+      <Box sx={{ position: "relative", pr: { sm: 30 } }}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <CharacterFace name={character} ring={color} size={72} />
+          <CharacterFace name={character} size={72} />
           <Box sx={{ minWidth: 0 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <Chip label={roleLabel(profile.role)} size="small" color="primary" sx={{ height: 22, fontWeight: 800 }} />
-              {player && player.registeredAt && <Typography variant="caption" sx={{ color: "rgba(255,255,255,.75)" }}>Joined {fmtDate(String(player.registeredAt).slice(0, 10))}</Typography>}
-            </Stack>
-            <Typography component="h1" sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.4rem", sm: "2rem" }, lineHeight: 1.05, textShadow: `0 3px 0 ${colors.red}`, transform: "skewX(-7deg)", transformOrigin: "left bottom", overflowWrap: "anywhere" }}>
+            <Typography component="h1" sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.375rem", sm: "1.75rem" }, lineHeight: 1.15, overflowWrap: "anywhere" }}>
               {profile.displayName || "Racer"}
+            </Typography>
+            <Typography sx={{ color: colors.muted, mt: 0.5 }}>
+              {[roleLabel(profile.role), character, profile.favoriteVehicle, player && player.registeredAt ? `joined ${fmtDate(String(player.registeredAt).slice(0, 10))}` : null].filter(Boolean).join(" · ")}
             </Typography>
           </Box>
         </Stack>
 
         <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 2 }}>
-          {character && <Chip size="small" label={character} sx={{ bgcolor: "rgba(7,10,31,.5)" }} />}
-          {profile.favoriteVehicle && <Chip size="small" label={profile.favoriteVehicle} sx={{ bgcolor: "rgba(7,10,31,.5)" }} />}
           {player
-            ? <Chip size="small" label={`Racing as ${player.name}`} sx={{ bgcolor: "rgba(7,10,31,.5)" }} avatar={<Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: player.color || color, ml: 0.75 }} />} />
-            : <Chip size="small" variant="outlined" label="Not linked to a player yet" sx={{ borderStyle: "dashed" }} />}
+            ? <Chip size="small" variant="outlined" label={`Racing as ${player.name}`} sx={chip} />
+            : <Chip size="small" variant="outlined" label="Not linked to a player yet" sx={{ ...chip, borderStyle: "dashed" }} />}
         </Stack>
 
         {stats && stats.cp > 0 ? (
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "minmax(0,1.6fr) repeat(4, minmax(0,1fr))" }, gap: 2, mt: 3, p: 2, borderRadius: 2, bgcolor: "rgba(7,10,31,.55)", border: "1px solid rgba(255,255,255,.08)", alignItems: "end" }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "minmax(0,1.6fr) repeat(4, minmax(0,1fr))" }, columnGap: 3, rowGap: 2, mt: 3, pt: 2, borderTop: `1px solid ${colors.line}`, alignItems: "end" }}>
             {stats.rating != null && (
               <Box sx={{ gridColumn: { xs: "1 / -1", sm: "auto" }, minWidth: 0 }}>
+                <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }}>Skill rating</Typography>
                 <Stack direction="row" spacing={1} alignItems="baseline">
-                  <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "2rem", sm: "2.4rem" }, lineHeight: 1, transform: "skewX(-7deg)", color: colors.gold }}>{fmtRating(stats.rating)}</Typography>
-                  {stats.lastNight && <RatingDelta delta={stats.lastNight.delta} />}
+                  <Typography sx={{ fontWeight: 800, fontSize: { xs: "2.25rem", sm: "2.75rem" }, lineHeight: 1 }}>{fmtRating(stats.rating)}</Typography>
+                  {stats.lastNight && <RatingDelta delta={stats.lastNight.delta} sx={{ fontSize: "1rem" }} />}
                   {stats.provisional && <ProvisionalBadge cups={provisionalCups} />}
                 </Stack>
-                <Typography variant="caption" sx={{ color: colors.muted, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>Skill rating</Typography>
               </Box>
             )}
             <Stat label="Rank" value={stats.rank ? `${stats.rank}${ord(stats.rank)}` : "—"} sub={stats.rank ? null : `${plural(Math.max(0, need - stats.cp), "cup")} to qualify`} />
@@ -305,7 +288,7 @@ function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEd
             <Stat label="Cup wins" value={stats.wins} />
           </Box>
         ) : (
-          <Typography variant="body2" sx={{ color: "rgba(255,255,255,.8)", mt: 2.5, maxWidth: "46ch" }}>
+          <Typography sx={{ color: colors.muted, mt: 2.5, maxWidth: "46ch" }}>
             {player
               ? "Race your first cup and your season shows up here."
               : "Your results link up once an admin connects you to your player, or claim them on the Unclaimed page."}
@@ -314,12 +297,11 @@ function ProfileHero({ profile, player, stats, need, slug, provisionalCups, onEd
 
         <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mt: 2.5 }}>
           <Button variant="contained" startIcon={<EditOutlinedIcon />} onClick={onEdit}>Edit profile</Button>
-          {stats && stats.cp > 0 && slug && <Button variant="outlined" component={RouterLink} to={`/standings/${encodeURIComponent(slug)}`} sx={{ bgcolor: "rgba(7,10,31,.4)" }}>Full season</Button>}
-          {!player && <Button variant="outlined" component={RouterLink} to="/unclaimed" sx={{ bgcolor: "rgba(7,10,31,.4)" }}>Unclaimed results</Button>}
+          {stats && stats.cp > 0 && slug && <Button variant="outlined" color="inherit" component={RouterLink} to={`/standings/${encodeURIComponent(slug)}`}>Full season</Button>}
+          {!player && <Button variant="outlined" color="inherit" component={RouterLink} to="/unclaimed">Unclaimed results</Button>}
         </Stack>
       </Box>
-      <Box aria-hidden sx={{ position: "relative", height: 4, background: brandStripe }} />
-    </Paper>
+    </Box>
   );
 }
 
@@ -334,17 +316,17 @@ function FavouriteTracks({ favourites, stats, onEdit }) {
   const grid = { display: "grid", gap: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(3, minmax(0,1fr))" } };
 
   return (
-    <Panel icon={<FavoriteBorderIcon fontSize="small" />} title="Favourite tracks">
+    <Panel title="Favourite tracks">
       <Box sx={grid}>
         {favourites.map((t) => (
           <Box key={t} sx={{ minWidth: 0 }}>
             <TrackImage track={t} label caption={trackCup(t) || "Custom"} />
-            <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 0.5 }} noWrap>{line(statOf(t))}</Typography>
+            <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }} noWrap>{line(statOf(t))}</Typography>
           </Box>
         ))}
         {Array.from({ length: 3 - favourites.length }, (_, i) => (
           <Box key={`empty-${i}`} component="button" type="button" onClick={onEdit}
-            sx={{ aspectRatio: "16 / 9", borderRadius: 1.5, border: `1px dashed ${colors.line}`, bgcolor: "transparent", color: colors.muted, cursor: "pointer", font: "inherit", fontSize: "0.8rem", "&:hover": { borderColor: colors.accent, color: colors.ink } }}>
+            sx={{ aspectRatio: "16 / 9", borderRadius: 1, border: `1px dashed ${colors.rule}`, bgcolor: "transparent", color: colors.muted, cursor: "pointer", font: "inherit", fontSize: "0.9375rem", fontWeight: 600, "&:hover": { borderColor: colors.ink, color: colors.ink } }}>
             + Pick a favourite
           </Box>
         ))}
@@ -352,12 +334,12 @@ function FavouriteTracks({ favourites, stats, onEdit }) {
 
       {best.length > 0 && (
         <>
-          <Typography variant="overline" sx={{ color: colors.muted, display: "block", mt: 2.5, mb: 1, lineHeight: 1.4 }}>Where you score best</Typography>
+          <Typography component="h3" sx={{ fontWeight: 700, mt: 3, mb: 1 }}>Where you score best</Typography>
           <Box sx={grid}>
             {best.map((st) => (
               <Box key={st.track} sx={{ minWidth: 0 }}>
                 <TrackImage track={st.track} label caption={st.wins ? plural(st.wins, "race win") : trackCup(st.track) || "Custom"} />
-                <Typography variant="caption" sx={{ color: st.vsUsual > 0 ? colors.good : colors.muted, display: "block", mt: 0.5 }} noWrap>{line(st)}</Typography>
+                <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }} noWrap>{line(st)}</Typography>
               </Box>
             ))}
           </Box>
@@ -372,20 +354,20 @@ function FavouriteTracks({ favourites, stats, onEdit }) {
 function RatingPanel({ stats }) {
   if (!stats || stats.rating == null || !stats.cp) return null;
   return (
-    <Panel icon={<TimelineOutlinedIcon fontSize="small" />} title="Skill rating">
+    <Panel title="Skill rating">
       <Stack direction="row" spacing={2} alignItems="baseline" useFlexGap flexWrap="wrap" sx={{ mb: 1.25 }}>
-        <Typography sx={{ fontFamily: fontData, fontWeight: 800, fontSize: "1.6rem", lineHeight: 1 }}>{fmtRating(stats.rating)}</Typography>
+        <Typography sx={{ fontWeight: 800, fontSize: "1.6rem", lineHeight: 1 }}>{fmtRating(stats.rating)}</Typography>
         {stats.lastNight && (
-          <Typography variant="body2" sx={{ color: colors.muted }}><RatingDelta delta={stats.lastNight.delta} /> on {fmtDate(stats.lastNight.date)}</Typography>
+          <Typography sx={{ color: colors.muted }}><RatingDelta delta={stats.lastNight.delta} /> on {fmtDate(stats.lastNight.date)}</Typography>
         )}
-        <Typography variant="body2" sx={{ color: colors.muted }}>
+        <Typography sx={{ color: colors.muted }}>
           high {fmtRating(stats.ratingHigh)} · started {fmtRating(stats.ratingStart)}
           {stats.overUnder != null ? ` · ${signed(stats.overUnder, 1)} pts a matchup vs expected` : ""}
         </Typography>
       </Stack>
       <RatingChart s={stats} />
       {stats.provisional && (
-        <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 1 }}>
+        <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 1 }}>
           Provisional: your rating moves faster until you've raced a few more cups this season.
         </Typography>
       )}
@@ -401,25 +383,23 @@ function RecentForm({ stats }) {
     return h ? h.after - h.before : null;
   };
   return (
-    <Panel icon={<TimelineOutlinedIcon fontSize="small" />} title="Recent form">
+    <Panel title="Recent form">
       <Stack divider={<Divider />}>
         {recent.map((l) => {
-          const medal = { 1: colors.gold, 2: colors.silver, 3: colors.bronze }[l.rank];
           return (
             <Stack key={l.cup.id} direction="row" spacing={1.5} alignItems="center" sx={{ py: 1 }}>
-              <Box sx={{ width: 40, textAlign: "center", fontFamily: fontDisplay, fontSize: "0.95rem", color: medal || colors.muted, transform: "skewX(-7deg)" }}>
-                {l.rank}<Box component="sup" sx={{ fontSize: "0.55em" }}>{ord(l.rank)}</Box>
+              <Box sx={{ width: 40, textAlign: "center", fontWeight: 800, fontStyle: "italic", fontSize: "1.125rem" }}>
+                {l.rank}<Box component="sup" sx={{ fontSize: "0.6em" }}>{ord(l.rank)}</Box>
               </Box>
               <CupIcon cup={l.cup.cup} size={26} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{l.cup.cup}</Typography>
-                <Typography variant="caption" sx={{ color: colors.muted }} noWrap>
+                <Typography sx={{ fontWeight: 700 }} noWrap>{l.cup.cup}</Typography>
+                <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }} noWrap>
                   {[fmtDate(l.cup.date), plural(l.field, "racer"), l.character].filter(Boolean).join(" · ")}
                 </Typography>
               </Box>
               <Box sx={{ textAlign: "right" }}>
-                <Typography variant="body2" sx={{ fontFamily: fontData, fontWeight: 700 }}>{l.pts}<Box component="span" sx={{ color: colors.muted }}>/{l.max}</Box></Typography>
-                <LinearProgress variant="determinate" value={(100 * l.pts) / l.max} sx={{ width: 64, height: 4, borderRadius: 2, mt: 0.5, bgcolor: colors.line, "& .MuiLinearProgress-bar": { bgcolor: medal || colors.cool } }} />
+                <Typography sx={{ fontWeight: 700 }}>{l.pts}<Box component="span" sx={{ color: colors.muted, fontWeight: 500 }}>/{l.max}</Box></Typography>
               </Box>
               <Box sx={{ width: 44, textAlign: "right" }}><RatingDelta delta={change(l.cup.id)} /></Box>
             </Stack>
@@ -451,7 +431,7 @@ function EmailPreferences({ profile }) {
   }
 
   return (
-    <Panel icon={<MailOutlineIcon fontSize="small" />} title="Emails">
+    <Panel title="Emails">
       <FormControlLabel
         sx={{ display: "flex" }}
         control={<Switch checked={on} disabled={busy} onChange={(e) => toggle(e.target.checked)} />}
@@ -476,11 +456,11 @@ function GeminiKey() {
     setApiKey(k); setHas(true); setVal(""); setEditing(false);
   }
   return (
-    <Panel icon={<AutoAwesomeOutlinedIcon fontSize="small" />} title="Read results photos with Gemini">
+    <Panel title="Read results photos with Gemini">
       <Typography variant="body2">
         With a Gemini API key, Gemini reads the results photos you upload: everyone's points, who's who (by character) and the tracks. Admins only.
         The key stays in this browser and is sent only to Google ({MODEL}). Get one free at{" "}
-        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: colors.cool }}>Google AI Studio</a>; usage beyond the free tier is billed to the key.
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" style={{ color: colors.link }}>Google AI Studio</a>; usage beyond the free tier is billed to the key.
       </Typography>
       {has && !editing ? (
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1.5 }}>
@@ -521,7 +501,7 @@ function MyActivity() {
   }
 
   return (
-    <Panel icon={<InboxOutlinedIcon fontSize="small" />} title="Your submissions and requests">
+    <Panel title="Your submissions and requests">
       <Stack spacing={1.5}>
         {batches.map((b) => {
           const pending = b.filter((x) => x.status === "pending");
@@ -664,25 +644,25 @@ function SignedInView() {
       <ProfileHero profile={profile} player={player} stats={stats} need={m ? m.minCups : 0} slug={slug} provisionalCups={m && m.rated ? m.rated.cfg.provisional : 5} onEdit={() => setEditing(true)} />
       {editing && <ProfileEditor open profile={profile} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setSavedFlash("Profile saved"); }} />}
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, gap: 2, mt: 2, alignItems: "start" }}>
-        <Stack spacing={2} sx={{ minWidth: 0 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,7fr) minmax(0,5fr)" }, columnGap: 6, rowGap: 5, mt: 5, alignItems: "start" }}>
+        <Stack spacing={5} sx={{ minWidth: 0 }}>
           <FavouriteTracks favourites={profile.favoriteTracks || []} stats={stats} onEdit={() => setEditing(true)} />
           <RatingPanel stats={stats} />
           <RecentForm stats={stats} />
           <MyActivity />
-          <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", justifyContent: "space-between" }}>
+          <Box sx={{ pt: 2, borderTop: `1px solid ${colors.line}`, display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", justifyContent: "space-between" }}>
             <Box>
-              <Typography sx={{ fontWeight: 800 }}>Raced a cup night?</Typography>
-              <Typography variant="body2" sx={{ color: colors.muted }}>{isAdmin ? "Record the results and the standings update." : "Submit the results and an admin checks them."}</Typography>
+              <Typography sx={{ fontWeight: 700 }}>Raced a cup night?</Typography>
+              <Typography sx={{ color: colors.muted }}>{isAdmin ? "Record the results and the standings update." : "Submit the results and an admin checks them."}</Typography>
             </Box>
             <Button component={RouterLink} to="/add" variant="contained">{isAdmin ? "Record a cup night" : "Submit results"}</Button>
-          </Paper>
+          </Box>
         </Stack>
 
-        <Stack spacing={2} sx={{ minWidth: 0 }}>
+        <Stack spacing={5} sx={{ minWidth: 0 }}>
           <EmailPreferences key={String(profile.emailCupNights)} profile={profile} />
           {isAdmin && <GeminiKey />}
-          <Panel icon={<LockOutlinedIcon fontSize="small" />} title="Sign-in and security">
+          <Panel title="Sign-in and security">
             <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
               Signed in as <b>{user.email}</b>{isPw ? " with a password" : ""}.
             </Typography>

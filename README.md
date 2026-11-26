@@ -1,4 +1,4 @@
-# Kart Night League
+# Night Kart League
 
 Regular-season standings for our Mario Kart Wii league. It's a React + MUI site, built with Vite and deployed
 to GitHub Pages by a GitHub Actions workflow, with Supabase for accounts and league data.

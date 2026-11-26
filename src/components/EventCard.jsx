@@ -20,7 +20,7 @@ import { cupLabel, formatEventWhen, isGoing, isHappening, isOpen, isOver } from 
 import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useFlash } from "../context/FlashContext";
-import { colors, fontDisplay } from "../theme";
+import { colors } from "../theme";
 import CupIcon from "./CupIcon";
 import EventDialog from "./EventDialog";
 
@@ -168,25 +168,18 @@ export function byMonth(items, dateOf) {
   return groups;
 }
 
-// The tear-off calendar square at the start of each schedule row.
+// The date at the start of each schedule row: weekday, a big day number, month.
 export function DateBlock({ date, tone = "default", struck = false }) {
-  const accent = tone === "next" ? colors.accent : tone === "live" ? colors.hot : null;
+  const past = tone === "past";
   return (
-    <Box
-      aria-hidden
-      sx={{
-        width: { xs: 52, sm: 60 }, borderRadius: 1.5, overflow: "hidden", textAlign: "center", alignSelf: "start",
-        border: `1px solid ${accent || colors.line}`, bgcolor: tone === "past" ? "transparent" : colors.bg2,
-        opacity: struck ? 0.6 : 1,
-      }}
-    >
-      <Box sx={{ bgcolor: accent || (tone === "past" ? colors.panel : colors.navy), color: accent ? colors.accentInk : colors.ink, fontSize: "0.62rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", py: 0.25 }}>
+    <Box aria-hidden sx={{ width: { xs: 48, sm: 56 }, textAlign: "center", alignSelf: "start", opacity: struck ? 0.6 : 1 }}>
+      <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: colors.muted, lineHeight: 1.2 }}>
         {date.toLocaleDateString(undefined, { weekday: "short" })}
-      </Box>
-      <Typography sx={{ fontFamily: fontDisplay, fontSize: { xs: "1.25rem", sm: "1.45rem" }, lineHeight: 1.15, pt: 0.5, textDecoration: struck ? "line-through" : "none", color: tone === "past" ? colors.muted : colors.ink }}>
+      </Typography>
+      <Typography sx={{ fontWeight: 800, fontSize: { xs: "1.75rem", sm: "2rem" }, lineHeight: 1.05, textDecoration: struck ? "line-through" : "none", color: past ? colors.muted : colors.ink }}>
         {date.getDate()}
       </Typography>
-      <Typography sx={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colors.muted, pb: 0.5 }}>
+      <Typography sx={{ fontSize: "0.875rem", fontWeight: 600, color: colors.muted, lineHeight: 1.2 }}>
         {date.toLocaleDateString(undefined, { month: "short" })}
       </Typography>
     </Box>
@@ -199,10 +192,9 @@ export function ScheduleRow({ id, date, tone, struck, highlight, children, actio
     <Box
       id={id}
       sx={{
-        display: "grid", columnGap: 2, rowGap: 1.25, px: { xs: 1.5, sm: 2 }, py: 2, scrollMarginTop: 80,
+        display: "grid", columnGap: 2, rowGap: 1.25, px: highlight ? 1.5 : 0, py: 2, scrollMarginTop: 80,
         gridTemplateColumns: { xs: "auto minmax(0,1fr)", sm: "auto minmax(0,1fr) auto" },
-        bgcolor: highlight ? "rgba(255,210,63,.06)" : "transparent",
-        boxShadow: highlight ? `inset 3px 0 0 ${colors.accent}` : "none",
+        bgcolor: highlight ? colors.raised : "transparent",
       }}
     >
       <DateBlock date={date} tone={tone} struck={struck} />
@@ -217,17 +209,12 @@ export function ScheduleRow({ id, date, tone, struck, highlight, children, actio
   );
 }
 
-// A row of colored dots and names: who's in, or who raced.
+// Who's in, or who raced: a label and the names.
 export function PeopleLine({ people, label }) {
   return (
-    <Typography variant="body2" sx={{ color: colors.muted, display: "flex", flexWrap: "wrap", alignItems: "center", columnGap: 1, rowGap: 0.25 }}>
-      {label && <Box component="span" sx={{ fontWeight: 700, color: colors.ink }}>{label}</Box>}
-      {people.map((g, i) => (
-        <Box key={g.key || i} component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, whiteSpace: "nowrap" }}>
-          <Box component="span" sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: g.color || colors.muted, flexShrink: 0 }} />
-          {g.name}
-        </Box>
-      ))}
+    <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>
+      {label && <Box component="span" sx={{ fontWeight: 700, color: colors.ink, mr: 1 }}>{label}</Box>}
+      {people.map((g) => g.name).join(", ")}
     </Typography>
   );
 }
@@ -266,10 +253,10 @@ export default function EventCard({ event, isNext = false, highlight = false }) 
       actions={actions}
     >
       <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap", mb: 0.75 }}>
-        <Typography sx={{ fontWeight: 800, textDecoration: cancelled ? "line-through" : "none" }}>{when.time}</Typography>
-        {live && <Chip size="small" label="Happening now" sx={{ bgcolor: colors.hot, color: "#fff", fontWeight: 700, height: 22 }} />}
-        {isNext && !live && <Chip size="small" label="Next up" sx={{ bgcolor: colors.accent, color: colors.accentInk, fontWeight: 800, height: 22 }} />}
-        {cancelled && <Chip size="small" label="Cancelled" color="error" sx={{ height: 22 }} />}
+        <Typography sx={{ fontWeight: 700, fontSize: "1.0625rem", textDecoration: cancelled ? "line-through" : "none" }}>{when.time}</Typography>
+        {live && <Chip size="small" variant="outlined" label="Happening now" sx={{ color: colors.good, borderColor: colors.good, height: 24 }} />}
+        {isNext && !live && <Chip size="small" variant="outlined" label="Next up" sx={{ borderColor: colors.rule, height: 24 }} />}
+        {cancelled && <Chip size="small" variant="outlined" label="Cancelled" color="error" sx={{ height: 24 }} />}
       </Stack>
 
       {event.cups.length ? (
@@ -277,22 +264,22 @@ export default function EventCard({ event, isNext = false, highlight = false }) 
           {event.cups.map((c, i) => (
             <Stack key={i} direction="row" spacing={0.75} alignItems="center">
               <CupIcon cup={c} size={20} />
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>{c}</Typography>
+              <Typography sx={{ fontWeight: 600 }}>{c}</Typography>
             </Stack>
           ))}
         </Stack>
       ) : (
-        <Typography variant="body2" sx={{ color: colors.muted, mb: 0.75 }}>
-          <Box component="span" sx={{ px: 0.75, py: 0.1, border: `1px dashed ${colors.line}`, borderRadius: 1, mr: 0.75 }}>{cupLabel(event.cups)}</Box>
-          Cups picked before the night
+        <Typography sx={{ color: colors.muted, mb: 0.75 }}>
+          <Box component="span" sx={{ color: colors.ink, fontWeight: 600, mr: 0.75 }}>{cupLabel(event.cups)}</Box>
+          · cups picked before the night
         </Typography>
       )}
 
-      {event.notes && <Typography variant="body2" sx={{ mb: 0.75, whiteSpace: "pre-line" }}>{event.notes}</Typography>}
+      {event.notes && <Typography sx={{ mb: 0.75, whiteSpace: "pre-line" }}>{event.notes}</Typography>}
 
       {!cancelled && (n
-        ? <PeopleLine label={`${n} in`} people={event.going.map((g, i) => ({ key: g.userId || `${g.name}-${i}`, name: g.name, color: g.color }))} />
-        : <Typography variant="body2" sx={{ color: colors.muted }}>{open ? "Nobody's in yet. Be the first." : "Nobody signed up."}</Typography>)}
+        ? <PeopleLine label={`${n} in`} people={event.going.map((g, i) => ({ key: g.userId || `${g.name}-${i}`, name: g.name }))} />
+        : <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{open ? "Nobody's in yet. Be the first." : "Nobody signed up."}</Typography>)}
     </ScheduleRow>
   );
 }

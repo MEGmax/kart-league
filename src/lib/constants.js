@@ -61,7 +61,7 @@ export const BUILTIN_CUPS = ["Mushroom Cup", "Flower Cup", "Star Cup", "Special 
 // "pct" ranks by points percentage. seasonRankBy records how each finished season was ranked, so old
 // seasons render as they were.
 export const DEFAULT_LEAGUE = {
-  name: "Kart Night League", season: "Season 1", seasonWeeks: 5, cupsPerWeek: 4,
+  name: "Night Kart League", season: "Season 1", seasonWeeks: 5, cupsPerWeek: 4,
   playoffSpots: 4, minParticipation: 40, defaultMax: 60,
   currentSeason: 1, rankBy: "rating", ratingStart: 1500, ratingK: 32, ratingKProvisional: 48, provisionalCups: 5,
   marginCap: 30, carryOver: 0.5, playoffCupsPerRound: 2,

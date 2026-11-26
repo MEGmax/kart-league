@@ -1,8 +1,6 @@
 // Records (#/records): league records that update live, and the season's awards (announced after the playoffs).
 import { useMemo } from "react";
 import Container from "@mui/material/Container";
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Alert from "@mui/material/Alert";
 import { useLeagueData } from "../context/LeagueDataContext";
@@ -10,27 +8,20 @@ import { compute } from "../lib/standings";
 import { awards, records, rookieIds } from "../lib/records";
 import { DEMO } from "../lib/demo";
 import { fmtDate, pctTxt } from "../lib/constants";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import SeasonPicker, { useSeason } from "../components/SeasonPicker";
 import { fmtRating, signed } from "../components/RatingBits";
-import { Loading, PageTitle, SectionTitle } from "../components/PageBits";
+import { Fact, FactList, Loading, PageTitle, SectionTitle } from "../components/PageBits";
 
 function names(list) {
   const n = list.map((x) => x.s.player.name);
   return n.length <= 2 ? n.join(" & ") : `${n.slice(0, -1).join(", ")} & ${n[n.length - 1]}`;
 }
 
-function Card({ title, holder, detail, accent = colors.hot }) {
-  return (
-    <Paper sx={{ p: 2, borderLeft: `3px solid ${accent}`, minWidth: 0 }}>
-      <Typography variant="overline" sx={{ color: colors.muted, lineHeight: 1.4, display: "block" }}>{title}</Typography>
-      <Typography sx={{ fontWeight: 800, fontSize: "1.1rem", mt: 0.25 }}>{holder || "—"}</Typography>
-      <Typography variant="body2" sx={{ color: colors.muted, fontFamily: holder ? fontData : "inherit" }}>{detail}</Typography>
-    </Paper>
-  );
+// A record or award: the holder in bold, what it's for above, the detail under it.
+function Card({ title, holder, detail }) {
+  return <Fact label={title} value={holder || "—"} sub={detail} />;
 }
-
-const grid = { display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, 1fr)" } };
 
 export default function RecordsPage() {
   const { state, loadError } = useLeagueData();
@@ -71,7 +62,7 @@ export default function RecordsPage() {
       <SeasonPicker season={season} seasons={seasons} setSeason={setSeason} />
 
       <SectionTitle title="Records" sx={{ mt: 0 }} />
-      <Box sx={grid}>
+      <FactList columns={3}>
         <Card title="Best cup" holder={r.bestCup && name(r.bestCup.p)}
           detail={r.bestCup ? `${r.bestCup.pts}/${r.bestCup.max}, cup ${r.bestCup.num} (${fmtDate(r.bestCup.cup.date)})${r.bestCup.pts === r.bestCup.max ? ": a perfect cup" : ""}` : "No cups yet"} />
         <Card title="Biggest winning margin" holder={r.biggestMargin && name(r.biggestMargin.p)}
@@ -82,16 +73,16 @@ export default function RecordsPage() {
           detail={r.winStreak.length ? `${r.winStreak[0].value} cups in a row` : "Nobody has won 2 in a row yet"} />
         <Card title="Highest rating reached" holder={r.highestRating.length ? names(r.highestRating) : null}
           detail={r.highestRating.length ? fmtRating(r.highestRating[0].value) : "No ratings yet"} />
-      </Box>
+      </FactList>
 
       <SectionTitle title="Awards" count={over ? "Season complete" : "As things stand"} />
-      <Box sx={grid}>
+      <FactList columns={3}>
         {list.map((a) => {
           const f = fmtAward(a);
-          return <Card key={a.key} title={a.title} holder={f.holder} detail={f.detail || a.blurb} accent={colors.gold} />;
+          return <Card key={a.key} title={a.title} holder={f.holder} detail={f.detail || a.blurb} />;
         })}
-      </Box>
-      <Typography variant="body2" sx={{ color: colors.muted, mt: 1.5 }}>
+      </FactList>
+      <Typography sx={{ color: colors.muted, mt: 2, fontSize: "0.9375rem" }}>
         {list.map((a) => `${a.title}: ${a.blurb.toLowerCase()}.`).join(" ")}
       </Typography>
     </Container>

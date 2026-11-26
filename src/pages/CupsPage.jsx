@@ -2,13 +2,13 @@ import { Fragment, useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
-import LinearProgress from "@mui/material/LinearProgress";
+import Collapse from "@mui/material/Collapse";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Link from "@mui/material/Link";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
@@ -17,7 +17,7 @@ import { compute, liveCups } from "../lib/standings";
 import { DEMO } from "../lib/demo";
 import { fmtDate } from "../lib/constants";
 import { sb, q, dbErr } from "../lib/supabaseClient";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import { PageTitle } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import TrackImage from "../components/TrackImage";
@@ -29,56 +29,87 @@ import Chip from "@mui/material/Chip";
 import Tooltip from "@mui/material/Tooltip";
 import SeasonPicker, { useSeason } from "../components/SeasonPicker";
 
-// Race-by-race places. On a phone each race is just the place (details in the tooltip), so all four
-// races and the total fit without scrolling; wider screens add the character and points.
+// Race-by-race places as a plain table. On a phone each race is just the place (details in the tooltip),
+// so all four races and the total fit without scrolling; wider screens add the character and points.
 function RaceGrid({ cup, info, races, playerById }) {
   const rs = races.filter((x) => x.cupId === cup.id);
-  const cols = { xs: "minmax(0,1fr) repeat(4, 34px) 38px", sm: "minmax(0,1fr) repeat(4, minmax(64px, 96px)) 48px" };
-  const head = { fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.06em", color: colors.muted, textAlign: "center" };
+  const cols = { xs: "minmax(0,1fr) repeat(4, 36px) 44px", sm: "minmax(0,1fr) repeat(4, minmax(64px, 96px)) 56px" };
+  const head = { fontSize: "0.875rem", fontWeight: 600, color: colors.muted, textAlign: "center" };
   return (
-    <Paper variant="outlined" role="table" aria-label={`${cup.cup}, race by race`} sx={{ mt: 2, bgcolor: colors.bg2, px: { xs: 1, sm: 1.5 }, py: 1 }}>
-      <Box role="row" sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 0.5, alignItems: "center", pb: 0.75, borderBottom: `1px solid ${colors.line}` }}>
-        <Box role="columnheader" sx={{ ...head, textAlign: "left" }}>RACER</Box>
+    <Box role="table" aria-label={`${cup.cup}, race by race`}>
+      <Box role="row" sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 0.5, alignItems: "center", py: 0.75, borderBottom: `2px solid ${colors.rule}` }}>
+        <Box role="columnheader" sx={{ ...head, textAlign: "left" }}>Racer</Box>
         {[1, 2, 3, 4].map((n) => <Box key={n} role="columnheader" title={cup.maps[n - 1] || ""} sx={head}>R{n}</Box>)}
-        <Box role="columnheader" sx={{ ...head, textAlign: "right" }}>TOTAL</Box>
+        <Box role="columnheader" sx={{ ...head, textAlign: "right" }}>Total</Box>
       </Box>
       {info.res.filter((r) => r.p).map((r) => {
         const p = playerById(r.p);
         return (
-          <Box key={r.rid} role="row" sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 0.5, alignItems: "center", py: 0.75, borderBottom: `1px solid ${colors.line}`, "&:last-of-type": { borderBottom: 0 } }}>
-            <Stack role="rowheader" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-              <CharacterFace name={r.character} ring={p && p.color} size={22} />
-              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>{p ? p.name : "?"}</Typography>
-            </Stack>
+          <Box key={r.rid} role="row" sx={{ display: "grid", gridTemplateColumns: cols, columnGap: 0.5, alignItems: "center", minHeight: 44, borderBottom: `1px solid ${colors.line}` }}>
+            <Typography role="rowheader" noWrap sx={{ fontWeight: 600 }}>{p ? p.name : "?"}</Typography>
             {[1, 2, 3, 4].map((n) => {
               const x = rs.find((y) => y.playerId === r.p && y.race === n);
               const tip = x ? [cup.maps[n - 1], `${x.points} pts`, x.character].filter(Boolean).join(" · ") : "";
               return (
-                <Stack key={n} role="cell" direction="row" spacing={0.5} alignItems="center" justifyContent="center" title={tip} aria-label={x ? `Race ${n}: ${x.position}, ${tip}` : `Race ${n}: no result`}>
+                <Stack key={n} role="cell" direction="row" spacing={0.75} alignItems="center" justifyContent="center" title={tip} aria-label={x ? `Race ${n}: ${x.position}, ${tip}` : `Race ${n}: no result`}>
                   {x ? (
                     <>
-                      {x.character && <Box sx={{ display: { xs: "none", sm: "block" } }}><CharacterFace name={x.character} size={20} /></Box>}
+                      {x.character && <Box sx={{ display: { xs: "none", sm: "block" } }}><CharacterFace name={x.character} size={22} /></Box>}
                       <PlaceBadge n={x.position} />
-                      <Typography component="span" variant="caption" sx={{ color: colors.muted, display: { xs: "none", sm: "inline" } }}>{x.points}</Typography>
+                      <Typography component="span" sx={{ color: colors.muted, fontSize: "0.875rem", display: { xs: "none", sm: "inline" } }}>{x.points}</Typography>
                     </>
                   ) : <Typography component="span" sx={{ color: colors.muted }}>–</Typography>}
                 </Stack>
               );
             })}
-            <Typography role="cell" sx={{ fontFamily: fontData, fontWeight: 700, textAlign: "right" }}>{r.pts}</Typography>
+            <Typography role="cell" sx={{ fontWeight: 700, textAlign: "right" }}>{r.pts}</Typography>
           </Box>
         );
       })}
-    </Paper>
+    </Box>
   );
 }
 
-function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
+// Finishing order: place, face, name (and the character they raced), points.
+function Results({ info, playerById, big }) {
+  return (
+    <Box component="ol" sx={{ listStyle: "none", m: 0, p: 0 }} aria-label="Finishing order">
+      {info.res.map((r) => {
+        const p = r.p ? playerById(r.p) : null;
+        return (
+          <Box component="li" key={r.rid} sx={{
+            display: "grid", alignItems: "center", columnGap: 1.5, minHeight: big ? 56 : 48,
+            gridTemplateColumns: "28px minmax(0,1fr) auto", borderBottom: `1px solid ${colors.line}`,
+          }}>
+            <Box sx={{ fontWeight: 800, fontStyle: "italic", fontSize: big ? "1.375rem" : "1.125rem", color: r.rank === 1 ? colors.gold : colors.ink }}>{r.rank}</Box>
+            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+              <CharacterFace name={r.character} size={big ? 36 : 30} />
+              <Box sx={{ minWidth: 0 }}>
+                {p ? (
+                  <Typography noWrap sx={{ fontWeight: 700, lineHeight: 1.25 }}>{p.name}</Typography>
+                ) : (
+                  <Link component={RouterLink} to="/unclaimed" sx={{ fontWeight: 700, fontStyle: "italic", color: colors.link }}>Unclaimed</Link>
+                )}
+                {r.character && <Typography noWrap sx={{ color: colors.muted, fontSize: "0.875rem", lineHeight: 1.25 }}>{r.character}</Typography>}
+              </Box>
+            </Stack>
+            <Typography sx={{ fontWeight: 700, fontSize: big ? "1.125rem" : "1rem", textAlign: "right", whiteSpace: "nowrap" }}>
+              {r.pts}<Box component="span" sx={{ color: colors.muted, fontWeight: 500 }}>/{info.max}</Box>
+            </Typography>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+function CupCard({ cup, info, st, demo, isAdmin, signedIn, latest }) {
   const navigate = useNavigate();
   const flash = useFlash();
   const { reload } = useLeagueData();
   const [confirmDel, setConfirmDel] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [grid, setGrid] = useState(false);
   const [error, setError] = useState("");
   const playerById = (id) => st.players.find((x) => x.id === id);
 
@@ -108,93 +139,102 @@ function CupCard({ cup, info, st, demo, isAdmin, signedIn }) {
     }
   }
 
+  const tracks = cup.maps && cup.maps.length > 0;
   return (
-    <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2, gridTemplateColumns: { xs: "minmax(0,1fr)", md: cup.hasPhoto && !demo ? "minmax(0,1fr) 260px" : "minmax(0,1fr)" } }}>
+    <Box component="article" aria-label={`Cup ${info.num}: ${cup.cup}`} sx={{
+      py: latest ? 0 : 3, borderTop: latest ? 0 : `1px solid ${colors.line}`,
+      display: "grid", columnGap: 4, rowGap: 2,
+      gridTemplateColumns: { xs: "minmax(0,1fr)", md: latest ? (cup.hasPhoto && !demo ? "minmax(0,1fr) 260px" : "minmax(0,1fr)") : "minmax(0,1fr) minmax(0,1fr)" },
+    }}>
       <Box sx={{ minWidth: 0 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: "wrap" }} useFlexGap>
-          <CupIcon cup={cup.cup} />
-          <Typography sx={{ fontFamily: fontData, color: colors.muted }}>#{info.num}</Typography>
-          <Typography sx={{ fontWeight: 800, fontSize: "1.1rem" }}>{cup.cup}</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>
-            {fmtDate(cup.date)}{info.max !== 60 ? ` · max ${info.max} pts` : ""}
-          </Typography>
+        <Stack direction="row" spacing={1.25} alignItems="center" sx={{ flexWrap: "wrap" }} useFlexGap>
+          <CupIcon cup={cup.cup} size={latest ? 44 : 32} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component={latest ? "h2" : "h3"} sx={{ fontWeight: 700, fontSize: latest ? "1.5rem" : "1.125rem", lineHeight: 1.2 }}>
+              {cup.cup} <Box component="span" sx={{ color: colors.muted, fontWeight: 500 }}>#{info.num}</Box>
+            </Typography>
+            <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>
+              {latest ? "Latest cup · " : ""}{fmtDate(cup.date)}{info.max !== 60 ? ` · max ${info.max} pts` : ""}
+            </Typography>
+          </Box>
           {info.upset && (
             <Tooltip title={`${(playerById(info.upset.winner) || {}).name || "The winner"} won over ${info.upset.over.map((id) => (playerById(id) || {}).name || "?").join(" and ")}, rated 75+ higher going in`}>
-              <Chip size="small" label="Upset" sx={{ height: 22, fontWeight: 800, bgcolor: colors.hot, color: "#fff" }} />
+              <Chip size="small" variant="outlined" label="Upset" sx={{ borderColor: colors.rule }} />
             </Tooltip>
           )}
         </Stack>
 
-        {cup.maps && cup.maps.length > 0 && (
-          <Box sx={{ display: "grid", gap: 1, mt: 1.5, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(4, minmax(0,1fr))" }, maxWidth: 760 }}>
+        {tracks && latest && (
+          <Box sx={{ display: "grid", gap: 1, mt: 2, gridTemplateColumns: { xs: "repeat(2, minmax(0,1fr))", sm: "repeat(4, minmax(0,1fr))" }, maxWidth: 760 }}>
             {cup.maps.map((mp, k) => <TrackImage key={k} track={mp} label caption={`Race ${k + 1}`} />)}
           </Box>
         )}
-        {cup.notes && <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>{cup.notes}</Typography>}
-
-        <Stack spacing={1} sx={{ mt: 2 }}>
-          {info.res.map((r) => {
-            const p = r.p ? playerById(r.p) : null;
-            return (
-              <Box key={r.rid} sx={{
-                display: "grid", alignItems: "center", columnGap: 1.5, rowGap: 0.5,
-                gridTemplateColumns: { xs: "28px minmax(0,1fr) auto", sm: "28px minmax(0,220px) minmax(0,1fr) auto" },
-                opacity: p ? 1 : 0.8,
-              }}>
-                <PlaceBadge n={r.rank} suffix={false} />
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                  <CharacterFace name={r.character} ring={p ? p.color : colors.muted} size={30} />
-                  <Box sx={{ minWidth: 0 }}>
-                    {p ? (
-                      <Typography noWrap sx={{ fontWeight: 700 }}>{p.name}</Typography>
-                    ) : (
-                      <Link component={RouterLink} to="/unclaimed" sx={{ fontWeight: 700, fontStyle: "italic" }}>Unclaimed</Link>
-                    )}
-                    {r.character && <Typography noWrap variant="caption" sx={{ color: colors.muted, display: "block", lineHeight: 1.2 }}>{r.character}</Typography>}
-                  </Box>
-                </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={Math.min(100, (r.pts / info.max) * 100)}
-                  sx={{
-                    display: { xs: "none", sm: "block" }, height: 8, borderRadius: 4, bgcolor: colors.panel2,
-                    "& .MuiLinearProgress-bar": { bgcolor: p ? p.color : colors.muted },
-                  }}
-                />
-                <Typography sx={{ fontFamily: fontData, fontWeight: 700, textAlign: "right", whiteSpace: "nowrap" }}>
-                  {r.pts}<Box component="span" sx={{ color: colors.muted, fontWeight: 400 }}>/{info.max}</Box>
-                </Typography>
-              </Box>
-            );
-          })}
-        </Stack>
-
-        {info.hasRaces && <RaceGrid cup={cup} info={info} races={st.races || []} playerById={playerById} />}
-
-        {isAdmin && !demo && (
-          <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ mt: 2, flexWrap: "wrap" }}>
-            {confirmDel ? (
-              <>
-                <Typography variant="body2"><b>Delete Cup {info.num}?</b> Its results leave the standings.</Typography>
-                <Button size="small" variant="contained" color="error" disabled={busy} onClick={del}>{busy ? "Deleting…" : "Delete cup"}</Button>
-                <Button size="small" onClick={() => setConfirmDel(false)}>Keep it</Button>
-              </>
-            ) : (
-              <>
-                <Button size="small" variant="outlined" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Edit results</Button>
-                {!(cup.maps && cup.maps.length) && (
-                  <Button size="small" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Set cup &amp; tracks</Button>
-                )}
-                {info.hasRaces && <Button size="small" disabled={busy} onClick={reopen}>Reopen on Join</Button>}
-                <Button size="small" color="error" onClick={() => setConfirmDel(true)}>Delete</Button>
-              </>
-            )}
-          </Stack>
+        {tracks && !latest && (
+          <Typography sx={{ color: colors.muted, fontSize: "0.9375rem", mt: 1 }}>{cup.maps.join(" · ")}</Typography>
         )}
-        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        {cup.notes && <Typography sx={{ color: colors.muted, mt: 1 }}>{cup.notes}</Typography>}
+
+        {!latest && (
+          <Box sx={{ mt: 1.5 }}><Results info={info} playerById={playerById} /></Box>
+        )}
       </Box>
-      {cup.hasPhoto && !demo && <CupPhoto cup={cup} signedIn={signedIn} />}
-    </Paper>
+
+      {latest ? (
+        <Box sx={{ gridColumn: { md: "1 / 2" }, minWidth: 0 }}>
+          <Results info={info} playerById={playerById} big />
+          {info.hasRaces && (
+            <Box sx={{ mt: 3 }}>
+              <Typography component="h3" sx={{ fontWeight: 700, fontSize: "1.125rem", mb: 0.5 }}>Race by race</Typography>
+              <RaceGrid cup={cup} info={info} races={st.races || []} playerById={playerById} />
+            </Box>
+          )}
+        </Box>
+      ) : (
+        <Box sx={{ minWidth: 0, display: "grid", gap: 1, alignContent: "start", pt: { md: 6 } }}>
+          {cup.hasPhoto && !demo && <CupPhoto cup={cup} signedIn={signedIn} />}
+          {info.hasRaces && (
+            <>
+              <Button size="small" color="inherit" onClick={() => setGrid(!grid)} aria-expanded={grid}
+                sx={{ color: colors.muted, px: 0, justifySelf: "start" }}
+                endIcon={<ExpandMoreIcon sx={{ transform: grid ? "rotate(180deg)" : "none" }} />}>
+                Race by race
+              </Button>
+              <Collapse in={grid} unmountOnExit>
+                <RaceGrid cup={cup} info={info} races={st.races || []} playerById={playerById} />
+              </Collapse>
+            </>
+          )}
+        </Box>
+      )}
+
+      {latest && cup.hasPhoto && !demo && (
+        <Box sx={{ gridColumn: { md: "2" }, gridRow: { md: "1 / span 2" } }}>
+          <CupPhoto cup={cup} signedIn={signedIn} />
+        </Box>
+      )}
+
+      {isAdmin && !demo && (
+        <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap", gridColumn: "1 / -1" }}>
+          {confirmDel ? (
+            <>
+              <Typography><b>Delete Cup {info.num}?</b> Its results leave the standings.</Typography>
+              <Button size="small" variant="contained" color="error" disabled={busy} onClick={del}>{busy ? "Deleting…" : "Delete cup"}</Button>
+              <Button size="small" onClick={() => setConfirmDel(false)}>Keep it</Button>
+            </>
+          ) : (
+            <>
+              <Button size="small" variant="outlined" color="inherit" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Edit results</Button>
+              {!(cup.maps && cup.maps.length) && (
+                <Button size="small" color="inherit" disabled={busy} onClick={() => navigate(`/add?edit=${encodeURIComponent(cup.id)}`)}>Set cup &amp; tracks</Button>
+              )}
+              {info.hasRaces && <Button size="small" color="inherit" disabled={busy} onClick={reopen}>Reopen on Join</Button>}
+              <Button size="small" color="error" onClick={() => setConfirmDel(true)}>Delete</Button>
+            </>
+          )}
+        </Stack>
+      )}
+      {error && <Alert severity="error" sx={{ gridColumn: "1 / -1" }}>{error}</Alert>}
+    </Box>
   );
 }
 
@@ -222,7 +262,7 @@ export default function CupsPage() {
       <PageTitle
         title="History"
         sub={`${seasons.length > 1 ? `Season ${season} · ` : ""}${m.total} cup${m.total === 1 ? "" : "s"} finished · newest week first`}
-        action={user && <Button component={RouterLink} to="/add" variant="contained" size="small">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
+        action={user && <Button component={RouterLink} to="/add" variant="contained">{isAdmin ? "+ Record a cup night" : "+ Submit results"}</Button>}
       />
 
       {demo && (
@@ -245,25 +285,27 @@ export default function CupsPage() {
       ))}
 
       {!m.cups.length ? (
-        <Paper sx={{ p: 3 }}><Typography sx={{ fontWeight: 700 }}>No cups yet.</Typography></Paper>
+        <Typography sx={{ fontWeight: 700 }}>No cups yet.</Typography>
       ) : (
-        <Stack spacing={2}>
-          {newestFirst.map((c, i) => {
-            const newWeek = i === 0 || newestFirst[i - 1].week !== c.week;
+        <>
+          <CupCard cup={newestFirst[0]} info={m.cupInfo.get(newestFirst[0].id)} st={st} demo={demo} isAdmin={isAdmin} signedIn={!!user} latest />
+          {newestFirst.slice(1).map((c, i, rest) => {
+            const prev = i === 0 ? newestFirst[0] : rest[i - 1];
+            const newWeek = prev.week !== c.week || i === 0;
             const n = m.byWeek[c.week] || 0;
             return (
               <Fragment key={c.id}>
                 {newWeek && (
-                  <Typography variant="h6" sx={{ fontFamily: "inherit", pt: i ? 2 : 0 }}>
-                    Week {c.week}{" "}
-                    <Typography component="span" variant="body2" sx={{ color: colors.muted }}>{n} cup{n === 1 ? "" : "s"}</Typography>
-                  </Typography>
+                  <Stack direction="row" alignItems="baseline" spacing={1.25} sx={{ mt: 6, pb: 1, borderBottom: `2px solid ${colors.rule}` }}>
+                    <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.25rem" }}>Week {c.week}</Typography>
+                    <Typography sx={{ color: colors.muted }}>{n} cup{n === 1 ? "" : "s"}</Typography>
+                  </Stack>
                 )}
                 <CupCard cup={c} info={m.cupInfo.get(c.id)} st={st} demo={demo} isAdmin={isAdmin} signedIn={!!user} />
               </Fragment>
             );
           })}
-        </Stack>
+        </>
       )}
     </Container>
   );

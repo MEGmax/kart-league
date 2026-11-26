@@ -4,14 +4,12 @@ import { useMemo } from "react";
 import Box from "@mui/material/Box";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
-import LinearProgress from "@mui/material/LinearProgress";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import CloseIcon from "@mui/icons-material/Close";
-import { charColor, fmtDate, ord, pctTxt } from "../lib/constants";
-import { colors, fontData } from "../theme";
-import CharacterChip from "./CharacterChip";
+import { fmtDate, ord, pctTxt } from "../lib/constants";
+import { colors } from "../theme";
 import CharacterFace from "./CharacterFace";
 import CupIcon from "./CupIcon";
 import TrackImage from "./TrackImage";
@@ -21,8 +19,8 @@ import { headToHead as h2hTable, nemesisAndFavourite } from "../lib/rivals";
 
 function Section({ title, children }) {
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant="overline" sx={{ color: colors.muted, display: "block", mb: 1, lineHeight: 1.4 }}>{title}</Typography>
+    <Box component="section" sx={{ mt: 4 }}>
+      <Typography component="h3" sx={{ fontWeight: 700, fontSize: "1.125rem", mb: 1.25 }}>{title}</Typography>
       {children}
     </Box>
   );
@@ -38,10 +36,10 @@ function Trend({ log }) {
   const running = log.map((l) => { pts += l.pts; max += l.max; return pts / max; });
   return (
     <Box component="svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Points percentage over the season, cup by cup"
-      sx={{ width: "100%", height: "auto", display: "block", bgcolor: colors.bg2, borderRadius: 2, border: `1px solid ${colors.line}` }}>
+      sx={{ width: "100%", height: "auto", display: "block", borderTop: `1px solid ${colors.line}`, borderBottom: `1px solid ${colors.line}` }}>
       {[0.25, 0.5, 0.75].map((g) => <line key={g} x1={pad} x2={W - pad} y1={y(g)} y2={y(g)} stroke={colors.line} strokeDasharray="3 4" />)}
-      <polyline points={running.map((v, i) => `${x(i)},${y(v)}`).join(" ")} fill="none" stroke={colors.accent} strokeWidth="2.5" />
-      {log.map((l, i) => <circle key={i} cx={x(i)} cy={y(l.pts / l.max)} r="3.5" fill={colors.hot}><title>{`#${l.num} ${l.cup.cup}: ${l.pts}/${l.max}`}</title></circle>)}
+      <polyline points={running.map((v, i) => `${x(i)},${y(v)}`).join(" ")} fill="none" stroke={colors.ink} strokeWidth="2.5" />
+      {log.map((l, i) => <circle key={i} cx={x(i)} cy={y(l.pts / l.max)} r="3.5" fill={colors.muted}><title>{`#${l.num} ${l.cup.cup}: ${l.pts}/${l.max}`}</title></circle>)}
     </Box>
   );
 }
@@ -66,14 +64,15 @@ export default function RacerDrawer({ s, m, players, onClose }) {
 
   return (
     <Drawer anchor={phone ? "bottom" : "right"} open={open} onClose={onClose}
-      PaperProps={{ sx: { width: phone ? "100%" : 460, maxHeight: phone ? "92vh" : "100%", borderRadius: phone ? "16px 16px 0 0" : 0, p: { xs: 2, sm: 3 } } }}>
+      PaperProps={{ sx: { width: phone ? "100%" : 460, maxHeight: phone ? "92vh" : "100%", borderRadius: phone ? "12px 12px 0 0" : 0, borderLeft: phone ? 0 : undefined, borderTop: phone ? `1px solid ${colors.line}` : 0, p: { xs: 2, sm: 3 } } }}>
       {s && (
         <Box component="section" aria-label={`${s.player.name}'s season`}>
           <Stack direction="row" spacing={1.5} alignItems="center">
-            <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={52} />
+            <CharacterFace name={s.main && s.main.name} size={52} />
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="h5" noWrap sx={{ fontFamily: "inherit" }}>{s.player.name}</Typography>
-              <Typography variant="body2" sx={{ color: colors.muted }} component="div">
+              <Typography component="h2" noWrap sx={{ fontWeight: 800, fontSize: "1.5rem", lineHeight: 1.2 }}>{s.player.name}</Typography>
+              {s.main && <Typography sx={{ fontWeight: 600 }}>{s.main.name}</Typography>}
+              <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }} component="div">
                 {s.rank ? `${s.rank}${ord(s.rank)} · ` : "Not yet qualified · "}
                 {m.rankBy === "rating" ? <>rating {fmtRating(s.rating)} · {pctTxt(s.pct)} of points</> : <>{pctTxt(s.pct)} of points possible</>}
                 {s.provisional && m.rankBy === "rating" && <> <ProvisionalBadge cups={m.rated.cfg.provisional} /></>}
@@ -95,13 +94,13 @@ export default function RacerDrawer({ s, m, players, onClose }) {
               ["Races recorded", s.rc],
             ].map(([k, v]) => (
               <Box key={k}>
-                <Typography variant="caption" sx={{ color: colors.muted }}>{k}</Typography>
-                <Typography sx={{ fontWeight: 800, fontFamily: fontData }}>{v}</Typography>
+                <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }}>{k}</Typography>
+                <Typography sx={{ fontWeight: 700, fontSize: "1.125rem" }}>{v}</Typography>
               </Box>
             ))}
           </Box>
           {s.rc > 0 && s.rc < s.cp * 4 && (
-            <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 1 }}>
+            <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 1 }}>
               Race wins and average race finish count only the {s.rc} races entered race by race.
             </Typography>
           )}
@@ -109,7 +108,7 @@ export default function RacerDrawer({ s, m, players, onClose }) {
           {s.rating != null && (
             <Section title="Rating">
               <Stack direction="row" spacing={2} alignItems="baseline" useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
-                <Typography sx={{ fontFamily: fontData, fontWeight: 800, fontSize: "1.5rem" }}>{fmtRating(s.rating)}</Typography>
+                <Typography sx={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1 }}>{fmtRating(s.rating)}</Typography>
                 {s.lastNight && (
                   <Typography variant="body2" sx={{ color: colors.muted }}>
                     <RatingDelta delta={s.lastNight.delta} /> on {fmtDate(s.lastNight.date)}
@@ -135,8 +134,8 @@ export default function RacerDrawer({ s, m, players, onClose }) {
                 ["Last of the humans", s.lastAmongHumans, "Cups finished last among league players"],
               ].map(([k, v, hint]) => (
                 <Box key={k} title={hint}>
-                  <Typography variant="caption" sx={{ color: colors.muted }}>{k}</Typography>
-                  <Typography sx={{ fontWeight: 800, fontFamily: fontData }}>{v}</Typography>
+                  <Typography sx={{ color: colors.muted, fontSize: "0.875rem" }}>{k}</Typography>
+                  <Typography sx={{ fontWeight: 700, fontSize: "1.125rem" }}>{v}</Typography>
                 </Box>
               ))}
             </Box>
@@ -159,7 +158,7 @@ export default function RacerDrawer({ s, m, players, onClose }) {
 
           <Section title="Cup by cup">
             <Trend log={s.log} />
-            <Typography variant="caption" sx={{ color: colors.muted, display: "block", mt: 0.5 }}>Dots: each cup. Line: season percentage so far.</Typography>
+            <Typography sx={{ color: colors.muted, fontSize: "0.875rem", mt: 0.5 }}>Dots: each cup. Line: season percentage so far.</Typography>
             {best && (
               <Stack direction="row" spacing={2} sx={{ mt: 1.5 }} useFlexGap flexWrap="wrap">
                 <Typography variant="body2"><b>Best:</b> #{best.num} {best.cup.cup}, {best.pts}/{best.max}</Typography>
@@ -176,8 +175,8 @@ export default function RacerDrawer({ s, m, players, onClose }) {
                       Week {l.cup.week} · {fmtDate(l.cup.date)}{l.chars.length ? ` · ${l.chars.join(", ")}` : ""}
                     </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ fontFamily: fontData, whiteSpace: "nowrap" }}>{l.rank}{ord(l.rank)}<span style={{ color: colors.muted }}>/{l.field}</span></Typography>
-                  <Typography variant="body2" sx={{ fontFamily: fontData, fontWeight: 700, width: 54, textAlign: "right" }}>{l.pts}<span style={{ color: colors.muted, fontWeight: 400 }}>/{l.max}</span></Typography>
+                  <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>{l.rank}{ord(l.rank)}<span style={{ color: colors.muted }}>/{l.field}</span></Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, width: 54, textAlign: "right" }}>{l.pts}<span style={{ color: colors.muted, fontWeight: 400 }}>/{l.max}</span></Typography>
                   {s.ratingHistory && s.ratingHistory.length > 0 && (
                     <Box sx={{ width: 40, textAlign: "right" }}>
                       <RatingDelta delta={(() => { const h = s.ratingHistory.find((x) => x.cupId === l.cup.id); return h ? h.after - h.before : null; })()} />
@@ -196,8 +195,8 @@ export default function RacerDrawer({ s, m, players, onClose }) {
                     <TrackImage track={t.map} width={44} radius={0.75} />
                     <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>{t.map}</Typography>
                     <Typography variant="caption" sx={{ color: colors.muted }}>{plural(t.n, "race")}</Typography>
-                    <Typography variant="body2" sx={{ fontFamily: fontData, width: 104, textAlign: "right" }} title="Average finishing place">avg place {t.avgPos.toFixed(1)}</Typography>
-                    <Typography variant="body2" sx={{ fontFamily: fontData, width: 70, textAlign: "right" }}>{t.avgPts.toFixed(1)} pts</Typography>
+                    <Typography variant="body2" sx={{ width: 104, textAlign: "right" }} title="Average finishing place">avg place {t.avgPos.toFixed(1)}</Typography>
+                    <Typography variant="body2" sx={{ width: 70, textAlign: "right" }}>{t.avgPts.toFixed(1)} pts</Typography>
                   </Stack>
                 ))}
               </Stack>
@@ -210,8 +209,8 @@ export default function RacerDrawer({ s, m, players, onClose }) {
                 {h2h.map((h) => (
                   <Stack key={h.id} direction="row" spacing={1} alignItems="baseline">
                     <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600 }} noWrap>vs {nameOf(h.id)}</Typography>
-                    <Typography variant="body2" sx={{ fontFamily: fontData }}>{h.won}–{h.lost}{h.tied ? `–${h.tied}` : ""}</Typography>
-                    <Typography variant="caption" sx={{ color: h.diff >= 0 ? colors.good : colors.bad, fontFamily: fontData, width: 70, textAlign: "right" }}>
+                    <Typography variant="body2">{h.won}–{h.lost}{h.tied ? `–${h.tied}` : ""}</Typography>
+                    <Typography variant="caption" sx={{ color: h.diff >= 0 ? colors.good : colors.bad, width: 70, textAlign: "right" }}>
                       {h.diff > 0 ? "+" : ""}{h.diff} pts
                     </Typography>
                   </Stack>
@@ -223,12 +222,12 @@ export default function RacerDrawer({ s, m, players, onClose }) {
 
           {s.charList.length > 0 && (
             <Section title="Characters (by race)">
-              <Stack spacing={1}>
+              <Stack spacing={0.75}>
                 {s.charList.map((c) => (
                   <Stack key={c.name} direction="row" spacing={1.5} alignItems="center">
-                    <Box sx={{ width: 140, flexShrink: 0 }}><CharacterChip name={c.name} /></Box>
-                    <LinearProgress variant="determinate" value={c.share * 100} sx={{ flex: 1, height: 8, "& .MuiLinearProgress-bar": { bgcolor: charColor(c.name) } }} />
-                    <Typography variant="caption" sx={{ color: colors.muted, width: 40, textAlign: "right" }}>{Math.round(c.share * 100)}%</Typography>
+                    <CharacterFace name={c.name} size={28} />
+                    <Typography sx={{ flex: 1, minWidth: 0, fontWeight: 600 }} noWrap>{c.name}</Typography>
+                    <Typography sx={{ color: colors.muted, width: 48, textAlign: "right" }}>{Math.round(c.share * 100)}%</Typography>
                   </Stack>
                 ))}
               </Stack>

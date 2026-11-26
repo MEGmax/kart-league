@@ -4,7 +4,6 @@ import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Container from "@mui/material/Container";
 import Stack from "@mui/material/Stack";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
@@ -13,7 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { nextEvent, pastNights, splitEvents } from "../lib/events";
 import { compute } from "../lib/standings";
-import { colors, fontDisplay } from "../theme";
+import { colors } from "../theme";
 import { PageTitle, SectionTitle, plural } from "../components/PageBits";
 import CupIcon from "../components/CupIcon";
 import EventCard, { PeopleLine, ScheduleRow, byMonth } from "../components/EventCard";
@@ -29,13 +28,13 @@ function PastNight({ night, m, players, isAdmin, highlight }) {
   const raced = new Map();
   let unclaimed = 0;
   cups.forEach(({ info }) => info.res.forEach((r) => { if (r.p) raced.set(r.p, (raced.get(r.p) || 0) + 1); else unclaimed++; }));
-  const name = (id) => players.find((p) => p.id === id) || { name: "?", color: colors.muted };
+  const name = (id) => players.find((p) => p.id === id) || { name: "?" };
   const week = cups.length ? cups[0].c.week : null;
   const planned = ev && ev.cups.length && ev.cups.join("|") !== cups.map((x) => x.c.cup).join("|") ? ev.cups : null;
 
   const actions = (cups.length > 0 || (isAdmin && ev)) && (
     <>
-      {cups.length > 0 && <Button size="small" variant="outlined" component={RouterLink} to="/history">Results</Button>}
+      {cups.length > 0 && <Button size="small" variant="outlined" color="inherit" component={RouterLink} to="/history">Results</Button>}
       {isAdmin && ev && !cups.length && <Button size="small" variant="contained" component={RouterLink} to={`/add?event=${ev.id}`}>Record results</Button>}
     </>
   );
@@ -43,8 +42,8 @@ function PastNight({ night, m, players, isAdmin, highlight }) {
   return (
     <ScheduleRow id={ev ? `event-${ev.id}` : undefined} date={dayOf(night.date)} tone="past" highlight={highlight} actions={actions}>
       <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ flexWrap: "wrap", mb: 0.75 }}>
-        <Typography sx={{ fontWeight: 800 }}>{week ? `Week ${week}` : "Cup night"}</Typography>
-        <Typography variant="body2" sx={{ color: colors.muted }}>
+        <Typography sx={{ fontWeight: 700, fontSize: "1.0625rem" }}>{week ? `Week ${week}` : "Cup night"}</Typography>
+        <Typography sx={{ color: colors.muted }}>
           {cups.length ? plural(cups.length, "cup") : "No results recorded yet"}{ev ? "" : " · not on the schedule"}
         </Typography>
       </Stack>
@@ -56,10 +55,10 @@ function PastNight({ night, m, players, isAdmin, highlight }) {
             return (
               <Stack key={c.id} direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
                 <CupIcon cup={c.cup} size={20} />
-                <Typography variant="body2" sx={{ minWidth: 0 }} noWrap>
+                <Typography sx={{ minWidth: 0 }} noWrap>
                   <b>{c.cup}</b>
                   <Box component="span" sx={{ color: colors.muted }}> · won by </Box>
-                  <Box component="span" sx={{ color: colors.accent, fontWeight: 700 }}>{winners.join(" & ")}</Box>
+                  <Box component="span" sx={{ fontWeight: 700 }}>{winners.join(" & ")}</Box>
                 </Typography>
               </Stack>
             );
@@ -71,31 +70,29 @@ function PastNight({ night, m, players, isAdmin, highlight }) {
       {raced.size > 0 && (
         <PeopleLine
           label="Raced"
-          people={[...raced.entries()].map(([id, n]) => ({ key: id, name: `${name(id).name}${n > 1 ? ` ×${n}` : ""}`, color: name(id).color }))}
+          people={[...raced.entries()].map(([id, n]) => ({ key: id, name: `${name(id).name}${n > 1 ? ` ×${n}` : ""}`}))}
         />
       )}
       {unclaimed > 0 && (
-        <Typography variant="caption" component={RouterLink} to="/unclaimed" sx={{ color: colors.cool, display: "inline-block", mt: 0.5 }}>
+        <Typography variant="caption" component={RouterLink} to="/unclaimed" sx={{ color: colors.link, display: "inline-block", mt: 0.5 }}>
           {plural(unclaimed, "unclaimed result")}: yours?
         </Typography>
       )}
-      {!cups.length && ev && ev.going.length > 0 && <PeopleLine label="Said they were in" people={ev.going.map((g, i) => ({ key: g.userId || i, name: g.name, color: g.color }))} />}
+      {!cups.length && ev && ev.going.length > 0 && <PeopleLine label="Said they were in" people={ev.going.map((g, i) => ({ key: g.userId || i, name: g.name }))} />}
     </ScheduleRow>
   );
 }
 
 function MonthGroups({ groups, render }) {
   return (
-    <Paper sx={{ overflow: "hidden" }}>
+    <Box>
       {groups.map((g, gi) => (
-        <Box key={g.key} component="section" aria-label={g.label}>
-          <Box sx={{ px: { xs: 1.5, sm: 2 }, py: 0.75, bgcolor: colors.bg2, borderTop: gi ? `1px solid ${colors.line}` : "none", borderBottom: `1px solid ${colors.line}` }}>
-            <Typography sx={{ fontFamily: fontDisplay, fontSize: "0.7rem", letterSpacing: "0.08em", textTransform: "uppercase", color: colors.muted }}>{g.label}</Typography>
-          </Box>
-          <Stack divider={<Divider />}>{g.items.map(render)}</Stack>
+        <Box key={g.key} component="section" aria-label={g.label} sx={{ mt: gi ? 3 : 0 }}>
+          <Typography sx={{ fontWeight: 600, color: colors.muted, fontSize: "0.9375rem", pb: 0.75, borderBottom: `2px solid ${colors.rule}` }}>{g.label}</Typography>
+          <Stack divider={<Divider />} sx={{ borderBottom: `1px solid ${colors.line}` }}>{g.items.map(render)}</Stack>
         </Box>
       ))}
-    </Paper>
+    </Box>
   );
 }
 
@@ -143,12 +140,12 @@ export default function EventsPage() {
           render={(e) => <EventCard key={e.id} event={e} isNext={!!next && e.id === next.id} highlight={e.id === id} />}
         />
       ) : (
-        <Paper sx={{ p: 3, border: `1px dashed ${colors.line}` }}>
-          <Typography sx={{ fontWeight: 800 }}>Nothing on the schedule yet</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted, mt: 0.5 }}>
+        <Box>
+          <Typography sx={{ fontWeight: 700 }}>Nothing on the schedule yet</Typography>
+          <Typography sx={{ color: colors.muted, mt: 0.5 }}>
             {isAdmin ? "Schedule the next night and everyone who opted in gets an email invite." : "The next night will show up here. Turn on cup night emails in your account to get an invite."}
           </Typography>
-        </Paper>
+        </Box>
       )}
 
       {nights.length > 0 && (

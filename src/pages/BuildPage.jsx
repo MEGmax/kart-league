@@ -144,7 +144,7 @@ export default function BuildPage() {
         action={<Button component={RouterLink} to="/join" size="small" variant="outlined">Join</Button>}
       />
 
-      <Paper sx={{ p: { xs: 2, sm: 2.5 }, display: "grid", gap: 2 }}>
+      <Box component="section" sx={{ pt: 2.5, borderTop: `1px solid ${colors.line}`, display: "grid", gap: 2 }}>
         <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(4, minmax(0,1fr))" } }}>
           <TextField select size="small" label="Start from" value={build.templateId} onChange={(e) => applyTemplate(e.target.value)}>
             <MenuItem value="">Scratch</MenuItem>
@@ -161,9 +161,9 @@ export default function BuildPage() {
         </Box>
 
         {night && votes && (
-          <Box sx={{ p: 1.5, borderRadius: 1.5, border: `1px solid ${colors.line}`, bgcolor: colors.bg2 }}>
+          <Box sx={{ p: 1.5, borderRadius: 1.5, border: `1px solid ${colors.line}`, bgcolor: colors.raised }}>
             <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mb: voted.length ? 1 : 0 }}>
-              <Typography variant="overline" sx={{ color: colors.accent, mr: 1, lineHeight: 1.6 }}>Track vote</Typography>
+              <Typography sx={{ fontWeight: 700, mr: 1 }}>Track vote</Typography>
               <Typography variant="body2" sx={{ color: colors.muted, flex: 1 }}>
                 {voted.length
                   ? `${formatEventWhen(night.startsAt).date}: the most-voted tracks not raced yet on this cup's date.`
@@ -183,7 +183,7 @@ export default function BuildPage() {
         )}
 
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-          <Typography variant="overline" sx={{ color: colors.muted, mr: 1 }}>Random</Typography>
+          <Typography sx={{ fontWeight: 600, color: colors.muted, mr: 1 }}>Random</Typography>
           <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(TRACKS), templateId: "" })}>Any 4 tracks</Button>
           <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(NITRO), templateId: "" })}>Nitro only</Button>
           <Button size="small" variant="outlined" onClick={() => set({ maps: pickRandom(RETRO), templateId: "" })}>Retro only</Button>
@@ -230,14 +230,14 @@ export default function BuildPage() {
           <TextField size="small" label="Template name" placeholder="e.g. Cursed Cup" value={tplName} inputProps={{ maxLength: 40 }} onChange={(e) => setTplName(e.target.value)} />
           <Button size="small" disabled={tplBusy} onClick={saveTemplate}>{tplBusy ? "Saving…" : "Save these tracks as a template"}</Button>
         </Stack>
-      </Paper>
+      </Box>
 
       {templates.length > 0 && (
         <>
           <SectionTitle title="Your templates" count={templates.length} />
           <Stack spacing={1.5}>
             {templates.map((t) => (
-              <Paper key={t.id} sx={{ p: 2, display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap" }}>
+              <Box key={t.id} sx={{ py: 1.5, borderBottom: `1px solid ${colors.line}`, display: "flex", gap: 1.5, alignItems: "center", flexWrap: "wrap" }}>
                 <CupIcon cup={t.name} size={40} />
                 <Box sx={{ flex: 1, minWidth: 200 }}>
                   <Typography sx={{ fontWeight: 700 }}>{t.name}</Typography>
@@ -247,14 +247,14 @@ export default function BuildPage() {
                 </Box>
                 <Button size="small" variant="outlined" onClick={() => applyTemplate(t.id)}>Use</Button>
                 <Button size="small" color="error" onClick={() => deleteTemplate(t)}>Delete</Button>
-              </Paper>
+              </Box>
             ))}
           </Stack>
         </>
       )}
 
       <Typography variant="body2" sx={{ color: colors.muted, mt: 3 }}>
-        Already raced without entering each race? <RouterLink to="/add" style={{ color: colors.cool }}>Record the cups and their results</RouterLink> instead.
+        Already raced without entering each race? <RouterLink to="/add" style={{ color: colors.link }}>Record the cups and their results</RouterLink> instead.
       </Typography>
     </Container>
   );

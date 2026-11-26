@@ -9,12 +9,11 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
 import Alert from "@mui/material/Alert";
-import LinearProgress from "@mui/material/LinearProgress";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { compute } from "../lib/standings";
 import { DEMO } from "../lib/demo";
 import { pctTxt } from "../lib/constants";
-import { colors, fontData } from "../theme";
+import { colors } from "../theme";
 import CharacterFace from "../components/CharacterFace";
 import { fmtRating } from "../components/RatingBits";
 import { Loading, PageTitle, SectionTitle } from "../components/PageBits";
@@ -35,16 +34,16 @@ function roundName(matches) {
 
 function Slot({ seed, s, note, rankBy }) {
   return (
-    <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 1.25, py: 0.75, minHeight: 40 }}>
-      <Typography sx={{ fontFamily: fontData, color: colors.muted, width: 18, textAlign: "right" }}>{seed || ""}</Typography>
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ px: 1.25, py: 0.75, minHeight: 44 }}>
+      <Typography sx={{ fontWeight: 800, fontStyle: "italic", width: 20, textAlign: "right" }}>{seed || ""}</Typography>
       {s ? (
         <>
-          <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={24} />
-          <Typography variant="body2" sx={{ fontWeight: 700, flex: 1, minWidth: 0 }} noWrap>{s.player.name}</Typography>
-          <Typography variant="caption" sx={{ fontFamily: fontData, color: colors.muted }}>{rankBy === "rating" ? fmtRating(s.rating) : pctTxt(s.pct)}</Typography>
+          <CharacterFace name={s.main && s.main.name} size={24} />
+          <Typography sx={{ fontWeight: 700, flex: 1, minWidth: 0 }} noWrap>{s.player.name}</Typography>
+          <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{rankBy === "rating" ? fmtRating(s.rating) : pctTxt(s.pct)}</Typography>
         </>
       ) : (
-        <Typography variant="body2" sx={{ color: colors.muted, fontStyle: "italic" }}>{note || "TBD"}</Typography>
+        <Typography sx={{ color: colors.muted, fontStyle: "italic" }}>{note || "TBD"}</Typography>
       )}
     </Stack>
   );
@@ -52,7 +51,7 @@ function Slot({ seed, s, note, rankBy }) {
 
 function Match({ a, b, rankBy }) {
   return (
-    <Paper variant="outlined" sx={{ bgcolor: colors.bg2, "& > *:first-of-type": { borderBottom: `1px solid ${colors.line}` } }}>
+    <Paper variant="outlined" sx={{ borderColor: colors.rule, "& > *:first-of-type": { borderBottom: `1px solid ${colors.line}` } }}>
       <Slot {...a} rankBy={rankBy} />
       <Slot {...b} rankBy={rankBy} />
     </Paper>
@@ -106,29 +105,27 @@ export default function PlayoffsPage() {
       <PageTitle title="Playoffs" sub={`Top ${K} qualified players by ${byRating ? "skill rating" : "points percentage"} after week ${lastWeek}`} />
       {demo && <Alert severity="info" sx={{ mb: 2 }}><b>Example standings.</b> This fills in from real results once the first cup is added.</Alert>}
 
-      <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 3 }}>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-          <Typography sx={{ fontWeight: 800 }}>{over ? "Regular season complete: seeds are locked" : "Regular season in progress"}</Typography>
-          {!over && <Chip size="small" label="Projected" variant="outlined" />}
+      <Box sx={{ mb: 4, maxWidth: 760 }}>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: "1.125rem" }}>{over ? "Regular season complete: seeds are locked" : "Regular season in progress"}</Typography>
+          {!over && <Chip size="small" label="Projected" variant="outlined" sx={{ borderColor: colors.rule }} />}
         </Stack>
-        <LinearProgress variant="determinate" value={Math.min(100, (plan.played / plan.total) * 100)}
-          sx={{ height: 8, borderRadius: 4, bgcolor: colors.panel2, "& .MuiLinearProgress-bar": { bgcolor: colors.accent } }} />
-        <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
+        <Typography sx={{ color: colors.muted }}>
           {plan.played} of {plan.total} cups played · week {plan.current} of {lastWeek} · {m.ranked.length} qualified (played {m.minCups}+ cups)
         </Typography>
         {everyoneIn && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
+          <Typography sx={{ mt: 1 }}>
             {m.ranked.length === K ? `All ${K} qualified players` : `All ${m.ranked.length} qualified players`} make the playoffs as things stand:
             the top-{K} line only cuts anyone once more than {K} players qualify. Seeding still comes from the standings.
           </Typography>
         )}
-      </Paper>
+      </Box>
 
       {seeds.length < 2 ? (
-        <Paper sx={{ p: 3 }}>
+        <Box>
           <Typography sx={{ fontWeight: 700 }}>Not enough qualified players for a bracket yet.</Typography>
-          <Typography variant="body2" sx={{ color: colors.muted }}>It appears once at least 2 players have played {L.minParticipation}% of the cups{m.minCups > m.need ? ` and at least ${m.minCups}` : ""}.</Typography>
-        </Paper>
+          <Typography sx={{ color: colors.muted }}>It appears once at least 2 players have played {L.minParticipation}% of the cups{m.minCups > m.need ? ` and at least ${m.minCups}` : ""}.</Typography>
+        </Box>
       ) : (
         <>
           <SectionTitle title={over ? "Bracket" : "If the season ended today"} sx={{ mt: 0 }} />
@@ -140,18 +137,18 @@ export default function PlayoffsPage() {
             }}>
               {rounds.map((r, i) => (
                 <Box key={i} sx={{ display: "grid", gap: 2 }}>
-                  <Typography variant="overline" sx={{ color: colors.muted }}>{roundName(size / 2 ** (i + 1))}</Typography>
+                  <Typography component="h3" sx={{ fontWeight: 700, color: colors.muted }}>{roundName(size / 2 ** (i + 1))}</Typography>
                   {r.map((mt, k) => <Match key={k} a={mt[0]} b={mt[1]} rankBy={m.rankBy} />)}
                 </Box>
               ))}
             </Box>
           </Box>
           {seeds.length < size && (
-            <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
+            <Typography sx={{ color: colors.muted, mt: 1.5, fontSize: "0.9375rem" }}>
               Seed{size - seeds.length === 1 ? "" : "s"} 1{size - seeds.length > 1 ? `–${size - seeds.length}` : ""} get{size - seeds.length === 1 ? "s" : ""} a bye into the next round.
             </Typography>
           )}
-          <Typography variant="body2" sx={{ color: colors.muted, mt: 1 }}>
+          <Typography sx={{ color: colors.muted, mt: 1.5, fontSize: "0.9375rem" }}>
             {perRound === 1
               ? "Each matchup is one cup; the higher score advances. A tied cup goes to a single-race runoff on a track an admin picks."
               : `Each round is ${perRound} cups on aggregate points; the higher total advances, and a tie goes to a single-race runoff on a track an admin picks.`}
@@ -164,19 +161,19 @@ export default function PlayoffsPage() {
       {!over && bubble.length > 0 && (
         <>
           <SectionTitle title="On the bubble" />
-          <Stack spacing={1}>
+          <Box sx={{ borderTop: `1px solid ${colors.line}` }}>
             {bubble.map((s) => {
               const gap = byRating ? Math.round(seeds[seeds.length - 1].rating) - Math.round(s.rating) : (seeds[seeds.length - 1].pct - s.pct) * 100;
               return (
-                <Paper key={s.player.id} sx={{ p: 1.5, display: "flex", alignItems: "center", gap: 1.5 }}>
-                  <Typography sx={{ fontFamily: fontData, color: colors.muted, width: 24 }}>{s.rank}</Typography>
-                  <CharacterFace name={s.main && s.main.name} ring={s.player.color} size={28} />
+                <Box key={s.player.id} sx={{ py: 1.25, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", borderBottom: `1px solid ${colors.line}` }}>
+                  <Typography sx={{ fontWeight: 800, fontStyle: "italic", fontSize: "1.125rem", width: 24 }}>{s.rank}</Typography>
+                  <CharacterFace name={s.main && s.main.name} size={32} />
                   <Typography sx={{ fontWeight: 700, flex: 1 }}>{s.player.name}</Typography>
-                  <Typography variant="body2" sx={{ fontFamily: fontData, color: colors.muted }}>{byRating ? `${fmtRating(s.rating)} · ${gap} rating points` : `${pctTxt(s.pct)} · ${gap.toFixed(1)} percentage points`} behind seed {seeds.length}</Typography>
-                </Paper>
+                  <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{byRating ? `${fmtRating(s.rating)} · ${gap} rating points` : `${pctTxt(s.pct)} · ${gap.toFixed(1)} percentage points`} behind seed {seeds.length}</Typography>
+                </Box>
               );
             })}
-          </Stack>
+          </Box>
         </>
       )}
     </Container>
