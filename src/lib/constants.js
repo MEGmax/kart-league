@@ -63,7 +63,7 @@ export const BUILTIN_CUPS = ["Mushroom Cup", "Flower Cup", "Star Cup", "Special 
 // playoffSpots − 1 are in and the next playInRacers race a play-in for it (src/lib/playoffs.js); 0 turns it off.
 export const DEFAULT_LEAGUE = {
   name: "Night Kart League", season: "Season 1", seasonWeeks: 5, cupsPerWeek: 4,
-  playoffSpots: 4, playInRacers: 3, minParticipation: 40, defaultMax: 60,
+  playoffSpots: 4, playInRacers: 4, minParticipation: 40, defaultMax: 60,
   currentSeason: 1, rankBy: "rating", ratingStart: 1500, ratingK: 32, ratingKProvisional: 48, provisionalCups: 5,
   marginCap: 30, carryOver: 0.5, playoffCupsPerRound: 2,
 };

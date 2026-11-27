@@ -13,18 +13,18 @@ describe("bracketOrder", () => {
   });
 });
 
-describe("wild card (default: 4 spots, 3 racers in the play-in)", () => {
+describe("wild card (default: 4 spots, 4 racers in the play-in)", () => {
   const L = { ...DEFAULT_LEAGUE };
 
   it("is on by default", () => {
-    expect(playoffFormat(L)).toMatchObject({ spots: 4, playInRacers: 3 });
+    expect(playoffFormat(L)).toMatchObject({ spots: 4, playInRacers: 4 });
   });
 
-  it("puts the top 3 straight in and 4th–6th in the play-in", () => {
-    const p = playoffPicture(ranked(8), L);
+  it("puts the top 3 straight in and 4th–7th in the play-in", () => {
+    const p = playoffPicture(ranked(9), L);
     expect(ids(p.direct)).toEqual(["p1", "p2", "p3"]);
-    expect(ids(p.playIn)).toEqual(["p4", "p5", "p6"]);
-    expect(ids(p.bubble)).toEqual(["p7", "p8"]);
+    expect(ids(p.playIn)).toEqual(["p4", "p5", "p6", "p7"]);
+    expect(ids(p.bubble)).toEqual(["p8", "p9"]);
   });
 
   it("seeds the wild card 4th: 1 v wild card and 2 v 3, then the final", () => {
@@ -36,7 +36,7 @@ describe("wild card (default: 4 spots, 3 racers in the play-in)", () => {
     expect(p.rounds[1].map(match)).toEqual([["TBD", "TBD"]]);
   });
 
-  it("plays in with whoever is left when fewer than 3 are", () => {
+  it("plays in with whoever is left when fewer than 4 are", () => {
     const p = playoffPicture(ranked(5), L);
     expect(ids(p.playIn)).toEqual(["p4", "p5"]);
     expect(p.bubble).toEqual([]);
