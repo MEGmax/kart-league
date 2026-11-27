@@ -4,7 +4,7 @@ import Typography from "@mui/material/Typography";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { DEFAULT_LEAGUE, RACE_POINTS, ord } from "../lib/constants";
 import { currentSeason, rankByFor, seasonPlan } from "../lib/standings";
-import { ratingSettings } from "../lib/rating";
+import { expected, matchScore, ratingSettings } from "../lib/rating";
 import { playoffFormat } from "../lib/playoffs";
 import { colors } from "../theme";
 import { PageTitle, SectionTitle } from "../components/PageBits";
@@ -53,7 +53,7 @@ function ratingRules(L, plan, season) {
       : "Every cup is built in the cup builder before racing, so all 4 tracks are recorded.", null, "New"],
     ["Race scoring", `Every race is scored with the game's 12-racer points table, so the most anyone can score in a cup is ${L.defaultMax} points.`, true],
     ["Entering results and the photo check", "Enter race by race on the Join tab, or record the night afterwards from the results-screen photos. When a cup ends, someone photographs the final results screen before anyone presses a button; that photo is the check. Only finished cups count."],
-    ["Ranking stat: skill rating", "Your rank is your rating. After every cup, each pair of league players in it is scored as a mini-match, and your rating goes up or down depending on who you beat, by how much, and how strong they were. See How the rating works below.", null, "Changed"],
+    ["Ranking stat: skill rating", <>Your rank is your rating, an Elo-style score. After every cup, each pair of league players in it is scored as a mini-match, and your rating goes up or down depending on who you beat, by how much, and how strong they were. See <RatingLink />.</>, null, "Changed"],
     ["Starting ratings", `Returning players start the season ${Math.round(cfg.carry * 100)}% of the way from ${cfg.start} to their final rating from last season. New players start at ${cfg.start}.`, null, "New"],
     ["Provisional ratings", `Your first ${cfg.provisional} cups of the season are provisional: your rating moves ${Math.round((cfg.Kp / cfg.K - 1) * 100)}% faster and shows a “P” badge.`, null, "New"],
     ["Qualifying", `To be ranked you need at least ${cfg.provisional} cups and ${L.minParticipation}% of the cups held so far, rounded up. By the season's end that is ${finalMark} of ${total}.`, null, "Changed"],
@@ -65,9 +65,29 @@ function ratingRules(L, plan, season) {
   ];
 }
 
-// The formula and the settings it runs on.
+const RATING_ID = "how-the-rating-works";
+
+// A jump to the formula. Not an href="#…": the site routes on the hash.
+function RatingLink() {
+  const go = (e) => {
+    e.preventDefault();
+    const el = document.getElementById(RATING_ID);
+    if (el) el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  };
+  return <Box component="a" href="#" onClick={go} sx={{ color: colors.link, fontWeight: 600 }}>the Elo formula below</Box>;
+}
+
+const sign = (n) => `${n >= 0 ? "+" : "−"}${Math.abs(n).toFixed(1)}`;
+
+// The formula and the settings it runs on, with a worked example from the live settings.
 function HowRatingWorks({ L }) {
   const cfg = ratingSettings(L);
+  // Example: a 4-player cup; you're rated 60 below one opponent and beat them 43–35.
+  const ex = { you: cfg.start, them: cfg.start + 60, ptsYou: 43, ptsThem: 35, players: 4 };
+  const exM = Math.min(1, Math.max(0, 0.5 + (ex.ptsYou - ex.ptsThem) / (2 * cfg.cap)));
+  const exS = matchScore(ex.ptsYou, ex.ptsThem, cfg.cap);
+  const exE = expected(ex.you, ex.them);
+  const exD = (cfg.K / (ex.players - 1)) * (exS - exE);
   const rows = [
     ["Starting rating", cfg.start, "New players start level"],
     ["K (cup weight)", cfg.K, "The most a rating can move in one cup"],
@@ -78,7 +98,9 @@ function HowRatingWorks({ L }) {
   const code = { fontSize: "0.9375rem", fontWeight: 500, bgcolor: colors.raised, borderRadius: 1, px: 1.5, py: 1, overflowX: "auto", whiteSpace: "pre", minWidth: 0 };
   return (
     <>
-      <SectionTitle title="How the rating works" />
+      <Box id={RATING_ID} sx={{ scrollMarginTop: 96 }}>
+        <SectionTitle title="How the rating works (Elo)" />
+      </Box>
       <Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 1.5 }}>
         <Typography>
           Each cup is scored as a set of head-to-head matches between the league players in it. With 4 humans, that's 3 matches each per cup. CPUs don't count.
@@ -92,6 +114,23 @@ function HowRatingWorks({ L }) {
           Your <b>expected</b> result comes from the rating gap, and your rating moves by the difference, averaged over your opponents:
         </Typography>
         <Box sx={code}>{"E  = 1 / (1 + 10^((their rating − your rating) / 400))\nΔR = K / (players − 1) × Σ (S − E)"}</Box>
+        <Typography>
+          This is the classic Elo formula, with a 400-point scale: 400 points ahead means you're expected to win about 10 times out of 11.
+          Everyone in a cup is rated from their ratings before it, and the changes are added up when the cup is saved.
+        </Typography>
+        <Typography sx={{ fontWeight: 700, mt: 1 }}>Example</Typography>
+        <Typography>
+          In a {ex.players}-player cup you're rated {ex.you} and one opponent is {ex.them}. You beat them {ex.ptsYou}–{ex.ptsThem}{cfg.K !== cfg.Kp ? ` (neither of you is provisional, so K = ${cfg.K})` : ""}:
+        </Typography>
+        <Box sx={code}>{[
+          `S  = ½·1 + ½·clamp(½ + ${ex.ptsYou - ex.ptsThem}/${2 * cfg.cap}, 0, 1) = ½ + ½·${exM.toFixed(3)} = ${exS.toFixed(3)}`,
+          `E  = 1 / (1 + 10^(${ex.them - ex.you}/400)) = ${exE.toFixed(3)}`,
+          `ΔR = ${cfg.K} / ${ex.players - 1} × (${exS.toFixed(3)} − ${exE.toFixed(3)}) = ${sign(exD)}`,
+        ].join("\n")}</Box>
+        <Typography>
+          That's {sign(exD)} from this one opponent. The other {ex.players - 2} opponents in the cup each add their own share, and the total is the change you see after the cup.
+          Beating someone rated higher earns more than beating someone rated lower, and a close loss to a much stronger player can still gain a little.
+        </Typography>
         <Box component="table" sx={{ width: "100%", borderCollapse: "collapse", "& td, & th": { textAlign: "left", py: 1, pr: 1.5, borderBottom: `1px solid ${colors.line}`, fontSize: "0.9375rem", verticalAlign: "top" }, "& th": { color: colors.muted, fontWeight: 600, borderBottom: `2px solid ${colors.rule}` } }}>
           <thead><tr><th>Setting</th><th>Value</th><th>Effect</th></tr></thead>
           <tbody>
