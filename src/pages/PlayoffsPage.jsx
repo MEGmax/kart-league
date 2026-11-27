@@ -1,6 +1,7 @@
 // Playoff picture: the top qualified players (by rating, or points percentage in Season 1), seeded into a
-// single-elimination bracket (top seeds get byes when the field isn't a power of two). Projected until the
-// regular season ends. Each round is playoffCupsPerRound cups on aggregate points.
+// single-elimination bracket (top seeds get byes when the field isn't a power of two), with an optional
+// wild-card play-in for the last spot. Projected until the regular season ends. Each round is
+// playoffCupsPerRound cups on aggregate points. The field and bracket come from src/lib/playoffs.js.
 import { useMemo } from "react";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
@@ -11,26 +12,13 @@ import Chip from "@mui/material/Chip";
 import Alert from "@mui/material/Alert";
 import { useLeagueData } from "../context/LeagueDataContext";
 import { compute } from "../lib/standings";
+import { playoffFormat, playoffPicture, roundName } from "../lib/playoffs";
 import { DEMO } from "../lib/demo";
 import { pctTxt } from "../lib/constants";
 import { colors } from "../theme";
 import RacerFace from "../components/RacerFace";
 import { fmtRating } from "../components/RatingBits";
 import { Loading, PageTitle, SectionTitle } from "../components/PageBits";
-
-// Standard seeding order: 1 v 8, 4 v 5, 2 v 7, 3 v 6, …
-export function bracketOrder(n) {
-  let order = [1];
-  while (order.length < n) {
-    const m = order.length * 2;
-    order = order.flatMap((s) => [s, m + 1 - s]);
-  }
-  return order;
-}
-
-function roundName(matches) {
-  return matches === 1 ? "Final" : matches === 2 ? "Semifinals" : matches === 4 ? "Quarterfinals" : `Round of ${matches * 2}`;
-}
 
 function Slot({ seed, s, note, rankBy }) {
   return (
@@ -50,13 +38,19 @@ function Slot({ seed, s, note, rankBy }) {
 }
 
 function Match({ a, b, rankBy }) {
+  return <Card slots={[a, b]} rankBy={rankBy} />;
+}
+
+// One bordered card of slots: a two-player match, or the whole play-in field.
+function Card({ slots, rankBy, label }) {
   return (
-    <Paper variant="outlined" sx={{ borderColor: colors.rule, "& > *:first-of-type": { borderBottom: `1px solid ${colors.line}` } }}>
-      <Slot {...a} rankBy={rankBy} />
-      <Slot {...b} rankBy={rankBy} />
+    <Paper variant="outlined" aria-label={label} sx={{ borderColor: colors.rule, "& > *:not(:last-of-type)": { borderBottom: `1px solid ${colors.line}` } }}>
+      {slots.map((x, i) => <Slot key={i} {...x} rankBy={rankBy} />)}
     </Paper>
   );
 }
+
+const cupsTxt = (n) => (n === 1 ? "one cup" : `${n} cups`);
 
 export default function PlayoffsPage() {
   const { state, loadError } = useLeagueData();
@@ -66,43 +60,28 @@ export default function PlayoffsPage() {
   if (!state) return <Loading error={loadError} />;
 
   const L = st.league;
-  const K = Math.max(2, Number(L.playoffSpots) || 4);
+  const { spots: K, playInRacers, perRound } = playoffFormat(L);
   const byRating = m.rankBy === "rating";
-  const perRound = Math.max(1, Number(L.playoffCupsPerRound) || 1);
-  const seeds = m.ranked.slice(0, K);
-  const bubble = m.ranked.slice(K, K + 3);
+  const { direct, playIn, bubble, slots, rounds, size, byes } = playoffPicture(m.ranked, L);
   const plan = m.plan;
   const lastWeek = plan.seasonWeeks;
   const over = plan.seasonDone;
-  // With this few qualified players, the top-K line doesn't cut anyone.
-  const everyoneIn = m.ranked.length > 0 && m.ranked.length <= K;
-
-  // Bracket rounds. First round from the seeding order; later rounds show byes advancing, others TBD.
-  const size = seeds.length >= 2 ? 2 ** Math.ceil(Math.log2(seeds.length)) : 0;
-  const rounds = [];
-  if (size) {
-    const order = bracketOrder(size);
-    const slot = (seed) => ({ seed: seed <= seeds.length ? seed : null, s: seeds[seed - 1] || null, note: seed > seeds.length ? "Bye" : null });
-    let current = [];
-    for (let i = 0; i < size; i += 2) current.push([slot(order[i]), slot(order[i + 1])]);
-    rounds.push(current);
-    while (current.length > 1) {
-      const next = [];
-      for (let i = 0; i < current.length; i += 2) {
-        const adv = (mt) => (mt[1].note === "Bye" ? mt[0] : mt[0].note === "Bye" ? mt[1] : { seed: null, s: null, note: "Winner" });
-        next.push([adv(current[i]), adv(current[i + 1])]);
-      }
-      // Only the first round can contain byes; after it everyone left is a real match.
-      current = next.map((mt) => mt.map((x) => (x.s ? x : { seed: null, s: null, note: "TBD" })));
-      rounds.push(current);
-    }
-    // A first-round "match" against a bye isn't played; hide it.
-    rounds[0] = rounds[0].filter((mt) => mt[0].note !== "Bye" && mt[1].note !== "Bye");
-  }
+  const by = byRating ? "skill rating" : "points percentage";
+  // The most players the field can hold; with this few qualified, nobody is cut.
+  const fieldMax = playInRacers ? K - 1 + playInRacers : K;
+  const everyoneIn = m.ranked.length > 0 && m.ranked.length <= fieldMax;
+  const lastIn = playIn.length ? playIn[playIn.length - 1] : direct[direct.length - 1];
+  const range = (a, b) => (a === b ? `${a}` : `${a}–${b}`);
+  const playInSeeds = playIn.length ? range(K, K + playIn.length - 1) : "";
 
   return (
     <Container maxWidth="lg" sx={{ pt: 1 }}>
-      <PageTitle title="Playoffs" sub={`Top ${K} qualified players by ${byRating ? "skill rating" : "points percentage"} after week ${lastWeek}`} />
+      <PageTitle
+        title="Playoffs"
+        sub={playInRacers
+          ? `Top ${K - 1} by ${by} go straight in after week ${lastWeek}; the next ${playInRacers} race a play-in for the wild card`
+          : `Top ${K} qualified players by ${by} after week ${lastWeek}`}
+      />
       {demo && <Alert severity="info" sx={{ mb: 2 }}><b>Example standings.</b> This fills in from real results once the first cup is added.</Alert>}
 
       <Box sx={{ mb: 4, maxWidth: 760 }}>
@@ -115,13 +94,14 @@ export default function PlayoffsPage() {
         </Typography>
         {everyoneIn && (
           <Typography sx={{ mt: 1 }}>
-            {m.ranked.length === K ? `All ${K} qualified players` : `All ${m.ranked.length} qualified players`} make the playoffs as things stand:
-            the top-{K} line only cuts anyone once more than {K} players qualify. Seeding still comes from the standings.
+            {playIn.length
+              ? `All ${m.ranked.length} qualified players are in the field as things stand: the top ${direct.length} go straight in and the rest race the play-in. Nobody is cut until more than ${fieldMax} players qualify.`
+              : `${m.ranked.length === K ? `All ${K}` : `All ${m.ranked.length}`} qualified players make the playoffs as things stand: the line only cuts anyone once more than ${fieldMax} players qualify. Seeding still comes from the standings.`}
           </Typography>
         )}
       </Box>
 
-      {seeds.length < 2 ? (
+      {slots.length < 2 ? (
         <Box>
           <Typography sx={{ fontWeight: 700 }}>Not enough qualified players for a bracket yet.</Typography>
           <Typography sx={{ color: colors.muted }}>It appears once at least 2 players have played {L.minParticipation}% of the cups{m.minCups > m.need ? ` and at least ${m.minCups}` : ""}.</Typography>
@@ -133,8 +113,16 @@ export default function PlayoffsPage() {
           <Box sx={{ overflowX: { md: "auto" }, pb: 1 }}>
             <Box sx={{
               display: "grid", gap: 2, alignItems: "center",
-              gridAutoFlow: { xs: "row", md: "column" }, gridAutoColumns: { md: "minmax(240px, 1fr)" }, minWidth: { md: rounds.length * 250 },
+              gridAutoFlow: { xs: "row", md: "column" }, gridAutoColumns: { md: "minmax(240px, 1fr)" },
+              minWidth: { md: (rounds.length + (playIn.length ? 1 : 0)) * 250 },
             }}>
+              {playIn.length > 0 && (
+                <Box sx={{ display: "grid", gap: 2 }}>
+                  <Typography component="h3" sx={{ fontWeight: 700, color: colors.muted }}>Play-in · wild card</Typography>
+                  <Card label="Play-in" rankBy={m.rankBy} slots={playIn.map((s) => ({ seed: s.rank, s }))} />
+                  <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>Highest {perRound === 1 ? "score" : "total"} takes seed {K}.</Typography>
+                </Box>
+              )}
               {rounds.map((r, i) => (
                 <Box key={i} sx={{ display: "grid", gap: 2 }}>
                   <Typography component="h3" sx={{ fontWeight: 700, color: colors.muted }}>{roundName(size / 2 ** (i + 1))}</Typography>
@@ -143,33 +131,35 @@ export default function PlayoffsPage() {
               ))}
             </Box>
           </Box>
-          {seeds.length < size && (
+          {byes > 0 && (
             <Typography sx={{ color: colors.muted, mt: 1.5, fontSize: "0.9375rem" }}>
-              Seed{size - seeds.length === 1 ? "" : "s"} 1{size - seeds.length > 1 ? `–${size - seeds.length}` : ""} get{size - seeds.length === 1 ? "s" : ""} a bye into the next round.
+              Seed{byes === 1 ? "" : "s"} 1{byes > 1 ? `–${byes}` : ""} get{byes === 1 ? "s" : ""} a bye into the next round.
             </Typography>
           )}
           <Typography sx={{ color: colors.muted, mt: 1.5, fontSize: "0.9375rem" }}>
+            {playIn.length > 0 && `The play-in is ${cupsTxt(perRound)}: ${playIn.length === 2 ? "both" : `all ${playIn.length}`} racers (${playInSeeds} in the standings) race together and the highest ${perRound === 1 ? "score" : "total"} takes the wild card into the bracket as seed ${K}; a tie for the top goes to a single-race runoff. `}
             {perRound === 1
               ? "Each matchup is one cup; the higher score advances. A tied cup goes to a single-race runoff on a track an admin picks."
               : `Each round is ${perRound} cups on aggregate points; the higher total advances, and a tie goes to a single-race runoff on a track an admin picks.`}
-            {perRound > 1 && size === 4 && seeds.length === 4 && " All four semifinalists race the same cups together: 1 v 4 and 2 v 3 compare totals, and the two winners race the final."}
+            {perRound > 1 && size === 4 && slots.length === 4 && ` All four semifinalists race the same cups together: 1 v 4 and 2 v 3 compare totals, and the two winners race the final.`}
             {byRating && " Playoff cups count in stats and records but don't move the locked season rating."}
           </Typography>
         </>
       )}
 
-      {!over && bubble.length > 0 && (
+      {!over && bubble.length > 0 && lastIn && (
         <>
           <SectionTitle title="On the bubble" />
           <Box sx={{ borderTop: `1px solid ${colors.line}` }}>
             {bubble.map((s) => {
-              const gap = byRating ? Math.round(seeds[seeds.length - 1].rating) - Math.round(s.rating) : (seeds[seeds.length - 1].pct - s.pct) * 100;
+              const gap = byRating ? Math.round(lastIn.rating) - Math.round(s.rating) : (lastIn.pct - s.pct) * 100;
+              const target = playIn.length ? "the last play-in spot" : `seed ${direct.length}`;
               return (
                 <Box key={s.player.id} sx={{ py: 1.25, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap", borderBottom: `1px solid ${colors.line}` }}>
                   <Typography sx={{ fontWeight: 800, fontStyle: "italic", fontSize: "1.125rem", width: 24 }}>{s.rank}</Typography>
                   <RacerFace who={s.player} character={s.main && s.main.name} size={32} />
                   <Typography sx={{ fontWeight: 700, flex: 1 }}>{s.player.name}</Typography>
-                  <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{byRating ? `${fmtRating(s.rating)} · ${gap} rating points` : `${pctTxt(s.pct)} · ${gap.toFixed(1)} percentage points`} behind seed {seeds.length}</Typography>
+                  <Typography sx={{ color: colors.muted, fontSize: "0.9375rem" }}>{byRating ? `${fmtRating(s.rating)} · ${gap} rating points` : `${pctTxt(s.pct)} · ${gap.toFixed(1)} percentage points`} behind {target}</Typography>
                 </Box>
               );
             })}

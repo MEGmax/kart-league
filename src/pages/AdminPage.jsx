@@ -283,7 +283,7 @@ function checkSettings(cur) {
     currentSeason: Number(cur.currentSeason), rankBy: cur.rankBy === "rating" ? "rating" : "pct",
     ratingStart: Number(cur.ratingStart), ratingK: Number(cur.ratingK), ratingKProvisional: Number(cur.ratingKProvisional),
     provisionalCups: Number(cur.provisionalCups), marginCap: Number(cur.marginCap), carryOver: Number(cur.carryOver),
-    playoffCupsPerRound: Number(cur.playoffCupsPerRound),
+    playoffCupsPerRound: Number(cur.playoffCupsPerRound), playInRacers: Number(cur.playInRacers),
   };
   const whole = (v, lo, hi) => v >= lo && v <= hi && Math.round(v) === v;
   let err = "";
@@ -302,6 +302,7 @@ function checkSettings(cur) {
   else if (!(n.marginCap >= 1 && n.marginCap <= 1000)) err = "The margin cap must be at least 1 point.";
   else if (!(n.carryOver >= 0 && n.carryOver <= 1)) err = "Carry-over must be between 0 and 1 (0.5 = halfway).";
   else if (!whole(n.playoffCupsPerRound, 1, 10)) err = "Playoff cups per round must be a whole number from 1 to 10.";
+  else if (!whole(n.playInRacers, 0, 12) || n.playInRacers === 1) err = "Wild card play-in racers must be 0 (no play-in) or a whole number from 2 to 12.";
   return { n, err };
 }
 
@@ -377,6 +378,8 @@ function SettingsEditor({ league }) {
           {Array.from({ length: 24 }, (_, h) => <MenuItem key={h} value={h}>{new Date(2000, 0, 1, h).toLocaleTimeString("en-US", { hour: "numeric" })}</MenuItem>)}
         </TextField>
         {num("Playoff cups per round", "playoffCupsPerRound")}
+        <TextField size="small" type="number" label="Wild card play-in racers" value={cur.playInRacers} onChange={set("playInRacers")} inputProps={{ min: 0, step: 1 }}
+          helperText={Number(cur.playInRacers) >= 2 ? `Top ${Number(cur.playoffSpots) - 1} are in; ${cur.playoffSpots}–${Number(cur.playoffSpots) + Number(cur.playInRacers) - 1} race for the last spot` : "0 = no play-in"} />
       </Box>
       <Typography component="h2" sx={{ fontWeight: 700, fontSize: "1.125rem", color: colors.muted }}>Ranking and rating (season {cur.currentSeason})</Typography>
       <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "repeat(3, minmax(0,1fr))" } }}>

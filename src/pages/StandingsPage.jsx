@@ -11,6 +11,7 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { useAuth } from "../context/AuthContext";
 import { compute, playerFromSlug, playerSlug } from "../lib/standings";
 import { DEMO } from "../lib/demo";
+import { playoffFormat, playoffPicture } from "../lib/playoffs";
 import { fmtDate, ord, pctTxt } from "../lib/constants";
 import { formatEventWhen, nextEvent } from "../lib/events";
 import { colors } from "../theme";
@@ -139,11 +140,11 @@ function BoardRow({ s, rank, href, m }) {
   );
 }
 
-// The playoff cut-off: a solid red rule across the table.
-function PlayoffLine() {
+// The playoff cut-off: a solid red rule across the table. The wild-card play-in cut-off is the same rule, dashed.
+function PlayoffLine({ label = "Playoff line", dashed = false }) {
   return (
-    <Box role="separator" aria-label="Playoff line" sx={{ borderBottom: `2px solid ${colors.red}`, textAlign: "right", pt: 0.75, pb: 0.5 }}>
-      <Typography component="span" sx={{ color: colors.red, fontSize: "0.875rem", fontWeight: 700 }}>Playoff line</Typography>
+    <Box role="separator" aria-label={label} sx={{ borderBottom: `2px ${dashed ? "dashed" : "solid"} ${colors.red}`, textAlign: "right", pt: 0.75, pb: 0.5 }}>
+      <Typography component="span" sx={{ color: colors.red, fontSize: "0.875rem", fontWeight: 700 }}>{label}</Typography>
     </Box>
   );
 }
@@ -169,7 +170,11 @@ export default function StandingsPage() {
   const everyone = m.ranked.concat(m.unranked);
   const topWins = everyone.length ? Math.max(...everyone.map((s) => s.wins)) : 0;
   const winLeaders = everyone.filter((s) => s.wins === topWins).map((s) => s.player.name);
-  const spots = L.playoffSpots;
+  const { spots, playInRacers } = playoffFormat(L);
+  const { direct, playIn } = playoffPicture(m.ranked, L);
+  const lineAfter = direct.length - 1;
+  const playInAfter = playIn.length ? direct.length + playIn.length - 1 : -1;
+  const moreBelow = (i) => i < m.ranked.length - 1 || m.unranked.length > 0;
   const rating = m.rankBy === "rating";
   const when = next ? formatEventWhen(next.startsAt) : null;
 
@@ -185,7 +190,7 @@ export default function StandingsPage() {
         <Podium ranked={m.ranked} hrefOf={hrefOf} rankBy={m.rankBy} />
 
         <Box sx={{ mt: 4 }}>
-          <PageTitle title="Standings" sub={`By ${rating ? "skill rating" : "points percentage"} · top ${spots} make the playoffs`} />
+          <PageTitle title="Standings" sub={`By ${rating ? "skill rating" : "points percentage"} · ${playInRacers ? `top ${spots - 1} make the playoffs, the next ${playInRacers} race for the wild card` : `top ${spots} make the playoffs`}`} />
         </Box>
         <Box sx={{ display: "grid", gap: { xs: 5, md: 6 }, gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(0,1fr) 280px" }, alignItems: "start" }}>
           <div>
@@ -202,7 +207,8 @@ export default function StandingsPage() {
                 {m.ranked.map((s, i) => (
                   <Box key={s.player.id}>
                     <BoardRow s={s} rank={s.rank} href={hrefOf(s.player)} m={m} />
-                    {i === spots - 1 && (m.ranked.length > spots || m.unranked.length > 0) && <PlayoffLine />}
+                    {i === lineAfter && moreBelow(i) && <PlayoffLine />}
+                    {i === playInAfter && moreBelow(i) && <PlayoffLine label="Play-in line" dashed />}
                   </Box>
                 ))}
                 {m.unranked.length > 0 && (

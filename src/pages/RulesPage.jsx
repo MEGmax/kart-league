@@ -5,8 +5,16 @@ import { useLeagueData } from "../context/LeagueDataContext";
 import { DEFAULT_LEAGUE, RACE_POINTS, ord } from "../lib/constants";
 import { currentSeason, rankByFor, seasonPlan } from "../lib/standings";
 import { ratingSettings } from "../lib/rating";
+import { playoffFormat } from "../lib/playoffs";
 import { colors } from "../theme";
 import { PageTitle, SectionTitle } from "../components/PageBits";
+
+// The wild card sentence, or "" when there's no play-in.
+function wildCard(L) {
+  const { spots, playInRacers, perRound } = playoffFormat(L);
+  if (!playInRacers) return "";
+  return `The top ${spots - 1} go straight in. The last spot is a wild card: the players ranked ${spots} to ${spots + playInRacers - 1} race a play-in (${perRound === 1 ? "one cup" : `${perRound} cups`}, all together), and the highest ${perRound === 1 ? "score" : "total"} takes seed ${spots}; a tie for the top goes to a single-race runoff. If only one player is left for the play-in, they're simply in. `;
+}
 
 function rules(L, plan) {
   const planned = (Number(L.seasonWeeks) || 5) * (Number(L.cupsPerWeek) || 4);
@@ -24,7 +32,7 @@ function rules(L, plan) {
     ["Cup wins and podiums", "Finishing order counts human players only. The most points in a cup wins it; 2nd and 3rd complete the podium. Players tied on points share the place."],
     ["Tiebreakers", "Equal percentages are split by, in order: cup wins, head-to-head points across cups both players played, total points, then a single-race runoff on a track an admin picks."],
     ["Abandoned cups", "A cup that isn't finished (power cut, rage quit, a disconnect that ends it) doesn't count and is raced again from the start."],
-    ["Playoffs", `After week ${L.seasonWeeks} the standings lock and the top ${L.playoffSpots} qualified players advance to a seeded, single-elimination bracket (1 v ${L.playoffSpots}, 2 v ${Math.max(2, L.playoffSpots - 1)}, and so on). ${Number(L.playoffCupsPerRound) > 1 ? `Each round is ${L.playoffCupsPerRound} cups on aggregate points; the higher total advances, and a tie goes to a single-race runoff on a track an admin picks.` : "Each matchup is one cup; the higher-scoring player advances, and a tied cup goes to a single-race runoff on a track an admin picks."} If ${L.playoffSpots} or fewer players qualify, they're all in; if that leaves an uneven bracket, the top seeds get byes.`],
+    ["Playoffs", `After week ${L.seasonWeeks} the standings lock and the top ${L.playoffSpots} qualified players advance to a seeded, single-elimination bracket (1 v ${L.playoffSpots}, 2 v ${Math.max(2, L.playoffSpots - 1)}, and so on). ${wildCard(L)}${Number(L.playoffCupsPerRound) > 1 ? `Each round is ${L.playoffCupsPerRound} cups on aggregate points; the higher total advances, and a tie goes to a single-race runoff on a track an admin picks.` : "Each matchup is one cup; the higher-scoring player advances, and a tied cup goes to a single-race runoff on a track an admin picks."} If ${L.playoffSpots} or fewer players qualify, they're all in; if that leaves an uneven bracket, the top seeds get byes.`],
     ["Disputes", "The photo settles it. If a photo is unreadable, players in that cup agree on the scores or the cup is replayed. Admins can correct any recorded cup."],
   ];
 }
@@ -52,7 +60,7 @@ function ratingRules(L, plan, season) {
     ["Cup wins and podiums", "Finishing order counts human players only. The most points in a cup wins it; 2nd and 3rd complete the podium. Players tied on points share the place."],
     ["Tiebreakers", "Ratings are compared to the whole point. Equal ratings are split by cup wins, then head-to-head points across cups both players raced, then total points, then a single-race runoff on a track an admin picks.", null, "Changed"],
     ["Abandoned cups", "A cup that isn't finished (power cut, rage quit, a disconnect that ends it) doesn't count and is raced again from the start."],
-    ["Playoffs", `After week ${L.seasonWeeks} the standings lock and the top ${L.playoffSpots} ranked players make the playoffs, seeded by rating. Each round is ${per === 1 ? "one cup" : `${per} cups on aggregate points`}; a tie goes to a single-race runoff. ${L.playoffSpots === 4 ? `All four race the semifinal cups together (1 v 4 and 2 v 3 compare totals), and the final is ${per === 1 ? "one more cup" : `${per} more cups`}. ` : ""}Playoff cups count in stats and records but don't move the locked season rating.`, null, "Changed"],
+    ["Playoffs", `After week ${L.seasonWeeks} the standings lock and the top ${L.playoffSpots} ranked players make the playoffs, seeded by rating. ${wildCard(L)}Each round is ${per === 1 ? "one cup" : `${per} cups on aggregate points`}; a tie goes to a single-race runoff. ${L.playoffSpots === 4 ? `All four race the semifinal cups together (1 v 4 and 2 v 3 compare totals), and the final is ${per === 1 ? "one more cup" : `${per} more cups`}. ` : ""}Playoff and play-in cups count in stats and records but don't move the locked season rating.`, null, playoffFormat(L).playInRacers ? "New" : "Changed"],
     ["Disputes", "The photo settles it. If a photo is unreadable, players in that cup agree on the scores or the cup is replayed. Admins can correct any recorded cup."],
   ];
 }

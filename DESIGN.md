@@ -90,7 +90,7 @@ A row on a phone (375px):
 - **Rating**: right-aligned, Barlow 700 22px. The last night's change sits under it in `up`/`down` with an arrow.
 - The whole row is a link, at least 64px tall, with a `#121848` hover and a gold focus ring.
 - On desktop (≥900px) the meta line becomes real columns: Cups · Wins · Points · Last night · Rating, under a header row with a 2px `rule` underline.
-- **The playoff line** is a 2px solid `red` rule across the full table after the last playoff spot, labelled "Playoff line" in `redText` at the right.
+- **The playoff line** is a 2px solid `red` rule across the full table after the last playoff spot, labelled "Playoff line" in `redText` at the right. With a wild card, it sits after the last direct spot, and a 2px dashed `red` rule labelled "Play-in line" sits after the last play-in racer.
 - **Not yet qualified** players follow in the same table under a plain group label. Their numbers are `muted`.
 
 ## One hero per page
